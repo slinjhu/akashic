@@ -1,0 +1,36 @@
+[project]
+site_name = "Akashic"
+site_description = "A personal library of everything I learn."
+docs_dir = "docs"
+site_dir = "site"
+dev_addr = "127.0.0.1:8056"
+extra_javascript = [
+  "javascripts/mathjax.js",
+  "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js",
+]
+
+# Omitting nav lets the directory hierarchy define the sidebar automatically.
+[project.theme]
+language = "en"
+features = ["navigation.indexes", "navigation.top", "search.highlight", "content.code.copy"]
+
+[project.theme.font]
+text = false
+code = false
+
+[project.plugins.search]
+
+[project.plugins.tags]
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+md_in_html = {}
+tables = {}
+footnotes = {}
+pymdownx.details = {}
+pymdownx.highlight = {}
+pymdownx.arithmatex.generic = true
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
