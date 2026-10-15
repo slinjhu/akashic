@@ -1,11 +1,11 @@
 ---
-title: "AWS networking: build a network one piece at a time"
+title: "AWS networking"
 tags:
   - AWS
   - Network
 ---
 
-# AWS networking: build a network one piece at a time
+# AWS networking
 
 Start with a network that has no internet connection. Put a server inside it. Then add only what that server needs to communicate.
 
@@ -13,7 +13,7 @@ We'll use one example throughout: a VPC with address range `10.0.0.0/16`. These 
 
 ## 1. Start with an empty VPC
 
-A **VPC** is your own logically isolated network in an AWS Region. Think of it as the boundary around the network you are building.
+A **VPC (Virtual Private Cloud)** is your own logically isolated network in an AWS Region. Think of it as the boundary around the network you are building.
 
 Give it an address range:
 
@@ -23,7 +23,38 @@ VPC: 10.0.0.0/16
   No internet connection
 ```
 
-`10.0.0.0/16` is CIDR notation: it describes the range `10.0.0.0` through `10.0.255.255`. You don't need the bit arithmetic yet. Read it as “the pool of private addresses available to this network.”
+`10.0.0.0/16` is **CIDR notation**, a compact way to describe a range of IP addresses. Each number between the dots is an **octet**: a group of 8 bits. Four octets make a 32-bit IPv4 address.
+
+```mermaid
+---
+config:
+  themeCSS: |
+    .packetBlock:nth-of-type(1) { fill: rgba(96, 165, 250, 0.22); }
+    .packetBlock:nth-of-type(2) { fill: rgba(52, 211, 153, 0.22); }
+  packet:
+    showBits: false
+    paddingX: 0
+    bitWidth: 22
+    rowHeight: 64
+---
+packet
+0-15: "Network ID — 16 fixed bits"
+16-31: "Host ID — 16 variable bits"
+```
+
+**`/16` sets the dividing line after the first 16 bits.** The network portion stays fixed; the host portion can vary. In `10.0.0.0/16`, that fixes `10.0` and lets the last two numbers vary, giving every address from `10.0.0.0` through `10.0.255.255`.
+
+The larger the number after `/`, the fewer bits can vary—and the smaller the address pool:
+
+| Example | Fixed part | Part that can vary | Total addresses |
+|---|---|---|---|
+| `10.0.0.0/16` | First 16 bits: `10.0` | Last two numbers | 65,536 |
+| `10.0.1.0/24` | First 24 bits: `10.0.1` | Last number | 256 |
+| `10.0.1.25/32` | All 32 bits | None | 1 |
+
+These examples line up with the dots because 16, 24, and 32 are multiples of 8. Other prefixes, such as `/20`, fix part of a number too. The rule is always the same: **`/n` fixes the first `n` bits**, leaving `2^(32 − n)` total addresses.
+
+For now, our `/16` is the VPC's address pool. Next, we'll take a smaller `/24` range from it for a subnet.
 
 For this example, we deliberately start without an internet gateway or connections to other networks. AWS's default VPC and setup wizards may already include internet connectivity, so they may not look like this starting point. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
 
@@ -31,7 +62,7 @@ For this example, we deliberately start without an internet gateway or connectio
 
 ## 2. Add a subnet and a server
 
-A **subnet** takes a smaller address range from the VPC. This is where you place resources such as EC2 instances.
+A **subnet** takes a smaller address range from the VPC. This is where you place a server, such as an **EC2 instance**, AWS's virtual machine.
 
 ```text
 VPC: 10.0.0.0/16
@@ -40,8 +71,6 @@ VPC: 10.0.0.0/16
 ```
 
 `10.0.1.0/24` covers `10.0.1.0` through `10.0.1.255`. AWS reserves some addresses in a subnet, so not every address is available for servers.
-
-The app gets its private IP through a virtual network interface, called an **ENI**. For now, think of that as the server's network card.
 
 A VPC belongs to one Region. Each subnet belongs to one **Availability Zone (AZ)** within that Region. An AZ is a separate location for running resources; a VPC can contain subnets in several AZs. See [AWS subnet concepts](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
 
@@ -67,7 +96,7 @@ Read each route as: “For this destination range, send traffic to this target.�
 |---|---|---|
 | `10.0.0.0/16` | `local` | Keep traffic for this VPC inside this VPC |
 
-The database address falls within that range, so the app has a local path to it. Neither an internet gateway nor NAT is needed.
+The database address falls within that range, so the app has a local path to it. This connection stays inside the VPC.
 
 Each subnet uses one subnet route table at a time. Subnets can share a table; without an explicit association, a subnet uses the VPC's main table. AWS creates a local route for the VPC's address range. See [AWS subnet route tables](https://docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html).
 
@@ -82,7 +111,7 @@ For the app to connect to the database, we need both:
 - A path to the database's private IP, supplied here by the local route.
 - Security rules allowing the connection: app outbound traffic and database inbound traffic on the database port.
 
-For example, the database's security group could allow inbound TCP `5432` from the app's security group. The database must also be listening on that port.
+For example, the database's security group could allow inbound TCP `5432` from the app's security group. A **port** identifies the service receiving a connection; PostgreSQL commonly listens on port `5432`. The database must actually be running and listening there.
 
 Security groups are **stateful**: replies to an allowed connection are automatically permitted. They contain allow rules, rather than explicit deny rules. See [AWS security groups](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html).
 
@@ -92,9 +121,16 @@ There is also a subnet-level filter called a **network ACL**. We'll assume the d
 
 ## 5. Add an internet gateway: public versus private subnets
 
-Suppose we now want the app to communicate directly with the internet.
+Suppose we want to add a web server that visitors can reach from the internet. Keep the app and database where they are, and add Subnet C for the web server:
 
-Attach an **internet gateway (IGW)** to the VPC. Then add a route to Subnet A's table:
+```text
+VPC: 10.0.0.0/16
+  Subnet A: 10.0.1.0/24 — app at 10.0.1.25
+  Subnet B: 10.0.2.0/24 — database at 10.0.2.30
+  Subnet C: 10.0.3.0/24 — web server at 10.0.3.40
+```
+
+An **internet gateway (IGW)** connects a VPC to the internet. Attach one to the VPC, then give Subnet C its own route table:
 
 | Destination | Target | Meaning |
 |---|---|---|
@@ -103,7 +139,7 @@ Attach an **internet gateway (IGW)** to the VPC. Then add a route to Subnet A's 
 
 `0.0.0.0/0` means all IPv4 addresses. It acts as the fallback because routing chooses the **most specific matching range**. The database's `10.0.2.30` address still matches the more specific local route.
 
-Subnet A is now a **public subnet** because it has a direct route to the IGW. Keep Subnet B on a separate, local-only table, and it remains **private**.
+Subnet C is now a **public subnet** because it has a direct route to the IGW. Keep Subnets A and B on their local-only table, and they remain **private**.
 
 | Subnet description | What its routes mean |
 |---|---|
@@ -111,25 +147,25 @@ Subnet A is now a **public subnet** because it has a direct route to the IGW. Ke
 | Private | Has no direct route to an internet gateway |
 | Isolated | Has no routes to destinations outside the VPC |
 
-Our local-only Subnet B is isolated as well as private. A private subnet can gain other connections later without becoming public. See [AWS subnet types](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
+Our local-only Subnets A and B are isolated as well as private. A private subnet can gain other connections later without becoming public. See [AWS subnet types](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
 
-For direct IPv4 internet communication, the app also needs a public IPv4 address, such as an Elastic IP, and suitable security rules. The IGW maps between the app's private and public IPv4 addresses. Inbound connections additionally require an application listening on the requested port. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
+To make the web server reachable, give it a public IPv4 address and allow its web port in its security group. It keeps its private address too: the IGW maps between the two addresses. The web application must be listening on that port. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
 
 **The distinction:** “public” describes a subnet's route. It does not mean every resource in it is reachable from the internet. Attaching an IGW alone also does not make all subnets public.
 
 ## 6. Keep the app private, but let it call the internet
 
-Now change the requirement: the app should call an external API, but it should have only a private IP.
+Now the app at `10.0.1.25` needs to call an external API. We want to keep it in private Subnet A with only its private IP.
 
-Move the app into private Subnet B. Use Subnet A for a **public NAT gateway**. This example uses a zonal NAT gateway with an Elastic IP.
+Add a **public NAT gateway** to public Subnet C. NAT means **Network Address Translation**: it lets the app use a shared outward-facing address. This example uses a zonal NAT gateway with an **Elastic IP**, a public IPv4 address allocated to your AWS account.
 
 ```mermaid
 flowchart LR
     subgraph vpc["VPC"]
-        subgraph private["Private subnet B"]
-            app["App<br/>Private IP only"]
+        subgraph private["Private subnet A"]
+            app["App: 10.0.1.25<br/>Private IP only"]
         end
-        subgraph public["Public subnet A"]
+        subgraph public["Public subnet C"]
             nat["Public NAT gateway"]
         end
         igw["Internet gateway"]
@@ -137,14 +173,14 @@ flowchart LR
     app --> nat --> igw --> internet["External API"]
 ```
 
-Keep the public subnet's route to the IGW. Add a default route to the private subnet:
+Keep Subnet C's route to the IGW. Give Subnet A its own table with a default route to NAT; leave the database's Subnet B on its local-only table:
 
 | Subnet | Destination | Target |
 |---|---|---|
-| Private B | `10.0.0.0/16` | `local` |
-| Private B | `0.0.0.0/0` | NAT gateway |
-| Public A | `10.0.0.0/16` | `local` |
-| Public A | `0.0.0.0/0` | Internet gateway |
+| Private A | `10.0.0.0/16` | `local` |
+| Private A | `0.0.0.0/0` | NAT gateway |
+| Public C | `10.0.0.0/16` | `local` |
+| Public C | `0.0.0.0/0` | Internet gateway |
 
 NAT translates addresses and tracks connections. The external API sees the NAT gateway's Elastic IP, and its replies return to the app through NAT.
 
@@ -152,22 +188,18 @@ An external host cannot use this NAT path to start an unsolicited connection to 
 
 **So far:** the app can call the internet while its subnet remains private. Its default route points to NAT, not directly to the IGW.
 
-## 7. Reach one AWS service without internet access
+## 7. Reach S3 through a gateway endpoint
 
-Suppose the app only needs S3. Must we give it a general internet path through NAT?
+Suppose the app now needs to read files from **Amazon S3**, AWS's object storage service. We can give it a path specifically to S3.
 
-No. A **VPC endpoint** provides a connection to a particular service without requiring an internet gateway or NAT for that connection.
+A **VPC endpoint** provides a connection to a particular service without requiring an internet gateway or NAT for that connection.
 
 First, separate two uses of “endpoint”:
 
 - An **API endpoint** is the address you call, usually a hostname or URL.
 - A **VPC endpoint** is a networking resource you create to reach a service.
 
-An endpoint for one service does not provide general internet access. There are two common mechanisms to understand.
-
-### Gateway endpoint: add a service-specific route
-
-For S3, we can create a **gateway endpoint** and associate it with the app subnet's route table:
+For S3, create a **gateway endpoint** and associate it with Subnet A's route table. Remove Subnet A's default route to NAT for this example, leaving:
 
 | Destination | Target |
 |---|---|
@@ -176,23 +208,25 @@ For S3, we can create a **gateway endpoint** and associate it with the app subne
 
 A **prefix list** is a collection of IP ranges; AWS maintains this one for the service. Traffic matching it follows the endpoint route.
 
-With this table, the app can reach matching S3 destinations, but it still cannot call an arbitrary external API. If we also keep a default route to NAT, the more specific S3 route takes precedence for matching traffic.
+With this table, the app can reach matching S3 destinations, but it can no longer call an arbitrary external API. If we keep a default route to NAT instead of removing it, the more specific S3 route takes precedence for matching traffic.
 
-S3 has not moved into our subnet. Its hostname can still resolve to public service IPs; the route provides the private service path. Gateway endpoints support S3 and DynamoDB and do not use AWS PrivateLink. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+S3 has not moved into our subnet. The endpoint gives us a route to the AWS-managed service. Gateway endpoints support S3 and DynamoDB. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
 
-### Interface endpoint: add a private address for a service
+**So far:** the app can reach the database locally and S3 through the endpoint. Without its NAT route, it can no longer call the external API.
 
-Many other services, such as Secrets Manager and ECR, support **interface endpoints**, powered by AWS PrivateLink.
+## 8. Reach another service through a private IP
 
-An interface endpoint creates network interfaces with private IP addresses in selected subnets. The app connects to those addresses to reach the service.
+Now the app needs to retrieve a password from **Secrets Manager**. This service uses a different kind of VPC endpoint: an **interface endpoint**.
+
+An interface endpoint creates a virtual network interface, called an **ENI**, with a private IP in each selected subnet. Think of it as a private entry point to the service. The underlying connectivity technology is called **AWS PrivateLink**; gateway endpoints use a different mechanism.
 
 ```mermaid
 flowchart LR
-    app["App in VPC"] --> ep["Endpoint network interface<br/>Private IP in VPC"]
-    ep --> service["AWS service"]
+    app["App: 10.0.1.25"] --> ep["Endpoint network interface<br/>Private IP in VPC"]
+    ep --> service["Secrets Manager"]
 ```
 
-This introduces **DNS**, which turns a hostname into an IP address. With private DNS enabled for the endpoint, the service's usual hostname resolves inside the VPC to the endpoint's private IPs.
+The app normally calls the service by its hostname. **DNS** turns that name into an IP address. With private DNS enabled for the endpoint, the service's usual hostname resolves inside the VPC to the endpoint's private IPs.
 
 The app can usually keep using the same service hostname. Its traffic now goes to the private interface. You do not add an S3-style service route: the destination IP is already reachable inside the VPC.
 
@@ -200,11 +234,13 @@ Private DNS requires VPC DNS support and DNS hostnames to be enabled. The endpoi
 
 **Remember the mechanism:** a gateway endpoint changes the route for service traffic; an interface endpoint provides private IPs to connect to.
 
-## 8. Put the pieces together: pull a container image from ECR
+This also explains why a public destination IP does not always mean traffic goes through the internet. S3's hostname can resolve to public service IPs while the matching traffic follows the gateway endpoint route.
 
-Keep the app private and remove its NAT path. We want it to pull a private container image from ECR in the same Region.
+## 9. Put the pieces together: pull a container image from ECR
 
-A typical EC2 or EKS image pull needs three service paths:
+Keep the app in Subnet A with its S3 endpoint route and no NAT route. We want its EC2 instance to pull a private container image from **Amazon ECR**, AWS's container image registry, in the same Region.
+
+A typical EC2 image pull needs three service paths:
 
 | Needed for | Connection |
 |---|---|
@@ -218,11 +254,13 @@ This is why “I created an ECR endpoint” may not be enough. One operation can
 
 Use private DNS for the ECR endpoints, allow HTTPS to their interfaces, and associate the S3 endpoint with the client's route table. The caller also needs permission to pull the image.
 
-This example covers the image pull, not every dependency of an EKS cluster or application. Special cases, including an initial pull-through-cache fetch or externally hosted Windows layers, can need additional connectivity. See [AWS ECR endpoint requirements](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html).
+This example covers the image pull; the application may need other services once it starts. Special cases, including an initial pull-through-cache fetch or externally hosted Windows layers, can need additional connectivity. See [AWS ECR endpoint requirements](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html).
 
-## 9. Add the remaining permission checks
+## 10. Add the remaining permission checks
 
-We already used security groups. Two more layers explain many failures:
+We already used security groups. Once the path exists, additional controls can still block traffic or deny a service operation:
+
+**IAM (Identity and Access Management)** controls who may perform AWS operations. For example, a network path to S3 lets the app send a request, but its identity still needs permission to read the requested object.
 
 | Layer | Question it answers | What to remember |
 |---|---|---|
@@ -237,7 +275,7 @@ For EC2, omitting a security group means AWS uses the VPC's default group. Its o
 
 **A path and permission are separate requirements.** Allowing HTTPS does not create a route. Creating an endpoint does not grant access to every resource behind it.
 
-## 10. Trace any connection with the same questions
+## 11. Trace any connection with the same questions
 
 Once the pieces are familiar, follow one request from start to finish:
 
