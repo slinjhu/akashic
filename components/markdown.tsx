@@ -3,6 +3,8 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
+import { common } from "lowlight";
+import dockerfile from "highlight.js/lib/languages/dockerfile";
 import rehypeSlug from "rehype-slug";
 import { Children, isValidElement, type ReactNode } from "react";
 import Link from "next/link";
@@ -13,7 +15,7 @@ import { Diagram } from "./mermaid";
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
   return <div className="prose"><Markdown
     remarkPlugins={[remarkGfm, remarkMath]}
-    rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { detect: false, ignoreMissing: true }]]}
+    rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }]]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{
       a: ({ href, children, ...props }) => href?.startsWith("/") && !href.startsWith("//") ? <Link href={href} title={props.title}>{children}</Link> : <a href={href} title={props.title} rel={href?.startsWith("http") ? "noreferrer" : undefined}>{children}</a>,
