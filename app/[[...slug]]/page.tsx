@@ -5,6 +5,7 @@ import { notes, assetRevision, allTags } from "@/lib/content";
 import { NoteMarkdown } from "@/components/markdown";
 
 type Props = { params: Promise<{ slug?: string[] }> };
+export const dynamicParams = false;
 function findNote(slug?: string[]) {
   return notes.find(note => note.url === "/" + (slug || []).map(encodeURIComponent).join("/"));
 }

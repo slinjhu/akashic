@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Note } from "@/lib/content";
 
 type SearchNote = Omit<Note, "body" | "headings">;
-export function Search({ notes, tags, initialQuery, initialTag }: { notes: SearchNote[]; tags: string[]; initialQuery: string; initialTag: string }) {
+export function Search({ notes, tags }: { notes: SearchNote[]; tags: string[] }) {
+  const params = useSearchParams();
+  const query = params.get("q") || "";
+  const tag = params.get("tag") || "";
+  return <SearchForm key={JSON.stringify([query, tag])} notes={notes} tags={tags} initialQuery={query} initialTag={tag} />;
+}
+
+function SearchForm({ notes, tags, initialQuery, initialTag }: { notes: SearchNote[]; tags: string[]; initialQuery: string; initialTag: string }) {
   const [query, setQuery] = useState(initialQuery);
   const [tag, setTag] = useState(initialTag);
   const router = useRouter();

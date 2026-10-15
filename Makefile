@@ -1,4 +1,4 @@
-.PHONY: env dev build check
+.PHONY: env dev build check publish
 
 env:
 	npm ci
@@ -8,6 +8,9 @@ dev:
 
 build:
 	npm run build
+
+publish:
+	npm run publish
 
 check:
 	npm run test

@@ -68,11 +68,13 @@ The table of contents includes heading levels 2 through 4, indented by depth.
 
 The same page component adds the collection cards on the Library overview and the
 grouped listings on the tag index. `/search` has its own route, which reads the
-query and selected tag from the URL.
+query and selected tag from the URL in the browser.
 
-Known note pages are prerendered during a production build. The search route
-prepares its initial state on the server, then passes searchable note data to
-the browser for interactive filtering.
+All note routes are enumerated with `generateStaticParams`; unknown note routes
+are not generated on demand. Next.js uses `output: "export"` and trailing-slash
+URLs to produce an `index.html` per route. Search reads URL parameters in a
+client component behind a Suspense boundary and filters the bundled note data.
+No request-time server is needed.
 
 ## Markdown rendering
 
@@ -99,7 +101,7 @@ locally rather than fetched from a CDN.
 
 ## Server and browser responsibilities
 
-Most page content renders on the server. Components that need user input,
+Most page content renders at build time. Components that need user input,
 browser APIs, or local state run in the browser:
 
 | Component | Responsibility |
@@ -141,7 +143,7 @@ Adding, editing, or deleting notes updates the content, navigation, and search
 data. App code also uses Next.js development refresh. Stop the server with
 Ctrl+C to release port 8056.
 
-For validation and a production server:
+For validation and a preview of the static export:
 
 ```sh
 make check
@@ -149,10 +151,16 @@ make build
 npm start
 ```
 
-`make check` runs content-pipeline tests and TypeScript checks. `make build`
-regenerates content and creates the production app in `.next/`. `npm start`
-serves that build on port 8056. Production content is a build-time snapshot;
-rebuild after changing notes.
+`make check` runs tests and TypeScript checks. `make build` runs
+`scripts/build.mjs`, regenerates content, and exports the site to `out/`;
+`.next/` contains intermediate build files. `npm start` uses `scripts/serve.mjs`
+to preview the exported files on port 8056. Rebuild after changing notes.
+
+`make publish` runs `scripts/publish.mjs`: it checks GitHub access, builds with
+the Pages base path, pushes the export to `gh-pages` using a temporary checkout,
+and configures Pages through the GitHub CLI. Next.js prefixes navigation links;
+the Markdown renderer explicitly prefixes local image URLs. See
+[publishing instructions](getting-started.md#publish-to-github-pages).
 
 ## Where to extend the app
 

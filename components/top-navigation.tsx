@@ -10,7 +10,7 @@ const tabs = [
 ];
 
 export function TopNavigation() {
-  const pathname = usePathname();
+  const pathname = usePathname().replace(/\/$/, "") || "/";
   const active = pathname === "/tags" ? "Tags"
     : pathname === "/search" ? "Search"
     : "Library";

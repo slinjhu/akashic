@@ -23,7 +23,7 @@ function buildTree(entries: Entry[]) {
 }
 
 export function Navigation({ entries, tags }: { entries: Entry[]; tags: { tag: string; count: number }[] }) {
-  const pathname = usePathname();
+  const pathname = usePathname().replace(/\/$/, "") || "/";
   const [open, setOpen] = useState(false);
   const isTags = pathname === "/tags";
   const tree = buildTree(entries);

@@ -47,9 +47,42 @@ make build
 npm start
 ```
 
-`make check` runs content-pipeline tests and TypeScript checks. The production
-build lives in `.next/`; `npm start` serves it on port 8056. Rebuild after changing
-notes in production. No database is required; notes remain editable Markdown.
+`make check` runs tests and TypeScript checks. `make build` exports the site to
+`out/`, containing HTML, CSS, JavaScript, and assets. `npm start` previews those
+files on port 8056; use `PORT=8057 npm start` if the development server is already
+running. Rebuild after changing notes. Production hosting needs only a static
+file server, with no Node.js runtime or database.
+
+## Publish to GitHub Pages
+
+Install the GitHub CLI (`gh`), authenticate with an account that can manage this
+repository's Pages settings, and ensure Git can push to `origin`. Then run:
+
+```sh
+make publish
+```
+
+This builds the current working files and pushes only the generated site to the
+`gh-pages` branch. It keeps deployment history, leaves the source branch alone,
+adds `.nojekyll`, and configures Pages to serve the branch root. GitHub's
+deployment runs asynchronously after the push. All notes and supported assets
+under `docs/` are included, including uncommitted local edits.
+
+For `slinjhu/akashic`, the default URL is <https://slinjhu.github.io/akashic/>.
+The publish command determines the project path from `origin` and uses an
+existing custom domain if configured. If `gh` reports a 404, check `gh auth status`
+and select an account with access to the repository. See
+[GitHub Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+
+To build and preview the project-path version without publishing:
+
+```sh
+NEXT_PUBLIC_BASE_PATH=/akashic make build
+npm start
+```
+
+The preview serves it at <http://127.0.0.1:8056/akashic/>. A plain `make build`
+exports for the domain root. The deployment path is fixed at build time.
 
 ## Rendering and interaction
 
@@ -67,7 +100,8 @@ the layout and styling, without a documentation theme or template overrides.
 Math fonts, syntax highlighting, and Mermaid are bundled locally, with no CDN
 dependency. `scripts/content.mjs` validates front matter, indexes headings and
 notes, and copies supported assets into `public/content/`. Its generated JSON
-feeds both server rendering and client search. `/search` is reserved for the app;
+feeds build-time page rendering and browser search. Search query parameters are
+read in the browser. `/search` is reserved for the app;
 `docs/tags.md` supplies the introduction to the generated `/tags` index.
 
 ## Layout
@@ -82,5 +116,6 @@ docs/                 Notes, subject indexes, and assets
 templates/note.md      Reusable note template (not published)
 .generated/           Generated content index (ignored)
 public/content/       Generated copies of note assets (ignored)
+out/                  Static site ready for hosting (ignored)
 package-lock.json     Locked Node.js dependencies
 ```

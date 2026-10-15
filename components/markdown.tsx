@@ -19,7 +19,7 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{
       a: ({ href, children, ...props }) => href?.startsWith("/") && !href.startsWith("//") ? <Link href={href} title={props.title}>{children}</Link> : <a href={href} title={props.title} rel={href?.startsWith("http") ? "noreferrer" : undefined}>{children}</a>,
-      img: ({ src, alt, title }) => <img src={typeof src === "string" && src.startsWith("/content/") ? `${src}${src.includes("?") ? "&" : "?"}v=${assetRevision.slice(0, 12)}` : src} alt={alt || ""} title={title} loading="lazy" />,
+      img: ({ src, alt, title }) => <img src={typeof src === "string" && src.startsWith("/content/") ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}${src.includes("?") ? "&" : "?"}v=${assetRevision.slice(0, 12)}` : src} alt={alt || ""} title={title} loading="lazy" />,
       table: ({ children }) => <div className="table-scroll" tabIndex={0} role="region" aria-label="Table"><table>{children}</table></div>,
       pre: ({ node, children }) => {
         const codeNode = node?.children.find(child => child.type === "element" && child.tagName === "code");
