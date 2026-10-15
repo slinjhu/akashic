@@ -400,50 +400,23 @@ This works like our S3 gateway endpoint policy: both restrict **who may perform 
 
 ### 9.4. Compare gateway and interface endpoints
 
-**S3 supports both gateway and interface endpoints.** We chose a gateway endpoint for this example because the app is inside the VPC and needs same-Region S3 access. It gives us a simple route-based path with no additional gateway-endpoint charge. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
+We now have two private paths: a gateway endpoint for S3 and an interface endpoint for Secrets Manager. Both are VPC endpoints, but they give traffic a different entry point. With the gateway endpoint, packets remain addressed to S3's service IPs, and the route table selects the endpoint path. With the interface endpoint, the app sends HTTPS traffic to `10.0.1.50:443`, and AWS PrivateLink carries it onward to Secrets Manager. The ENI is part of that data path. Its IP identifies an AWS-managed entry point, while the service itself runs outside our VPC. See [gateway endpoint routing](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html) and [AWS PrivateLink connectivity](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html).
 
-Both are VPC endpoints. Their main differences are the traffic path, network controls, and cost:
+That difference in entry point also determines where we apply network controls and how AWS charges for the connection:
 
 | Feature | Gateway endpoint | Interface endpoint |
 |---|---|---|
 | Entry point | A service-specific route in selected route tables | An ENI with a private IP in each selected subnet |
-| Traffic path | Packets addressed to the service follow the matching endpoint route | Packets addressed to the ENI's private IP pass through PrivateLink to the service |
 | Endpoint security group | None | Controls connections to the endpoint ENIs |
 | Endpoint charges | No additional hourly or data-processing charge | Hourly charge per AZ, plus data-processing charges |
 
-For our interface endpoint, the app sends actual HTTPS traffic to `10.0.1.50:443`. The ENI is part of the data path, not just a DNS entry. AWS carries the request onward through PrivateLink and returns the response through the connection. This private IP identifies an AWS-managed entry point; it does not mean we run a Secrets Manager server in our subnet. With the S3 gateway endpoint, packets remain addressed to S3's service IPs, and the route table selects the endpoint path without an endpoint ENI. See [AWS PrivateLink connectivity](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html) and [gateway endpoint routing](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+For an interface endpoint, we pay for each AZ where it is provisioned, even when idle, and for data processed in both requests and responses. Selecting subnets in two AZs therefore adds two hourly charges. A gateway endpoint has neither of these endpoint charges, although the underlying service's normal charges still apply. See [AWS PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/) and [S3 gateway endpoint pricing](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html).
 
-An interface endpoint's hourly charge continues while it is provisioned, even when idle. Selecting subnets in two AZs adds an hourly charge for each AZ, and data-processing charges cover both requests and responses. A gateway endpoint has neither of these endpoint charges; the underlying service's normal charges still apply. This makes cost a practical reason to use a gateway endpoint for our same-Region S3 traffic. See [AWS PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/) and [S3 gateway endpoint pricing](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html).
+Whether we can choose between the two depends first on the service. AWS offers gateway endpoints for S3 and DynamoDB; services such as Secrets Manager and ECR use interface endpoints. **S3 supports both**, so our app's location and needs determine which fits. Its same-Region S3 requests can use the gateway endpoint without additional endpoint charges. If the client were on premises, an S3 interface endpoint could provide access through VPN or Direct Connect, whereas that client could not use our VPC's gateway endpoint directly. Both paths keep S3 traffic on the AWS network. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html) and [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
 
-AWS offers gateway endpoints specifically for S3 and DynamoDB. Many other AWS services, including Secrets Manager and ECR, offer interface endpoints through PrivateLink. You choose from the endpoint types the service supports; you cannot turn an arbitrary service's interface endpoint into a gateway endpoint. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+Once a path meets those connectivity needs, **throughput** becomes another consideration for large transfers. AWS documents interface endpoint bandwidth of up to **10 Gbps per Availability Zone by default, automatically scaling up to 100 Gbps per AZ**. Many clients transferring data through the same endpoint share that capacity. These figures describe how much data the path can carry, rather than the latency of an individual request, so workloads that need high throughput should check the limits and measure their actual path. They help us assess capacity, but do not establish that gateway endpoints are always faster or explain why AWS originally created the two types. See [AWS PrivateLink quotas](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-limits-endpoints.html).
 
-**Throughput can affect the choice.** AWS documents interface endpoint bandwidth of up to **10 Gbps per Availability Zone by default, automatically scaling up to 100 Gbps per AZ**. This matters when many clients transfer large amounts of data through the same endpoint. These figures describe capacity for moving data, not the latency of an individual request; workloads that need high throughput should check the limits and measure their actual path. See [AWS PrivateLink quotas](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-limits-endpoints.html).
-
-That makes throughput a factor in choosing an endpoint. It does not establish why AWS created the two endpoint types, or prove that a gateway endpoint is always faster.
-
-The choice also depends on **where the client is and what connectivity it needs**. A gateway endpoint fits our in-VPC example. An S3 interface endpoint can also serve clients on premises through VPN or Direct Connect, which cannot use the VPC's S3 gateway endpoint directly. Both paths keep S3 traffic on the AWS network. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
-
-## 10. Put the pieces together: pull a container image from ECR
-
-Keep the app in Subnet A with both its S3 endpoint route and its NAT route. We want its EC2 instance to pull a private container image from **Amazon ECR**, AWS's container image registry, in the same Region, using endpoints for the image pull while retaining NAT for other internet traffic.
-
-A typical EC2 image pull through endpoints needs three service paths:
-
-| Needed for | Connection |
-|---|---|
-| Authentication and ECR API calls | `ecr.api` interface endpoint |
-| Registry requests, such as fetching the image manifest | `ecr.dkr` interface endpoint |
-| Downloading image layers stored in S3 | S3 gateway endpoint |
-
-The endpoint service names are `com.amazonaws.<region>.ecr.api`, `com.amazonaws.<region>.ecr.dkr`, and `com.amazonaws.<region>.s3`.
-
-This is why “I created an ECR endpoint” may not be enough to keep the whole pull on endpoint paths. One operation can involve several services. Each needs a working path and the necessary permissions. NAT may provide a public service path where an endpoint is missing, but that traffic would then depend on NAT.
-
-Use private DNS for the ECR endpoints, allow HTTPS to their interfaces, and associate the S3 endpoint with the client's route table. The caller also needs permission to pull the image.
-
-This example covers the image pull; the application may need other services once it starts. Special cases, including an initial pull-through-cache fetch or externally hosted Windows layers, can need additional connectivity. See [AWS ECR endpoint requirements](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html).
-
-## 11. Add the remaining permission checks
+## 10. Add the remaining permission checks
 
 We already used security groups. Once the path exists, additional controls can still block traffic or deny a service operation:
 
@@ -462,7 +435,7 @@ For EC2, omitting a security group means AWS uses the VPC's default group. Its o
 
 **A path and permission are separate requirements.** Allowing HTTPS does not create a route. Creating an endpoint does not grant access to every resource behind it.
 
-## 12. Extend the design across Availability Zones
+## 11. Extend the design across Availability Zones
 
 Our example explains connectivity. To keep serving requests when an AZ fails, repeat the needed parts of the application in another AZ within the same VPC.
 
@@ -504,7 +477,7 @@ Include dependencies in the design: the database needs replication and failover,
 
 One subnet can be enough for a learning environment or a workload that accepts downtime. Choose the production layout based on availability needs; the goal is surviving failures, not reaching a particular subnet count.
 
-## 13. Trace any connection with the same questions
+## 12. Trace any connection with the same questions
 
 Once the pieces are familiar, follow one request from start to finish:
 
@@ -515,6 +488,6 @@ Once the pieces are familiar, follow one request from start to finish:
 5. **Is the connection allowed?** Check security groups, ACLs, and the destination's listening port. Include the response path.
 6. **Is the operation allowed?** For AWS services, check credentials, IAM, resource policies, and endpoint policies.
 
-For example, an S3 request can use a gateway endpoint even when DNS returns a public IP. An ECR request can use an interface endpoint because private DNS returns a private IP. An external API request can use NAT because it matches the default route.
+For example, an S3 request can use a gateway endpoint even when DNS returns a public IP. A Secrets Manager request can use an interface endpoint because private DNS returns a private IP. An external API request can use NAT because it matches the default route.
 
 The network becomes easier to reason about when you follow a specific destination instead of trying to memorize the whole architecture at once.
