@@ -234,12 +234,12 @@ flowchart LR
 
 Keep Subnet C's route to the IGW. Give Subnet A its own table with a default route to NAT; leave the database's Subnet B on its local-only table:
 
-| Subnet | Destination | Target |
-|---|---|---|
-| Private A | `10.0.0.0/20` | `local` |
-| Private A | `0.0.0.0/0` | NAT gateway |
-| Public C | `10.0.0.0/20` | `local` |
-| Public C | `0.0.0.0/0` | Internet gateway |
+| Subnet | Destination | Target | Meaning |
+|---|---|---|---|
+| Private A | `10.0.0.0/20` | `local` | Traffic to other VPC addresses stays inside the VPC |
+| Private A | `0.0.0.0/0` | NAT gateway | Other IPv4 traffic goes to NAT in public Subnet C |
+| Public C | `10.0.0.0/20` | `local` | Traffic to other VPC addresses stays inside the VPC |
+| Public C | `0.0.0.0/0` | Internet gateway | Other IPv4 traffic, including traffic forwarded by NAT, goes toward the internet |
 
 NAT translates addresses and tracks connections. The external API sees the NAT gateway's Elastic IP, and its replies return to the app through NAT.
 
@@ -249,33 +249,66 @@ An external host cannot use this NAT path to start an unsolicited connection to 
 
 ## 8. Reach S3 through a gateway endpoint
 
-Suppose the app now needs to read files from **Amazon S3**, AWS's object storage service. We can give it a path specifically to S3.
+Suppose the app now needs to read files from **Amazon S3**, AWS's object storage service. It could reach S3 through NAT, but we can give S3 traffic a dedicated path that does not need NAT or an internet gateway.
 
-A **VPC endpoint** provides a connection to a particular service without requiring an internet gateway or NAT for that connection.
+### 8.1. What is a gateway endpoint?
 
-First, separate two uses of “endpoint”:
+Suppose our VPC and a bucket named `bucket` are both in `us-west-2`. The app wants to read `report.csv`, so it sends an HTTPS request to `https://bucket.s3.us-west-2.amazonaws.com/report.csv`. The hostname identifies the bucket and Region; the path identifies the object. A bucket is a logical collection of objects, not a server with its own dedicated IP. See [S3 bucket hostnames](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html).
 
-- An **API endpoint** is the address you call, usually a hostname or URL.
-- A **VPC endpoint** is a networking resource you create to reach a service.
+Before connecting, the app needs an IP address for that hostname. Assuming the VPC uses AWS's default DNS configuration, the instance asks the **Amazon-provided DNS resolver**, also called Route 53 Resolver, to resolve the name. The resolver obtains the DNS answer and returns S3 service IP addresses. With the gateway endpoint path described here, these are **public S3 IP addresses**, not private addresses allocated from our subnet. The app connects to one of them on HTTPS port `443`. See [Amazon DNS](https://docs.aws.amazon.com/vpc/latest/userguide/AmazonDNS-concepts.html).
 
-For S3, create a **gateway endpoint** and associate it with Subnet A's route table. Remove Subnet A's default route to NAT for this example, leaving:
+The destination IP tells AWS's VPC routing infrastructure which route to use. Once we associate an S3 gateway endpoint with Subnet A's route table, that table contains a route for the Region's S3 address ranges. The resolved S3 IP matches this route, which is more specific than the default NAT route. AWS therefore carries the traffic through the **gateway endpoint path** to S3, without using NAT or the internet gateway. The destination IP is public, but the route keeps this connection on the AWS network. DNS supplies the address; the route table selects the path. See [AWS gateway endpoint routing](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
 
-| Destination | Target |
-|---|---|
-| `10.0.0.0/20` | `local` |
-| Regional S3 prefix list | S3 gateway endpoint |
+At S3, the request's hostname identifies `bucket` and its path identifies `report.csv`. S3 checks access permissions and handles finding and returning the object through its own internal infrastructure. Your VPC route gets the request to the S3 service; S3 handles the machines and storage behind it. Neither DNS nor your route table gives you the address of a particular disk or machine storing that object.
+
+The **gateway endpoint** is the VPC resource that makes this service-specific route available. It has an endpoint ID, such as `vpce-example`, and an access policy, but no subnet private IP, network interface (ENI), or server for you to manage. “Gateway” describes its role in providing a path out to S3. AWS implements that path in its managed network, and the route points to the endpoint ID rather than to a gateway machine's IP.
+
+### 8.2. Add the S3 route and keep NAT
+
+Create the S3 gateway endpoint in our VPC and select Subnet A's route table. AWS automatically adds the S3 route to that table. Keep the existing default route to NAT:
+
+| Destination | Target | Meaning |
+|---|---|---|
+| `10.0.0.0/20` | `local` | Traffic to VPC addresses stays inside the VPC |
+| Regional S3 prefix list | S3 gateway endpoint | Matching S3 traffic uses the VPC's endpoint |
+| `0.0.0.0/0` | NAT gateway | Other IPv4 traffic continues through NAT |
 
 A **prefix list** is a collection of IP ranges; AWS maintains this one for the service. Traffic matching it follows the endpoint route.
 
-With this table, the app can reach matching S3 destinations, but it can no longer call an arbitrary external API. If we keep a default route to NAT instead of removing it, the more specific S3 route takes precedence for matching traffic.
+To give another subnet the same path, associate its route table with this endpoint too. If two subnets share an associated route table, both already use its endpoint route. You do not need one gateway endpoint per subnet. See [S3 gateway endpoint route-table associations](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html#associate-route-tables-s3).
+
+The more specific S3 route takes precedence over the default NAT route for matching traffic. An external API still uses NAT. Adding the endpoint gives S3 its own path without removing the app's existing internet access.
 
 S3 has not moved into our subnet. The endpoint gives us a route to the AWS-managed service. Gateway endpoints support S3 and DynamoDB. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
 
-**So far:** the app can reach the database locally and S3 through the endpoint. Without its NAT route, it can no longer call the external API.
+**So far:** the app reaches the database locally, S3 through the VPC's gateway endpoint, and external APIs through NAT.
+
+### 8.3. Access a bucket in another Region
+
+Suppose the app remains in `us-west-2`, but now needs an object from a bucket in `us-east-1`. It calls that bucket's regional hostname, such as `bucket.s3.us-east-1.amazonaws.com`. DNS resolves the name to an S3 service IP for the destination Region. That address does not match the `us-west-2` S3 prefix list in our route table, so the default route to NAT takes over.
+
+```mermaid
+flowchart LR
+    subgraph west["VPC in us-west-2"]
+        app["App"]
+        endpoint["S3 gateway endpoint<br/>us-west-2 destinations"]
+        nat["NAT gateway"]
+        igw["Internet gateway"]
+        app -->|"Matches regional S3 route"| endpoint
+        app -->|"Other Region: default route"| nat
+        nat --> igw
+    end
+    endpoint --> localS3["S3 in us-west-2"]
+    igw --> remoteS3["S3 in us-east-1"]
+```
+
+The existing NAT and internet gateway provide this path; adding another S3 gateway endpoint in our VPC would not extend it to another Region. Gateway endpoints are regional, and their S3 routes cover the service in that Region. Although the cross-Region request uses the internet gateway, AWS documents that this S3 traffic stays on the AWS network. See [AWS gateway endpoint routing](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+
+The app still needs permission to access the remote bucket, and its network rules must allow the connection. If we removed NAT without providing another suitable path, the local gateway endpoint would continue to serve matching local-Region S3 traffic, but it would not make the remote bucket reachable.
 
 ## 9. Reach another service through a private IP
 
-Now the app needs to retrieve a password from **Secrets Manager**. This service uses a different kind of VPC endpoint: an **interface endpoint**.
+Now the app needs to retrieve a password from **Amazon Secrets Manager**, an AWS service for storing and retrieving secrets. It supports a different kind of VPC endpoint: an **interface endpoint**.
 
 An interface endpoint creates a virtual network interface, called an **ENI**, with a private IP in each selected subnet. Think of it as a private entry point to the service. The underlying connectivity technology is called **AWS PrivateLink**; gateway endpoints use a different mechanism.
 
@@ -295,11 +328,28 @@ Private DNS requires VPC DNS support and DNS hostnames to be enabled. The endpoi
 
 This also explains why a public destination IP does not always mean traffic goes through the internet. S3's hostname can resolve to public service IPs while the matching traffic follows the gateway endpoint route.
 
+### 9.1. Why use a gateway endpoint for S3? Is it about performance?
+
+**S3 supports both gateway and interface endpoints.** We chose a gateway endpoint for this example because the app is inside the VPC and needs same-Region S3 access. It gives us a simple route-based path with no additional gateway-endpoint charge. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
+
+The two designs connect to the service differently:
+
+| Design | What changes in your VPC | How traffic reaches the service |
+|---|---|---|
+| Gateway endpoint | A service-specific route is added to selected route tables | Matching service IP ranges use the endpoint route |
+| Interface endpoint | ENIs with private IPs are created in selected subnets | The app connects to those private IPs, usually through DNS |
+
+AWS offers gateway endpoints specifically for S3 and DynamoDB. Many other AWS services, including Secrets Manager and ECR, offer interface endpoints through PrivateLink. You choose from the endpoint types the service supports; you cannot turn an arbitrary service's interface endpoint into a gateway endpoint. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+
+**Do not read this as “storage needs a fast gateway; other APIs use slower ENIs.”** The AWS documentation describes different connectivity options, not a universal performance ranking or a performance-based reason for that service split. Interface endpoints have documented bandwidth limits and scaling behavior, so throughput-sensitive workloads should check those limits and measure their actual path. See [AWS PrivateLink quotas](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-limits-endpoints.html).
+
+For S3, the practical choice is usually about **where the client is and what connectivity it needs**. A gateway endpoint fits our in-VPC example. An S3 interface endpoint can also serve clients on premises through VPN or Direct Connect, which cannot use the VPC's S3 gateway endpoint directly. Interface endpoints incur endpoint charges. Both paths keep S3 traffic on the AWS network. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
+
 ## 10. Put the pieces together: pull a container image from ECR
 
-Keep the app in Subnet A with its S3 endpoint route and no NAT route. We want its EC2 instance to pull a private container image from **Amazon ECR**, AWS's container image registry, in the same Region.
+Keep the app in Subnet A with both its S3 endpoint route and its NAT route. We want its EC2 instance to pull a private container image from **Amazon ECR**, AWS's container image registry, in the same Region, using endpoints for the image pull while retaining NAT for other internet traffic.
 
-A typical EC2 image pull needs three service paths:
+A typical EC2 image pull through endpoints needs three service paths:
 
 | Needed for | Connection |
 |---|---|
@@ -309,7 +359,7 @@ A typical EC2 image pull needs three service paths:
 
 The endpoint service names are `com.amazonaws.<region>.ecr.api`, `com.amazonaws.<region>.ecr.dkr`, and `com.amazonaws.<region>.s3`.
 
-This is why “I created an ECR endpoint” may not be enough. One operation can involve several services. Each needs a working path and the necessary permissions.
+This is why “I created an ECR endpoint” may not be enough to keep the whole pull on endpoint paths. One operation can involve several services. Each needs a working path and the necessary permissions. NAT may provide a public service path where an endpoint is missing, but that traffic would then depend on NAT.
 
 Use private DNS for the ECR endpoints, allow HTTPS to their interfaces, and associate the S3 endpoint with the client's route table. The caller also needs permission to pull the image.
 
