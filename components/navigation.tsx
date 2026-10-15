@@ -26,8 +26,7 @@ export function Navigation({ entries, tags }: { entries: Entry[]; tags: { tag: s
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isTags = pathname === "/tags";
-  const isHelp = pathname === "/guides" || pathname.startsWith("/guides/");
-  const tree = buildTree(isHelp ? entries.filter(entry => entry.url === "/guides" || entry.url.startsWith("/guides/")) : entries);
+  const tree = buildTree(entries);
   const link = (url: string, title: string) => <Link href={url} aria-current={pathname === url ? "page" : undefined} onClick={() => setOpen(false)}>{title}</Link>;
   function branches(parent: Tree): React.ReactNode {
     return [...parent.children.entries()].map(([key, node]) => <li key={key}>
@@ -36,9 +35,9 @@ export function Navigation({ entries, tags }: { entries: Entry[]; tags: { tag: s
   }
   if (pathname === "/search") return <aside className="sidebar" aria-hidden="true" />;
   return <>
-    <button className="mobile-nav" aria-expanded={open} aria-controls="library-nav" onClick={() => setOpen(!open)}>{isTags ? "Browse tags" : isHelp ? "Browse help" : "Browse library"} <span>{open ? "−" : "+"}</span></button>
-    <nav id="library-nav" className={`sidebar ${open ? "is-open" : ""}`} aria-label={isTags ? "Tags" : isHelp ? "Help" : "Library"}>
-      <p className="eyebrow">{isTags ? "Tags" : isHelp ? "Help" : "Topics"}</p>
+    <button className="mobile-nav" aria-expanded={open} aria-controls="library-nav" onClick={() => setOpen(!open)}>{isTags ? "Browse tags" : "Browse library"} <span>{open ? "−" : "+"}</span></button>
+    <nav id="library-nav" className={`sidebar ${open ? "is-open" : ""}`} aria-label={isTags ? "Tags" : "Library"}>
+      <p className="eyebrow">{isTags ? "Tags" : "Topics"}</p>
       {isTags ? <ul className="sidebar-tags">{tags.map(({ tag, count }) => <li key={tag}>
         <a href={`#tag:${encodeURIComponent(tag)}`} onClick={() => setOpen(false)}><span>{tag}</span><span className="sidebar-tag-count">{count}</span></a>
       </li>)}</ul> : <ul className="nav-tree">{branches(tree)}</ul>}
