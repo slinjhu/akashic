@@ -50,8 +50,10 @@ $$
 
 ## Diagrams
 
-Diagrams include zoom controls and a Source button for inspecting their Mermaid
-definition. Their colors follow the selected light or dark appearance.
+Diagrams use the page's default font and text size. Wide diagrams scroll instead
+of scaling the text. Use Source to inspect the Mermaid definition, or Fullscreen
+for more room. Press Escape or Exit fullscreen to return to the page. Their colors
+follow the selected light or dark appearance.
 
 Use a fenced block with the language `mermaid`:
 

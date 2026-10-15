@@ -98,7 +98,7 @@ how the resulting elements appear and behave.
 | Tables | A scrollable container for narrower screens |
 | LaTeX equations | KaTeX, with bundled fonts |
 | Code blocks | Syntax highlighting and a Copy button |
-| Mermaid blocks | A diagram component with zoom and source controls |
+| Mermaid blocks | Default-size text, with source and fullscreen controls |
 | Relative Markdown links | Links to the corresponding app routes |
 | Images | Locally served assets with alt text |
 
@@ -119,7 +119,7 @@ browser APIs, or local state run in the browser:
 | `components/search.tsx` | Text matching, result lists, and tag filtering |
 | `components/theme.tsx` | System appearance and saved light/dark preferences |
 | `components/code-block.tsx` | Copying code to the clipboard |
-| `components/mermaid.tsx` | Rendering diagrams, zooming, and viewing their source |
+| `components/mermaid.tsx` | Rendering diagrams, fullscreen viewing, and inspecting their source |
 
 Search currently filters the library's searchable text in the browser. It
 matches query words against titles, tags, and note text, and can restrict results

@@ -47,8 +47,9 @@ notes in production. No database is required; notes remain editable Markdown.
 for equations. Raw HTML and executable MDX are not enabled. Relative `.md` links
 resolve to page URLs; images can live beside notes or in `docs/assets/`.
 
-Mermaid blocks render with a local JavaScript bundle and include zoom and source
-controls. Code blocks have a copy button. Add React components in `components/`
+Mermaid blocks render with a local JavaScript bundle at the page's default text
+size, with source and fullscreen controls. Wide diagrams scroll instead of
+scaling the text. Code blocks have a copy button. Add React components in `components/`
 and register them in the Markdown renderer to extend interactions. The app owns
 the layout and styling, without a documentation theme or template overrides.
 

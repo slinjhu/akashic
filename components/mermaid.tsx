@@ -9,11 +9,32 @@ let renderQueue = Promise.resolve();
 export function Diagram({ source }: { source: string }) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, "");
   const version = useRef(0);
+  const container = useRef<HTMLElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const fullscreenButton = useRef<HTMLButtonElement>(null);
   const { resolvedTheme } = useTheme();
   const [drawing, setDrawing] = useState<{ svg: string; width: number } | null>(null);
   const [error, setError] = useState("");
   const [showSource, setShowSource] = useState(false);
-  const [scale, setScale] = useState(1);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [placeholderHeight, setPlaceholderHeight] = useState(0);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const modal = dialog.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    modal?.showModal();
+    return () => {
+      modal?.close();
+      document.body.style.overflow = previousOverflow;
+      fullscreenButton.current?.focus({ preventScroll: true });
+    };
+  }, [fullscreen]);
+
+  function toggleFullscreen() {
+    if (!fullscreen) setPlaceholderHeight(container.current?.getBoundingClientRect().height ?? 0);
+    setFullscreen(!fullscreen);
+  }
   useEffect(() => {
     let cancelled = false;
     const renderId = `diagram-${id}-${++version.current}`;
@@ -42,14 +63,18 @@ export function Diagram({ source }: { source: string }) {
     });
     return () => { cancelled = true; };
   }, [source, id, resolvedTheme]);
-  return <figure className="diagram">
+  const content = <>
     <figcaption className="code-toolbar"><span>Mermaid diagram</span><div className="diagram-controls">
-      <button aria-label="Zoom out" onClick={() => setScale(Math.max(.5, scale - .25))}>−</button>
-      <button aria-label="Reset diagram zoom" onClick={() => setScale(1)}>{Math.round(scale * 100)}%</button>
-      <button aria-label="Zoom in" onClick={() => setScale(Math.min(3, scale + .25))}>+</button>
       <button aria-pressed={showSource} onClick={() => setShowSource(!showSource)}>{showSource ? "Diagram" : "Source"}</button>
+      <button ref={fullscreen ? undefined : fullscreenButton} aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"} aria-pressed={fullscreen} onClick={toggleFullscreen}>{fullscreen ? "Exit fullscreen" : "Fullscreen"}</button>
     </div></figcaption>
     {error && <p role="alert">{error}</p>}
-    {showSource || error ? <pre><code>{source}</code></pre> : drawing ? <div className="diagram-scroll"><div className="diagram-render" style={{ width: drawing.width * scale }} dangerouslySetInnerHTML={{ __html: drawing.svg }}/></div> : <p className="diagram-loading">Rendering diagram…</p>}
-  </figure>;
+    {showSource || error ? <pre><code>{source}</code></pre> : drawing ? <div className="diagram-scroll"><div className="diagram-render" style={{ width: drawing.width }} dangerouslySetInnerHTML={{ __html: drawing.svg }}/></div> : <p className="diagram-loading">Rendering diagram…</p>}
+  </>;
+  return <>
+    <figure className="diagram" ref={container} style={fullscreen ? { height: placeholderHeight } : undefined}>{!fullscreen && content}</figure>
+    <dialog className="diagram-fullscreen" ref={dialog} aria-label="Mermaid diagram fullscreen" onCancel={() => setFullscreen(false)}>
+      {fullscreen && <figure className="diagram">{content}</figure>}
+    </dialog>
+  </>;
 }
