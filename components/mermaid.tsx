@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { CopyButton, ToolbarIcon } from "./toolbar-controls";
 
 // Mermaid has global configuration; serialize rendering across diagrams and themes.
 let renderQueue = Promise.resolve();
@@ -65,8 +66,9 @@ export function Diagram({ source }: { source: string }) {
   }, [source, id, resolvedTheme]);
   const content = <>
     <figcaption className="code-toolbar"><span>Mermaid diagram</span><div className="diagram-controls">
-      <button aria-pressed={showSource} onClick={() => setShowSource(!showSource)}>{showSource ? "Diagram" : "Source"}</button>
-      <button ref={fullscreen ? undefined : fullscreenButton} aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"} aria-pressed={fullscreen} onClick={toggleFullscreen}>{fullscreen ? "Exit fullscreen" : "Fullscreen"}</button>
+      <CopyButton text={source} label="Copy Mermaid source" />
+      <button type="button" className="toolbar-icon-button" aria-label="Show source" title={showSource ? "Show diagram" : "Show source"} aria-pressed={showSource} onClick={() => setShowSource(!showSource)}><ToolbarIcon name="source" /></button>
+      <button type="button" className="toolbar-icon-button" ref={fullscreen ? undefined : fullscreenButton} aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"} title={fullscreen ? "Exit fullscreen" : "Enter fullscreen"} aria-pressed={fullscreen} onClick={toggleFullscreen}><ToolbarIcon name={fullscreen ? "collapse" : "expand"} /></button>
     </div></figcaption>
     {error && <p role="alert">{error}</p>}
     {showSource || error ? <pre><code>{source}</code></pre> : drawing ? <div className="diagram-scroll"><div className="diagram-render" style={{ width: drawing.width }} dangerouslySetInnerHTML={{ __html: drawing.svg }}/></div> : <p className="diagram-loading">Rendering diagram…</p>}
