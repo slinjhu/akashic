@@ -35,7 +35,11 @@ A working route does not grant permission. Permission does not create a route.
 
 ## 2. VPC, subnet, Availability Zone, and CIDR
 
-A VPC is regional and can contain subnets in multiple Availability Zones (AZs). Each subnet belongs to exactly one AZ. Resources in different subnets can communicate when routing and security rules permit; subnets are not automatically isolated from each other. See [AWS subnet concepts](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
+A VPC is regional and can contain subnets in multiple Availability Zones (AZs). Each subnet belongs to exactly one AZ. See [AWS subnet concepts](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
+
+**Subnets are not automatically isolated from each other:** placing two resources in different subnets does not, by itself, prevent them from communicating. By default, the VPC's `local` route provides a path between private IP addresses in its subnets. For example, an EC2 instance at `10.0.1.25` in subnet `10.0.1.0/24` can connect to an instance at `10.0.2.30` in subnet `10.0.2.0/24` when security groups and network ACLs allow the traffic and the destination application is listening on the requested port. This communication does not require a NAT gateway or internet gateway.
+
+A subnet defines an address range and an Availability Zone; it is not an automatic security barrier. To isolate workloads, configure explicit traffic restrictions, such as security-group or network-ACL rules. Likewise, a **private subnet** has no direct route to an internet gateway—it is not necessarily inaccessible from other subnets in the VPC.
 
 ```mermaid
 flowchart TB
