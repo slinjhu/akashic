@@ -435,49 +435,7 @@ For EC2, omitting a security group means AWS uses the VPC's default group. Its o
 
 **A path and permission are separate requirements.** Allowing HTTPS does not create a route. Creating an endpoint does not grant access to every resource behind it.
 
-## 11. Extend the design across Availability Zones
-
-Our example explains connectivity. To keep serving requests when an AZ fails, repeat the needed parts of the application in another AZ within the same VPC.
-
-A common production web layout uses at least two AZs, with a public subnet and a private application subnet in each:
-
-```mermaid
-flowchart TB
-    subgraph vpc["One VPC, one Region"]
-        subgraph az1["Availability Zone 1"]
-            subgraph public1["Public subnet"]
-                lb1["Load balancer<br/>Entry point in AZ 1"]
-            end
-            subgraph private1["Private subnet"]
-                app1["App instance 1"]
-            end
-        end
-        subgraph az2["Availability Zone 2"]
-            subgraph public2["Public subnet"]
-                lb2["Load balancer<br/>Entry point in AZ 2"]
-            end
-            subgraph private2["Private subnet"]
-                app2["App instance 2"]
-            end
-        end
-        lb1 --> app1
-        lb1 --> app2
-        lb2 --> app1
-        lb2 --> app2
-    end
-```
-
-The two entry points belong to one load balancer spanning both AZs. The arrows show how it can reach app instances in either AZ.
-
-A **load balancer** sends requests to healthy app instances. If one AZ becomes unavailable, the other must have enough capacity to keep serving requests. AWS's [production VPC example](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html) uses this layout with an Auto Scaling group to maintain application instances.
-
-The distinction is simple: **subnets provide places to run resources; redundant resources and failover provide availability.** Two subnets in the same AZ do not protect against an AZ outage. Putting the only app server in one AZ and the only database in another does not either: losing either one still breaks the application.
-
-Include dependencies in the design: the database needs replication and failover, and each surviving app instance needs working network paths. With the zonal NAT gateways used in our example, a common resilient layout gives each AZ its own NAT gateway instead of making both depend on one AZ.
-
-One subnet can be enough for a learning environment or a workload that accepts downtime. Choose the production layout based on availability needs; the goal is surviving failures, not reaching a particular subnet count.
-
-## 12. Trace any connection with the same questions
+## 11. Trace any connection with the same questions
 
 Once the pieces are familiar, follow one request from start to finish:
 
