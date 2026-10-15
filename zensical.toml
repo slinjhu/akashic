@@ -11,6 +11,7 @@ extra_javascript = [
 
 # Omitting nav lets the directory hierarchy define the sidebar automatically.
 [project.theme]
+custom_dir = "overrides"
 language = "en"
 features = ["navigation.indexes", "navigation.top", "search.highlight", "content.code.copy"]
 
