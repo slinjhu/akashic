@@ -156,9 +156,10 @@ npm start
 `.next/` contains intermediate build files. `npm start` uses `scripts/serve.mjs`
 to preview the exported files on port 8056. Rebuild after changing notes.
 
-`make publish` runs `scripts/publish.mjs`: it checks GitHub access, builds with
+`make publish` runs `scripts/publish.mjs`: it checks Git remote access, builds with
 the Pages base path, pushes the export to `gh-pages` using a temporary checkout,
-and configures Pages through the GitHub CLI. Next.js prefixes navigation links;
+and uses ordinary Git push authentication. Pages is configured once in the
+repository's web settings; no GitHub CLI is required. Next.js prefixes navigation links;
 the Markdown renderer explicitly prefixes local image URLs. See
 [publishing instructions](getting-started.md#publish-to-github-pages).
 

@@ -55,8 +55,8 @@ file server, with no Node.js runtime or database.
 
 ## Publish to GitHub Pages
 
-Install the GitHub CLI (`gh`), authenticate with an account that can manage this
-repository's Pages settings, and ensure Git can push to `origin`. Then run:
+Ensure Git can push to `origin`, then run the command below. Publishing uses the
+same SSH alias and credentials as `git push`; the GitHub CLI is not needed.
 
 ```sh
 make publish
@@ -64,15 +64,19 @@ make publish
 
 This builds the current working files and pushes only the generated site to the
 `gh-pages` branch. It keeps deployment history, leaves the source branch alone,
-adds `.nojekyll`, and configures Pages to serve the branch root. GitHub's
-deployment runs asynchronously after the push. All notes and supported assets
+and adds `.nojekyll`. All notes and supported assets
 under `docs/` are included, including uncommitted local edits.
 
 For `slinjhu/akashic`, the default URL is <https://slinjhu.github.io/akashic/>.
-The publish command determines the project path from `origin` and uses an
-existing custom domain if configured. If `gh` reports a 404, check `gh auth status`
-and select an account with access to the repository. See
+After the first push, open the repository's **Settings → Pages**. Select
+**Deploy from a branch**, choose **gh-pages** and **/ (root)**, and save.
+This is a one-time setup; subsequent `make publish` runs trigger deployment
+automatically. Deployment runs asynchronously after the push. See
 [GitHub Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+
+The publish command determines the project path from `origin`. If using a custom
+domain, configure it in Pages settings and pass `PAGES_DOMAIN=notes.example.com`
+on every publish. This builds for the domain root and writes a `CNAME` file.
 
 To build and preview the project-path version without publishing:
 
