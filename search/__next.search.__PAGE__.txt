@@ -1,0 +1,1409 @@
+1:"$Sreact.fragment"
+2:"/akashic/_next/static/chunks/38y2-2-4i7a0r.js"
+3:I[2779,["$2"],"Theme"]
+4:I[22016,["$2"],""]
+5:I[80100,["$2"],"TopNavigation"]
+6:I[2779,["$2"],"ThemeToggle"]
+7:I[13474,["$2"],"Navigation"]
+8:I[39756,["$2"],"default"]
+9:I[37457,["$2"],"default"]
+10:"$Sreact.suspense"
+11:"/akashic/_next/static/chunks/3lf24fbvbq_c8.js"
+12:I[57477,["$2","$11"],"Search"]
+1c:"ViewportBoundary"
+1d:I[97367,["$2"],"$1c"]
+1e:"MetadataBoundary"
+1f:I[97367,["$2"],"$1e"]
+:HL["/akashic/_next/static/chunks/01d6euky2o51x.css","style"]
+b:X
+e:X
+e:C
+13:T1d06,Architecture
+
+Akashic has three main layers: Markdown content, a generated content index,
+and a Next.js application. Notes stay in portable text files, while the app
+controls their layout, rendering, and interactions. Git records their history.
+
+flowchart TD
+    docs["docs/<br/>Markdown notes and assets"] --> generator["Content generator<br/>scripts/content.mjs"]
+    generator --> index[".generated/library.json<br/>Metadata, text, and headings"]
+    generator --> assets["public/content/<br/>Images and other assets"]
+    index --> pages["Next.js pages and layout"]
+    pages --> renderer["Markdown-to-React renderer"]
+    renderer --> reader["Reading page"]
+    assets --> reader
+    reader --> interactions["Browser interactions<br/>Search, themes, diagrams, and copy"]
+
+Content and metadata
+
+The docs/ directory is the source of truth. Each note can have YAML front matter
+for its title, tags, and optional description. Directories provide the subject
+hierarchy; tags connect ideas across subjects.
+
+Source filePage URLRoledocs/index.md/Library overviewdocs/aws/networking.md/aws/networkingA knowledge notedocs/akashic/index.md/akashicA subject overviewdocs/tags.md/tagsIntroduction to the generated tag index
+
+The app keeps existing relative Markdown links usable. For example, a link from
+this page to writing-notes.md becomes /akashic/writing-notes. Images may
+live beside their notes or in docs/assets/.
+
+Preparing the content
+
+scripts/content.mjs scans the Markdown files and prepares data for the app. It:
+
+Parses and validates front matter.Assigns a URL to each note and checks for conflicting routes.Extracts headings and anchor IDs for the table of contents.Extracts plain text for search.Copies supported assets into public/content/.Writes the note collection to .generated/library.json.
+
+lib/content.ts imports that generated index and exposes the notes, navigation
+entries, search data, unique tags, and per-tag note counts. Both .generated/ and public/content/
+are disposable outputs excluded from Git. Edit the source files in docs/;
+the next generation step recreates the outputs.
+
+Pages and shared layout
+
+app/layout.tsx defines the shared header, sidebar, appearance controls, and
+footer. app/[[...slug]]/page.tsx handles note paths of any depth: it finds the
+matching note and assembles its tags, content, and table of contents.
+
+The header has Library, Tags, and Search tabs. Library shows the topic tree;
+Tags shows tag counts with links to sections of the tag index; Search leaves
+the sidebar empty. The Akashic guides are ordinary Markdown pages in Library.
+The table of contents includes heading levels 2 through 4, indented by depth.
+
+The same page component adds the collection cards on the Library overview and the
+grouped listings on the tag index. /search has its own route, which reads the
+query and selected tag from the URL in the browser.
+
+All note routes are enumerated with generateStaticParams; unknown note routes
+are not generated on demand. Next.js uses output: "export" and trailing-slash
+URLs to produce an index.html per route. Search reads URL parameters in a
+client component behind a Suspense boundary and filters the bundled note data.
+No request-time server is needed.
+
+Markdown rendering
+
+components/markdown.tsx owns the rendering pipeline. react-markdown parses
+the Markdown, plugins add syntax support, and our React components determine
+how the resulting elements appear and behave.
+
+ContentHow it rendersHeadings, paragraphs, and listsStandard HTML elements styled by the appTables, task lists, and footnotesGitHub-flavored Markdown supportTablesA scrollable container for narrower screensLaTeX equationsKaTeX, with bundled fontsCode blocksSyntax highlighting for the common language set plus Dockerfile, and a Copy buttonMermaid blocksDefault-size text, with source and fullscreen controlsRelative Markdown linksLinks to the corresponding app routesImagesLocally served assets with alt text
+
+This gives us control over rendering without maintaining a Markdown parser.
+Raw HTML and executable MDX are currently disabled. New interactions can be
+implemented as React components and connected to the renderer, following the
+same approach as Mermaid blocks. Math and diagram dependencies are bundled
+locally rather than fetched from a CDN.
+
+Server and browser responsibilities
+
+Most page content renders at build time. Components that need user input,
+browser APIs, or local state run in the browser:
+
+ComponentResponsibilitycomponents/top-navigation.tsxLibrary, Tags, and Search tabs and their active statecomponents/navigation.tsxTopic tree or tag counts based on the tab, active links, and the mobile menucomponents/search.tsxText matching, result lists, and tag filteringcomponents/theme.tsxSystem appearance and saved light/dark preferencescomponents/code-block.tsxCopying code to the clipboardcomponents/mermaid.tsxRendering diagrams, fullscreen viewing, and inspecting their source
+
+Search currently filters the library's searchable text in the browser. It
+matches query words against titles, tags, and note text, and can restrict results
+to a selected tag. This keeps the setup small for a personal library. A much
+larger collection could use a dedicated search index or server endpoint later.
+
+Development and hot reload
+
+With Node.js 22 or newer installed, run:
+
+make env
+make dev
+
+make env installs the locked dependencies with npm ci. make dev starts
+scripts/dev.mjs, which generates the content index, watches docs/, and starts
+Next.js at http://127.0.0.1:8056.
+
+flowchart LR
+    save["Save a Markdown file"] --> watch["Content watcher"]
+    watch --> generate["Regenerate the index"]
+    generate --> refresh["Next.js detects the changed import"]
+    refresh --> browser["Browser updates"]
+
+Adding, editing, or deleting notes updates the content, navigation, and search
+data. App code also uses Next.js development refresh. Stop the server with
+Ctrl+C to release port 8056.
+
+For validation and a preview of the static export:
+
+make check
+make build
+npm start
+
+make check runs tests and TypeScript checks. make build runs
+scripts/build.mjs, regenerates content, and exports the site to out/;
+.next/ contains intermediate build files. npm start uses scripts/serve.mjs
+to preview the exported files on port 8056. Rebuild after changing notes.
+
+make publish runs scripts/publish.mjs: it checks Git remote access, builds with
+the Pages base path, pushes the export to gh-pages using a temporary checkout,
+and uses ordinary Git push authentication. Pages is configured once in the
+repository's web settings; no GitHub CLI is required. Next.js prefixes navigation links;
+the Markdown renderer explicitly prefixes local image URLs. See
+publishing instructions.
+
+Where to extend the app
+
+ChangeMain file or directoryAdd knowledgedocs/Adjust the reusable note structuretemplates/note.mdChange typography, spacing, or colorsapp/globals.cssChange the shared application layoutapp/layout.tsxChange tag placement or the table of contentsapp/[[...slug]]/page.tsxCustomize Markdown elementscomponents/markdown.tsxAdd an interactive widgetcomponents/, then connect it to the rendererAdd metadata processing or indexing behaviorscripts/content.mjsChange relative-link resolutionlib/paths.mjs
+
+The current app has no database, editing API, or browser-based note editor.
+Markdown files provide storage, Git provides history, and Next.js provides the
+reading and interaction layer.14:T1342,Getting started with Akashic
+
+A Markdown-first personal knowledge library built with Next.js, React, and TypeScript.
+
+Preview locally
+
+Install Node.js 22 or newer, then run these commands from the repository root:
+
+make env
+make dev
+
+Open http://127.0.0.1:8056. make env runs npm ci using the lockfile.
+make dev watches both app code and docs/: saved notes, added or deleted pages,
+metadata, and images update automatically. Stop the server with Ctrl+C.
+
+Write a note
+
+Copy templates/note.md into a subject folder under docs/.Set its title, tags, and optional description, then write the content.Add an index.md to introduce a subject when useful.
+
+Navigation follows folders automatically; no navigation list needs updating.
+Use Library for the topic tree, Tags for the grouped tag index, and Search for
+titles, tags, and note text. On Tags, the sidebar lists tags with note counts;
+click one to scroll to its section. Search currently has no sidebar content.
+These Akashic guides live in Library alongside other notes.
+
+Tags appear above the title unless the note sets hide: [tags]. The appearance
+button shows the current mode and cycles System → Light → Dark → System.
+System is the default, and the choice is saved. Dates belong in Git history.
+See the writing guide for equations, Mermaid
+diagrams, images, plots, and links.
+
+Build
+
+make check
+make build
+npm start
+
+make check runs tests and TypeScript checks. make build exports the site to
+out/, containing HTML, CSS, JavaScript, and assets. npm start previews those
+files on port 8056; use PORT=8057 npm start if the development server is already
+running. Rebuild after changing notes. Production hosting needs only a static
+file server, with no Node.js runtime or database.
+
+Publish to GitHub Pages
+
+Ensure Git can push to origin, then run the command below. Publishing uses the
+same SSH alias and credentials as git push; the GitHub CLI is not needed.
+
+make publish
+
+This builds the current working files and pushes only the generated site to the
+gh-pages branch. It keeps deployment history, leaves the source branch alone,
+and adds .nojekyll. All notes and supported assets
+under docs/ are included, including uncommitted local edits.
+
+For slinjhu/akashic, the default URL is https://slinjhu.github.io/akashic/.
+After the first push, open the repository's Settings → Pages. Select
+Deploy from a branch, choose gh-pages and / (root), and save.
+This is a one-time setup; subsequent make publish runs trigger deployment
+automatically. Deployment runs asynchronously after the push. See
+GitHub Pages publishing sources.
+
+The publish command determines the project path from origin. If using a custom
+domain, configure it in Pages settings and pass PAGES_DOMAIN=notes.example.com
+on every publish. This builds for the domain root and writes a CNAME file.
+
+To build and preview the project-path version without publishing:
+
+NEXT_PUBLIC_BASE_PATH=/akashic make build
+npm start
+
+The preview serves it at http://127.0.0.1:8056/akashic/. A plain make build
+exports for the domain root. The deployment path is fixed at build time.
+
+Rendering and interaction
+
+components/markdown.tsx owns the Markdown-to-React rendering pipeline. It uses
+react-markdown, GFM tables/task lists/footnotes, syntax highlighting, and KaTeX
+for equations. Raw HTML and executable MDX are not enabled. Relative .md links
+resolve to page URLs; images can live beside notes or in docs/assets/.
+
+Mermaid blocks render with a local JavaScript bundle at the page's default text
+size, with source and fullscreen controls. Wide diagrams scroll instead of
+scaling the text. Code blocks have a copy button. Add React components in components/
+and register them in the Markdown renderer to extend interactions. The app owns
+the layout and styling, without a documentation theme or template overrides.
+
+Math fonts, syntax highlighting, and Mermaid are bundled locally, with no CDN
+dependency. scripts/content.mjs validates front matter, indexes headings and
+notes, and copies supported assets into public/content/. Its generated JSON
+feeds build-time page rendering and browser search. Search query parameters are
+read in the browser. /search is reserved for the app;
+docs/tags.md supplies the introduction to the generated /tags index.
+
+Layout
+
+app/                  Next.js routes, layout, and styles
+components/           Markdown rendering and interactive components
+lib/                  Content types and relative-link resolution
+scripts/              Content indexing and development watcher
+tests/                Content and path regression tests
+docs/                 Notes, subject indexes, and assets
+templates/note.md      Reusable note template (not published)
+.generated/           Generated content index (ignored)
+public/content/       Generated copies of note assets (ignored)
+out/                  Static site ready for hosting (ignored)
+package-lock.json     Locked Node.js dependencies15:Tf78,Writing notes
+
+Organize by subject
+
+Use paths such as docs/mathematics/linear-algebra/eigenvectors.md. Add an
+index.md within each folder when you want a subject overview. The sidebar follows
+the folder hierarchy automatically. Use tags to connect notes across subjects.
+
+Metadata
+
+Begin each note with YAML front matter. Use title and tags; description is
+optional. Reuse existing tag spellings: tags are case-sensitive, so Docker
+and docker would create separate entries.
+Git history records when content changes, so notes do not need date fields.
+
+---
+title: Eigenvectors
+description: Directions preserved by a linear transformation.
+tags:
+  - mathematics
+  - linear-algebra
+---
+
+Copy templates/note.md from the repository root as a starting point. Templates
+are outside docs/ so they do not appear in the published site or search results.
+
+Tags normally appear above the page title. Add hide: [tags] to front matter
+to hide that row while keeping the note in tag listings and search filters.
+
+Headings and section numbers
+
+Use one # heading for the page title, then ##, ###, and #### for sections,
+subsections, and sub-subsections. These three levels appear in the table of
+contents with matching indentation. Deeper headings still render in the page
+but are not included in the table of contents.
+
+Section numbers are part of the Markdown text, not automatic counters:
+
+## 1. Primer
+### 1.1. Build an image
+#### 1.1.1. Name the image
+## 2. Large images
+
+Update those numbers when reorganizing a note. Heading links are generated from
+the heading text, so changing a heading or its number also changes its anchor.
+
+Code blocks
+
+Give fenced code blocks a language such as python, sh, json, or
+dockerfile to enable syntax highlighting. The renderer supports its common
+language set plus Dockerfile; unknown languages remain plain text. Unlabelled
+blocks are not automatically detected. Each code block has a Copy button.
+
+Equations
+
+Use $...$ for inline math, such as A\mathbf{v} = \lambda\mathbf{v}.
+Use $$ on separate lines for display equations:
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
+
+\int_0^1 x^2\,dx = \frac{1}{3}
+
+Diagrams
+
+Diagrams use the page's default font and text size. Wide diagrams scroll instead
+of scaling the text. Use Source to inspect the Mermaid definition, or Fullscreen
+for more room. Press Escape or Exit fullscreen to return to the page. Their colors
+follow the selected light or dark appearance.
+
+Use a fenced block with the language mermaid:
+
+```mermaid
+flowchart LR
+  Learn --> Capture --> Connect --> Revisit
+  Revisit --> Learn
+```
+
+flowchart LR
+  Learn --> Capture --> Connect --> Revisit
+  Revisit --> Learn
+
+Images and plots
+
+Store images in docs/assets/images/ or next to the note that uses them. Embed
+them with a relative path and meaningful alt text:
+
+![An example linear plot](../assets/images/example-plot.svg)
+
+An example linear plot
+
+For Python plots, export an SVG or PNG and embed it the same way. For example,
+in a separate environment with Matplotlib installed:
+
+from pathlib import Path
+import matplotlib.pyplot as plt
+
+output = Path("docs/assets/images/my-plot.svg")
+output.parent.mkdir(parents=True, exist_ok=True)
+fig, ax = plt.subplots()
+ax.plot([0, 1, 2], [0, 1, 2])
+fig.savefig(output, bbox_inches="tight")
+plt.close(fig)
+
+Link ideas and sources
+
+Use relative Markdown links, such as [Akashic](index.md), to connect notes.
+Link sources near the claims they support; a Sources section can also collect
+references for further reading.
+
+Find notes
+
+Use the Library tab's sidebar for the subject hierarchy and Search for text.
+The Tags tab groups related notes across subjects. Its sidebar
+shows note counts and jumps to each tag's section.
+
+Preview changes
+
+Run make dev and open http://127.0.0.1:8056. Saving a Markdown file updates
+the page, navigation, and search index automatically. Code blocks include a Copy
+button, and the Appearance icon toggle lets you follow the system or choose light or
+dark mode.16:T7201,AWS networking
+
+Start with a network that has no internet connection. Put a server inside it. Then add only what that server needs to communicate.
+
+We'll use one example throughout: a VPC with address range 10.0.0.0/20. These notes cover ordinary regional VPCs and IPv4; the addresses are illustrative.
+
+1. Start with an empty VPC
+
+A VPC (Virtual Private Cloud) is your own logically isolated network in an AWS Region. Think of it as the boundary around the network you are building.
+
+Give it an address range:
+
+flowchart TB
+    vpc["VPC: 10.0.0.0/20<br/>No servers yet<br/>No internet connection"]
+
+For this example, we deliberately start without an internet gateway or connections to other networks. AWS's default VPC and setup wizards may already include internet connectivity, so they may not look like this starting point. See AWS internet gateway documentation.
+
+So far: we have a network boundary and an address pool. We have not created a path to the internet.
+
+2. Understand the address range: CIDR
+
+10.0.0.0/20 is CIDR notation, a compact way to describe a range of IP addresses. Each number between the dots is an octet: a group of 8 bits. Four octets make a 32-bit IPv4 address.
+
+---
+config:
+  themeCSS: |
+    .packetBlock:nth-of-type(1) { fill: rgba(96, 165, 250, 0.22); }
+    .packetBlock:nth-of-type(2) { fill: rgba(52, 211, 153, 0.22); }
+  packet:
+    showBits: false
+    paddingX: 0
+    bitWidth: 22
+    rowHeight: 64
+---
+packet
+0-19: "Network ID — 20 fixed bits"
+20-31: "Host ID — 12 variable bits"
+
+/20 means 20 fixed network bits, leaving 32 − 20 = 12 variable host bits. It fixes the first two octets (10.0) and the first four bits of the third octet. The third octet can range from 0 to 15, and the last from 0 to 255: the full range is 10.0.0.0 through 10.0.15.255.
+
+The larger the number after /, the fewer bits can vary—and the smaller the address pool:
+
+ExampleFixed partPart that can varyTotal addresses10.0.0.0/20First 20 bitsLast 12 bits4,09610.0.1.0/24First 24 bits: 10.0.1Last number25610.0.1.25/32All 32 bitsNone1
+
+The /24 and /32 boundaries line up with the dots because they are multiples of 8. Our /20 boundary falls inside the third octet. The rule is always the same: /n fixes the first n bits, leaving 2^(32 − n) total addresses.
+
+For now, our /20 is the VPC's address pool. Next, we'll take a smaller /24 range from it for a subnet.
+
+3. Add a subnet and a server
+
+A subnet takes a smaller address range from the VPC. This is where you place a server, such as an EC2 instance, AWS's virtual machine.
+
+flowchart TB
+    subgraph vpc["VPC: 10.0.0.0/20"]
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+        end
+    end
+
+10.0.1.0/24 covers 10.0.1.0 through 10.0.1.255. AWS reserves some addresses in a subnet, so not every address is available for servers.
+
+A VPC belongs to one Region. Each subnet belongs to exactly one Availability Zone (AZ) within that Region. A VPC can contain many subnets, including several in the same AZ or subnets in different AZs. See AWS subnet concepts.
+
+An AZ is one or more data centers with separate power and networking infrastructure. Its purpose is failure isolation: a problem in one AZ is less likely to affect another. AZs within a Region have fast network connections so an application can run across them. See AWS Availability Zones.
+
+We start with one subnet to learn the pieces. For a production application that must survive an AZ outage, we'll need subnets and working copies of the application in multiple AZs. Creating extra subnets alone does not create those copies.
+
+So far: the app has an address inside our network. It still has no internet path.
+
+4. Add a second subnet: how does traffic find its way?
+
+Put a database in another subnet:
+
+flowchart LR
+    subgraph vpc["VPC: 10.0.0.0/20"]
+        direction LR
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+        end
+        subgraph subnetB["Subnet B: 10.0.2.0/24"]
+            database["Database<br/>10.0.2.30"]
+        end
+        app -->|"Local route"| database
+    end
+
+When the app connects to 10.0.2.30, AWS needs to know where to send the traffic. A route table supplies that answer.
+
+Read each route as: “For this destination range, send traffic to this target.” Our starting table has one route:
+
+DestinationTargetMeaning10.0.0.0/20localKeep traffic for this VPC inside this VPC
+
+The database address falls within that range, so the app has a local path to it. This connection stays inside the VPC.
+
+Each subnet uses one subnet route table at a time. Subnets can share a table; without an explicit association, a subnet uses the VPC's main table. AWS creates a local route for the VPC's address range. See AWS subnet route tables.
+
+Separate subnets do not automatically block communication. A subnet divides addresses and determines placement. Traffic restrictions are a separate concern.
+
+5. Add permission to use the path
+
+A route answers “Where does traffic go?” A security group answers “Is this traffic allowed?”
+
+For the app to connect to the database, we need both:
+
+A path to the database's private IP, supplied here by the local route.Security rules allowing the connection: app outbound traffic and database inbound traffic on the database port.
+
+For example, the database's security group could allow inbound TCP 5432 from the app's security group. A port identifies the service receiving a connection; PostgreSQL commonly listens on port 5432. The database must actually be running and listening there.
+
+Security groups contain allow rules, rather than explicit deny rules.
+
+5.1. What does “stateful” mean? Can traffic go both ways?
+
+Traffic can flow both ways within an allowed connection. Permission to start a new connection is a separate question.
+
+Suppose the app starts a database connection on TCP port 5432:
+
+sequenceDiagram
+    participant App as App: 10.0.1.25
+    participant DB as Database: 10.0.2.30
+    App->>DB: Start connection to port 5432
+    Note over App,DB: Requires app outbound and database inbound permission
+    DB-->>App: Return traffic on the allowed connection
+    Note over App,DB: Security groups automatically allow this return traffic
+
+The security groups track the connection. The database's replies are allowed even without a matching outbound rule on its security group, and the app can receive those replies without a matching inbound rule on its security group. This connection tracking is what stateful means. See AWS security groups.
+
+Now suppose the database tries to start a separate connection to a service running on the app. That is not a reply. It needs database outbound permission and app inbound permission for that new connection.
+
+TrafficWhat the security groups requireApp starts a connection to the databaseApp outbound and database inbound rules must allow itDatabase sends replies on that connectionAutomatically allowed as return trafficDatabase starts a separate connection to the appDatabase outbound and app inbound rules must allow it
+
+The same principle applies when the app calls an external API: its response can return without an inbound security-group rule specifically allowing it. This automatic permission applies to security groups; it does not create a missing route or bypass other network filters.
+
+There is also a subnet-level filter called a network ACL. We'll assume the default allow-all ACL for our example and return to it later.
+
+So far: the app and database can communicate privately when the rules allow it. Neither needs internet access for this connection.
+
+6. Add an internet gateway: public versus private subnets
+
+Suppose we want to add a web server that visitors can reach from the internet. Keep the app and database where they are, and add Subnet C for the web server.
+
+An internet gateway (IGW) connects a VPC to the internet. Attach one to the VPC and give Subnet C a route to it. This makes Subnet C public; Subnets A and B keep their local-only routes:
+
+flowchart LR
+    subgraph vpc["VPC: 10.0.0.0/20"]
+        direction LR
+        subgraph subnetA["Private subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+        end
+        subgraph subnetB["Private subnet B: 10.0.2.0/24"]
+            database["Database<br/>10.0.2.30"]
+        end
+        subgraph subnetC["Public subnet C: 10.0.3.0/24"]
+            web["Web server<br/>Private IP: 10.0.3.40<br/>Public IPv4 address assigned"]
+        end
+        igw["Internet gateway<br/>Attached to the VPC"]
+        app -->|"Local route"| database
+        web <-->|"Subnet C route: 0.0.0.0/0 to IGW"| igw
+    end
+    igw <--> internet["Internet"]
+
+The IGW attaches to the VPC, not to an individual subnet. The arrows show the web server's internet path; security rules still control which connections are allowed.
+
+Subnet C's route table now contains:
+
+DestinationTargetMeaning10.0.0.0/20localVPC destinations stay local0.0.0.0/0Internet gatewaySend other IPv4 traffic toward the internet
+
+0.0.0.0/0 means all IPv4 addresses. It acts as the fallback because routing chooses the most specific matching range. The database's 10.0.2.30 address still matches the more specific local route.
+
+Subnet C is now a public subnet because it has a direct route to the IGW. Keep Subnets A and B on their local-only table, and they remain private.
+
+Subnet descriptionWhat its routes meanPublicHas a direct route to an internet gatewayPrivateHas no direct route to an internet gatewayIsolatedHas no routes to destinations outside the VPC
+
+Our local-only Subnets A and B are isolated as well as private. A private subnet can gain other connections later without becoming public. See AWS subnet types.
+
+To make the web server reachable, give it a public IPv4 address and allow its web port in its security group. It keeps its private address too: the IGW maps between the two addresses. The web application must be listening on that port. See AWS internet gateway documentation.
+
+The distinction: “public” describes a subnet's route. It does not mean every resource in it is reachable from the internet. Attaching an IGW alone also does not make all subnets public.
+
+7. Keep the app private, but let it call the internet
+
+Now the app at 10.0.1.25 needs to call an external API. We want to keep it in private Subnet A with only its private IP.
+
+Add a public NAT gateway to public Subnet C. NAT means Network Address Translation: it lets the app use a shared outward-facing address. This example uses a zonal NAT gateway with an Elastic IP, a public IPv4 address allocated to your AWS account.
+
+flowchart LR
+    subgraph vpc["VPC"]
+        subgraph private["Private subnet A"]
+            app["App: 10.0.1.25<br/>Private IP only"]
+        end
+        subgraph public["Public subnet C"]
+            nat["Public NAT gateway"]
+        end
+        igw["Internet gateway"]
+    end
+    app --> nat --> igw --> internet["External API"]
+
+Keep Subnet C's route to the IGW. Give Subnet A its own table with a default route to NAT; leave the database's Subnet B on its local-only table:
+
+SubnetDestinationTargetMeaningPrivate A10.0.0.0/20localTraffic to other VPC addresses stays inside the VPCPrivate A0.0.0.0/0NAT gatewayOther IPv4 traffic goes to NAT in public Subnet CPublic C10.0.0.0/20localTraffic to other VPC addresses stays inside the VPCPublic C0.0.0.0/0Internet gatewayOther IPv4 traffic, including traffic forwarded by NAT, goes toward the internet
+
+NAT translates addresses and tracks connections. The external API sees the NAT gateway's Elastic IP, and its replies return to the app through NAT.
+
+An external host cannot use this NAT path to start an unsolicited connection to the app. The app can initiate a connection and receive its responses. See AWS NAT gateways.
+
+So far: the app can call the internet while its subnet remains private. Its default route points to NAT, not directly to the IGW.
+
+8. Reach S3 through a gateway endpoint
+
+Suppose the app now needs to read files from Amazon S3, AWS's object storage service. It could reach S3 through NAT, but we can give S3 traffic a dedicated path that does not need NAT or an internet gateway.
+
+8.1. What is a gateway endpoint?
+
+Suppose our VPC and a bucket named bucket are both in us-west-2. The app wants to read report.csv, so it sends an HTTPS request to https://bucket.s3.us-west-2.amazonaws.com/report.csv. The hostname identifies the bucket and Region; the path identifies the object. A bucket is a logical collection of objects, not a server with its own dedicated IP. See S3 bucket hostnames.
+
+Before connecting, the app needs an IP address for that hostname. Assuming the VPC uses AWS's default DNS configuration, the instance asks the Amazon-provided DNS resolver, also called Route 53 Resolver, to resolve the name. The resolver obtains the DNS answer and returns S3 service IP addresses. With the gateway endpoint path described here, these are public S3 IP addresses, not private addresses allocated from our subnet. The app connects to one of them on HTTPS port 443. See Amazon DNS.
+
+The destination IP tells AWS's VPC routing infrastructure which route to use. Once we associate an S3 gateway endpoint with Subnet A's route table, that table contains a route for the Region's S3 address ranges. The resolved S3 IP matches this route, which is more specific than the default NAT route. AWS therefore carries the traffic through the gateway endpoint path to S3, without using NAT or the internet gateway. The destination IP is public, but the route keeps this connection on the AWS network. DNS supplies the address; the route table selects the path. See AWS gateway endpoint routing.
+
+At S3, the request's hostname identifies bucket and its path identifies report.csv. S3 checks access permissions and handles finding and returning the object through its own internal infrastructure. Your VPC route gets the request to the S3 service; S3 handles the machines and storage behind it. Neither DNS nor your route table gives you the address of a particular disk or machine storing that object.
+
+The gateway endpoint is the VPC resource that makes this service-specific route available. It has an endpoint ID, such as vpce-example, and an access policy, but no subnet private IP, network interface (ENI), or server for you to manage. “Gateway” describes its role in providing a path out to S3. AWS implements that path in its managed network, and the route points to the endpoint ID rather than to a gateway machine's IP.
+
+8.2. Add the S3 route and keep NAT
+
+Create the S3 gateway endpoint in our VPC and select Subnet A's route table. AWS automatically adds the S3 route to that table. Keep the existing default route to NAT:
+
+DestinationTargetMeaning10.0.0.0/20localTraffic to VPC addresses stays inside the VPCRegional S3 prefix listS3 gateway endpointMatching S3 traffic uses the VPC's endpoint0.0.0.0/0NAT gatewayOther IPv4 traffic continues through NAT
+
+A prefix list is a collection of IP ranges; AWS maintains this one for the service. Traffic matching it follows the endpoint route.
+
+To give another subnet the same path, associate its route table with this endpoint too. If two subnets share an associated route table, both already use its endpoint route. You do not need one gateway endpoint per subnet. See S3 gateway endpoint route-table associations.
+
+The more specific S3 route takes precedence over the default NAT route for matching traffic. An external API still uses NAT. Adding the endpoint gives S3 its own path without removing the app's existing internet access.
+
+S3 has not moved into our subnet. The endpoint gives us a route to the AWS-managed service. Gateway endpoints support S3 and DynamoDB. See AWS gateway endpoints.
+
+So far: the app reaches the database locally, S3 through the VPC's gateway endpoint, and external APIs through NAT.
+
+8.3. Access a bucket in another Region
+
+Suppose the app remains in us-west-2, but now needs an object from a bucket in us-east-1. It calls that bucket's regional hostname, such as bucket.s3.us-east-1.amazonaws.com. DNS resolves the name to an S3 service IP for the destination Region. That address does not match the us-west-2 S3 prefix list in our route table, so the default route to NAT takes over.
+
+flowchart LR
+    subgraph west["VPC in us-west-2"]
+        app["App"]
+        endpoint["S3 gateway endpoint<br/>us-west-2 destinations"]
+        nat["NAT gateway"]
+        igw["Internet gateway"]
+        app -->|"Matches regional S3 route"| endpoint
+        app -->|"Other Region: default route"| nat
+        nat --> igw
+    end
+    endpoint --> localS3["S3 in us-west-2"]
+    igw --> remoteS3["S3 in us-east-1"]
+
+The existing NAT and internet gateway provide this path; adding another S3 gateway endpoint in our VPC would not extend it to another Region. Gateway endpoints are regional, and their S3 routes cover the service in that Region. Although the cross-Region request uses the internet gateway, AWS documents that this S3 traffic stays on the AWS network. See AWS gateway endpoint routing.
+
+The app still needs permission to access the remote bucket, and its network rules must allow the connection. If we removed NAT without providing another suitable path, the local gateway endpoint would continue to serve matching local-Region S3 traffic, but it would not make the remote bucket reachable.
+
+8.4. Control access with a gateway endpoint policy
+
+The S3 route selects traffic by destination IP range, so it can carry requests for many buckets in the Region. An endpoint policy narrows what callers may do through that path. It is attached to the gateway endpoint and can restrict the calling identity, S3 actions, and resources. The default policy places no additional restriction on endpoint access; it does not make buckets public or grant callers S3 permissions.
+
+Suppose our app should only read objects in bucket. We could give the endpoint this policy, shown as a decoded JSON policy document:
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::bucket/*"
+            ]
+        }
+    ]
+}
+
+Principal: "*" applies this endpoint allowance to any caller using the endpoint; it does not make the bucket public. The action permits reading objects, and the resource covers object keys inside bucket. A request for report.csv can pass this endpoint check, but the caller still needs S3 authorization through the applicable IAM and bucket policies. Uploading an object, listing the bucket, or reading another bucket would fail the endpoint check under this policy.
+
+A rejected request does not fall back to NAT: routing has already selected the endpoint path. Conversely, this policy does not govern requests that use a different path, such as our cross-Region NAT connection. Restricting a bucket to requests from a particular endpoint requires a bucket policy. See AWS endpoint policies.
+
+9. Reach another service through a private IP
+
+Now the app needs to retrieve a password from Amazon Secrets Manager, an AWS service for storing and retrieving secrets. It supports a different kind of VPC endpoint: an interface endpoint.
+
+We create an interface endpoint with a network interface, called an ENI, in Subnet A. Its private IP, 10.0.1.50, is our entry point to Secrets Manager. AWS PrivateLink carries traffic from that interface to the service outside our VPC, without NAT or an internet gateway.
+
+flowchart LR
+    subgraph vpc["VPC: 10.0.0.0/20"]
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+            ep["Endpoint network interface (ENI)<br/>10.0.1.50"]
+            app --> ep
+        end
+    end
+    ep -->|AWS PrivateLink| service["Secrets Manager"]
+
+With private DNS enabled, the app's usual Secrets Manager hostname resolves to this private IP. The app connects to it using the VPC's existing local route.
+
+9.1. Choose subnets and enable private DNS
+
+The interface endpoint belongs to the VPC, while its ENIs live in the subnets we select. Here we select only Subnet A. Resources in Subnet B can also reach that ENI, provided security rules allow it; they do not need their own ENI.
+
+Selecting two subnets in different Availability Zones creates two ENIs for the same endpoint, each with its own private IP. An interface endpoint allows only one selected subnet per AZ. These can be private subnets. See AWS endpoint subnet configuration.
+
+DNS turns a hostname into an IP address. Enabling private DNS for the endpoint makes the service's usual hostname resolve inside the VPC to the endpoint's private IPs, so the app can keep using the same hostname. This requires VPC DNS support and DNS hostnames to be enabled. No S3-style service route is needed: the destination is already inside the VPC. See AWS interface endpoints.
+
+9.2. Allow connections with a security group
+
+A security group is created in a VPC and associated with network interfaces (ENIs), rather than with a subnet. Our EC2 app has an ENI too: its address is 10.0.1.25. When we say "the app's security group," we mean the group attached to that interface. The endpoint's security group is attached to its ENI at 10.0.1.50. A group is reusable: multiple ENIs, including those in different subnets of the VPC, can use the same group. See AWS security group associations.
+
+The app has a network path to 10.0.1.50, but the endpoint's security group must allow the connection. Give it an inbound rule allowing TCP 443 from the app's security group. Referencing that group identifies the permitted source interfaces; it does not copy their security group rules. The app's outbound rules must also allow the HTTPS connection. Replies are automatically permitted because security groups are stateful. See AWS security group rules.
+
+These rules control connections to the endpoint ENIs. They do not distinguish reading a password from changing it. A gateway endpoint has no ENI or security group of its own, although the app's network rules still apply. See interface endpoint security groups and AWS gateway endpoints.
+
+9.3. Limit requests with an endpoint policy
+
+Once the connection is allowed, an endpoint policy limits the service requests that can pass through it. The policy belongs to the interface endpoint, not to an individual ENI; it applies across all ENIs of that endpoint. Endpoint policies are available when the service supports them, as Secrets Manager does. See AWS endpoint policies.
+
+To allow only reading one secret through this endpoint, attach this policy:
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": [
+                "arn:aws:secretsmanager:us-west-2:111122223333:secret:app-password-AbCdEf"
+            ]
+        }
+    ]
+}
+
+Replace the example ARN with the secret's actual ARN, including its generated suffix. This endpoint policy allows a read request for that secret to pass the endpoint check; writes and requests for other secrets fail it. The caller still needs permission to read the secret through the applicable IAM and resource policies, plus any required KMS permission. See AWS Secrets Manager endpoint policies and GetSecretValue permissions.
+
+This works like our S3 gateway endpoint policy: both restrict who may perform which actions on which resources through that endpoint. Neither grants service access by itself nor restricts requests made through a different path.
+
+9.4. Compare gateway and interface endpoints
+
+We now have two private paths: a gateway endpoint for S3 and an interface endpoint for Secrets Manager. Both are VPC endpoints, but they give traffic a different entry point. With the gateway endpoint, packets remain addressed to S3's service IPs, and the route table selects the endpoint path. With the interface endpoint, the app sends HTTPS traffic to 10.0.1.50:443, and AWS PrivateLink carries it onward to Secrets Manager. The ENI is part of that data path. Its IP identifies an AWS-managed entry point, while the service itself runs outside our VPC. See gateway endpoint routing and AWS PrivateLink connectivity.
+
+That difference in entry point also determines where we apply network controls and how AWS charges for the connection:
+
+FeatureGateway endpointInterface endpointEntry pointA service-specific route in selected route tablesAn ENI with a private IP in each selected subnetEndpoint security groupNoneControls connections to the endpoint ENIsEndpoint chargesNo additional hourly or data-processing chargeHourly charge per AZ, plus data-processing charges
+
+For an interface endpoint, we pay for each AZ where it is provisioned, even when idle, and for data processed in both requests and responses. Selecting subnets in two AZs therefore adds two hourly charges. A gateway endpoint has neither of these endpoint charges, although the underlying service's normal charges still apply. See AWS PrivateLink pricing and S3 gateway endpoint pricing.
+
+Whether we can choose between the two depends first on the service. AWS offers gateway endpoints for S3 and DynamoDB; services such as Secrets Manager and ECR use interface endpoints. S3 supports both, so our app's location and needs determine which fits. Its same-Region S3 requests can use the gateway endpoint without additional endpoint charges. If the client were on premises, an S3 interface endpoint could provide access through VPN or Direct Connect, whereas that client could not use our VPC's gateway endpoint directly. Both paths keep S3 traffic on the AWS network. See AWS gateway endpoints and AWS S3 endpoint comparison.
+
+Once a path meets those connectivity needs, throughput becomes another consideration for large transfers. AWS documents interface endpoint bandwidth of up to 10 Gbps per Availability Zone by default, automatically scaling up to 100 Gbps per AZ. Many clients transferring data through the same endpoint share that capacity. These figures describe how much data the path can carry, rather than the latency of an individual request, so workloads that need high throughput should check the limits and measure their actual path. They help us assess capacity, but do not establish that gateway endpoints are always faster or explain why AWS originally created the two types. See AWS PrivateLink quotas.
+
+10. Add the remaining permission checks
+
+We already used security groups. Once the path exists, additional controls can still block traffic or deny a service operation:
+
+IAM (Identity and Access Management) controls who may perform AWS operations. For example, a network path to S3 lets the app send a request, but its identity still needs permission to read the requested object.
+
+LayerQuestion it answersWhat to rememberSecurity groupMay this resource send or receive the traffic?Stateful; allows replies to an allowed connectionNetwork ACLMay this traffic cross the subnet boundary?Stateless; rules must allow both request and response trafficIAM and resource policiesMay this caller perform the AWS operation?Network reachability does not grant service accessEndpoint policy, where supportedMay this request pass through the endpoint?Adds a restriction; does not replace service authorization
+
+Custom ACLs can block replies if they do not allow the applicable return ports. The default ACL initially allows inbound and outbound traffic. See AWS network ACLs.
+
+For EC2, omitting a security group means AWS uses the VPC's default group. Its original rules allow inbound traffic from resources associated with that same group and allow outbound traffic. They do not allow arbitrary inbound internet traffic. Those rules can be edited, and launch tools may select a different group, so check the actual association. See AWS default security groups.
+
+A path and permission are separate requirements. Allowing HTTPS does not create a route. Creating an endpoint does not grant access to every resource behind it.
+
+11. Trace any connection with the same questions
+
+Once the pieces are familiar, follow one request from start to finish:
+
+Where is the client? Find its VPC, subnet, and private IP.What address is it calling? Resolve the hostname, if it uses one.Which route matches? Look at the subnet's route table and choose the most specific match.Where does that route lead? Follow the local path, IGW, NAT, or endpoint, including any onward connection.Is the connection allowed? Check security groups, ACLs, and the destination's listening port. Include the response path.Is the operation allowed? For AWS services, check credentials, IAM, resource policies, and endpoint policies.
+
+For example, an S3 request can use a gateway endpoint even when DNS returns a public IP. A Secrets Manager request can use an interface endpoint because private DNS returns a private IP. An external API request can use NAT because it matches the default route.
+
+The network becomes easier to reason about when you follow a specific destination instead of trying to memorize the whole architecture at once.17:T3f75,LLM datasets
+
+LLM datasets serve different purposes. Some provide vast collections of text
+for learning language and knowledge. Others demonstrate how to answer requests,
+compare alternative answers, or test capabilities on held-out problems.
+
+This note surveys representative public datasets by category. These are
+recognizable names in published model recipes and evaluations, not a ranking
+of private industry usage. Public datasets let us inspect the ingredients;
+they do not reveal the complete training mixtures of proprietary models.
+The focus is text and code, rather than image, audio, or video training.
+
+1. Pretraining datasets
+
+During pretraining, a typical decoder language model learns
+to predict subsequent tokens in documents. A token is a piece of text defined
+by a tokenizer; it is not necessarily a word.
+
+An illustrative record might look like this:
+
+{"text": "Plants use sunlight to convert water and carbon dioxide into sugars...", "source": "web"}
+
+There is no user question or preferred response here. The document itself
+supplies the prediction targets. The snippets in this note are invented examples
+of record shapes, not excerpts or exact schemas from the named datasets.
+
+1.1. Common Crawl: the raw source behind many corpora
+
+Created by: the nonprofit Common Crawl Foundation. About Common Crawl.
+
+Motivation: make large-scale web data accessible without every team operating
+its own crawler. Common Crawl holds petabytes of web archives collected since
+2008, with new crawls generally published monthly. It includes web responses,
+metadata, and extracted text. See Common Crawl's overview.
+
+Scale: the accumulated archive totals more than 10 petabytes, according to
+the foundation's About page. For a concrete
+monthly example, the September 2026 release (CC-MAIN-2026-39) contains:
+
+MeasureSizeWeb page captures2.17 billionRegistered domains represented33.2 millionURLs not visited in previous crawls587.2 millionUncompressed content361.4 TiBCompressed web archives (WARC)82.79 TiBCompressed extracted text (WET)5.89 TiB
+
+These are figures for one release, not the whole archive. WARC stores archived
+web responses; WET contains extracted plain text, so their sizes describe
+different representations. One TiB is approximately 1.10 TB. See the
+September 2026 release announcement.
+
+Page captures across releases can revisit the same URLs. Archive size therefore
+does not equal unique, cleaned text available for LLM training.
+
+What it is useful for: building a custom pretraining corpus or studying web
+data processing. It is a raw source, not a ready-made collection of good
+assistant answers. Extraction, language identification, filtering, and
+deduplication determine which material reaches training. Two datasets can use
+Common Crawl and still produce very different training data.
+
+1.2. FineWeb and FineWeb-Edu: broad coverage versus educational selection
+
+Created by: Hugging Face’s FineWeb research team, including Guilherme Penedo, Hynek Kydlíček, Loubna Ben Allal, and collaborators. The team released both FineWeb and FineWeb-Edu. Research report.
+
+FineWeb was released as roughly 15 trillion English tokens, measured
+with the GPT-2 tokenizer, from 96 Common Crawl snapshots. Its motivation is to
+provide a large, reproducible web corpus with explicit cleaning and
+deduplication. Its records are web documents, with text and provenance metadata.
+It is useful as a general pretraining foundation or for comparing data filters.
+See the FineWeb report.
+
+FineWeb-Edu asks a more selective question: which web pages contain useful
+educational material? The principal release contains about 1.3 trillion
+tokens, selected using educational-quality scoring; a less restrictive
+score-2 variant contains about 5.4 trillion. It supports research into whether
+a smaller, selected corpus teaches more per training token. It is filtered web
+text, not a collection of synthetic tutor conversations. See the
+FineWeb-Edu card.
+
+Broad web data supplies many styles and topics, while educational selection
+favors explanatory material. Selection also changes
+coverage: “educational” is one objective, not a universal definition of quality.
+
+1.3. Dolma: an open training mixture
+
+Created by: the Allen Institute for AI (Ai2), with Luca Soldaini and collaborators on the Dolma/OLMo project. Dolma paper.
+
+Motivation: support open language-model research, including OLMo, with a
+documented mixture rather than an opaque dataset. Dolma is a roughly 3 trillion
+token corpus containing web text, academic publications, code, books, and
+encyclopedic material. Releases and mixture recipes differ; a reported result
+is tied to a specific version. See the Dolma dataset card.
+
+Useful for: reproducing open pretraining experiments and testing how source
+balance affects capabilities. A mixture makes the relative exposure to prose,
+code, and other sources an explicit design decision.
+The number of tokens in a corpus is distinct from how often a training recipe
+samples each source.
+
+1.4. FineWeb2: multilingual web text
+
+Created by: researchers at Hugging Face and EPFL, including Guilherme Penedo, Hynek Kydlíček, and collaborators. FineWeb2 paper.
+
+English-heavy training data leaves other languages underrepresented. FineWeb2 was designed to adapt filtering and deduplication
+to over 1,000 languages, rather than apply English-specific rules everywhere.
+The reported release has about 5 billion documents, 20 TB of text, and
+over 3 trillion words. Those are words, not a tokenizer-independent token
+count. See the FineWeb2 card.
+
+Useful for: multilingual pretraining and studying language coverage. A large
+language count does not imply equal data volume or quality in every language.
+
+1.5. The Stack v2: source code
+
+Created by: BigCode, the open research collaboration led by Hugging Face and ServiceNow, working with Software Heritage on the source-code collection. Dataset card, BigCode governance.
+
+Learning to write code requires examples of source code as well as prose about
+programming.
+The Stack v2 collects source code through Software Heritage across more than
+600 programming languages. The full release reports 67.5 TB of uncompressed
+source content; deduplicated and training subsets are different datasets.
+It includes code and repository/provenance information and underpins the
+StarCoder2 work. See the BigCode dataset card.
+
+Motivation and use: make large-scale code pretraining reproducible and study
+code completion or code understanding. Raw files are not automatically
+instruction/answer pairs. License metadata and source-code terms still matter;
+inclusion in a dataset is not blanket permission for every use.
+
+1.6. Older names that still appear in papers
+
+DatasetCreated byMotivation and contentsReported scale and useful contextC4Google Research’s T5 team, including Colin Raffel and collaboratorsA cleaned English Common Crawl corpus introduced with T5, providing consistent data for transfer-learning experimentsOriginal corpus roughly 750 GB of text; useful for understanding older pretraining recipes and baselines. Variants such as multilingual or unfiltered C4 have different sizes. T5 paper, C4 catalogThe PileEleutherAI, including Leo Gao, Stella Biderman, and collaboratorsBroaden training beyond generic web text using academic, professional, and other sources825 GiB, composed of 22 subsets; useful for studying source diversity and reproducing historical open-model work. It is a mixture, not a single uniformly licensed source. The Pile paper
+
+These are important reference points, not an assertion that they are the best
+starting point for a new project today.
+
+2. Instruction and conversation datasets
+
+Learning to continue documents does not by itself teach a model how to respond
+to user requests. Supervised fine-tuning (SFT) provides examples
+of desired responses, often as conversations:
+
+{"messages": [
+  {"role": "user", "content": "Explain photosynthesis in one sentence."},
+  {"role": "assistant", "content": "Plants use sunlight to turn water and carbon dioxide into sugars, releasing oxygen."}
+]}
+
+The training recipe commonly applies loss to assistant responses. This teaches
+answer format and task behavior. It does not replace the need for broad
+pretraining knowledge.
+
+2.1. UltraChat 200k: synthetic conversations
+
+Created by: the original UltraChat was developed by Ning Ding and collaborators in Tsinghua University’s THUNLP group. Hugging Face’s H4 team prepared the filtered ultrachat_200k derivative described here. Original project, H4 release.
+
+Motivation: provide a practical, filtered collection of synthetic
+conversations for instruction tuning. The Hugging Face H4 ultrachat_200k
+release has 207,865 examples in its SFT training split, with separate other
+splits. It was used for Zephyr-7B-beta. The rows contain multi-turn messages,
+covering questions, writing, and other assistant tasks. See the
+UltraChat 200k card.
+
+Useful for: learning an SFT pipeline or establishing a general conversational
+baseline. The name does not describe every row across every split, and synthetic
+responses should not be treated as independently verified facts.
+
+2.2. Tülu 3 SFT mixture: a broad instruction mixture
+
+Created by: Ai2’s Tülu team and collaborators, combining existing community datasets with newly generated data. This credits the mixture’s curation; its individual sources have their own creators. Tülu 3 technical report.
+
+Motivation: make a strong, reproducible post-training recipe rather than
+optimize just one conversational skill. The mixture contains approximately
+939,000 prompt/response examples, combining public data with newly generated
+synthetic examples. It covers areas such as general instruction following,
+reasoning, mathematics, coding, and safety. See the
+Tülu 3 technical report and
+SFT dataset.
+
+Useful for: studying a broad post-training recipe and its component mixture.
+The mixture lets researchers study how balancing task types affects the
+resulting model, rather than training on only one question style.
+A mixture can overlap with datasets distributed separately under other names.
+
+3. Preference datasets
+
+A model may produce several plausible answers that differ in accuracy,
+clarity, or relevance. A preference dataset compares alternatives for the same
+prompt:
+
+{
+  "prompt": "Do plants get most of their carbon from soil?",
+  "chosen": "No. Most of their carbon comes from carbon dioxide absorbed from the air.",
+  "rejected": "Yes. Plants absorb most of their carbon through their roots from soil."
+}
+
+This example labels factual correctness. Real preference labels can also encode
+helpfulness, style, or other criteria; “chosen” does not mean objectively best
+under every criterion.
+
+3.1. UltraFeedback: scalable feedback on candidate responses
+
+Created by: Ganqu Cui, Lifan Yuan, Ning Ding, and collaborators, released through OpenBMB. Hugging Face’s H4 team produced the binarized derivative used here. Original project, H4 derivative.
+
+Motivation: produce feedback at scale using model-generated judgments.
+The original UltraFeedback collection has about 64,000 prompts with multiple
+candidate responses and feedback. The H4 binarized derivative converts these
+into chosen/rejected pairs; its train_prefs split has about 61,000 rows.
+It is a processed derivative, not another name for the entire original dataset.
+See the UltraFeedback binarized card.
+
+Useful for: direct preference optimization (DPO), which trains a model to
+favor chosen responses relative to rejected ones, or experiments with reward
+models. These are primarily AI judgments, not a survey of human preferences.
+Judge biases and label quality affect the behavior the model learns.
+
+4. Evaluation datasets
+
+Training examples teach; held-out evaluation examples measure. If we train on
+the questions and answers we later report as a test, we no longer have a clean
+measurement of generalization. Some datasets deliberately provide both training
+and test splits, but those roles must remain separate.
+
+4.1. Recognizable benchmarks and what they actually test
+
+DatasetCreated byWhy it exists and what is in itScaleUseful forMMLUDan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, and Jacob Steinhardt. PaperTest breadth of academic and professional knowledge using multiple-choice questions across 57 subjectsRoughly 16,000 questions across its splitsBroad knowledge comparison; not a direct test of a multi-turn assistant or tool use. Author repositoryGSM8KOpenAI; Karl Cobbe and collaboratorsTest multi-step arithmetic reasoning using human-written grade-school word problems and worked solutionsRoughly 7,500 training and 1,000 test problemsTraining on the training split and evaluating arithmetic reasoning on held-out problems. Author repositoryHumanEvalOpenAI; Mark Chen and collaboratorsTest whether generated Python functions work, using prompts, reference solutions, and executable tests164 programming problemsA compact function-generation benchmark; not a test of navigating a large repository. Paper, evaluation harnessSWE-bench / VerifiedSWE-bench: Carlos E. Jimenez, John Yang, and collaborators at Princeton University and the University of Chicago. Verified: OpenAI in collaboration with the SWE-bench authors. Verified releaseMove from isolated functions to resolving real GitHub issues in repositories, evaluated through testsOriginal: 2,294 instances; Verified: 500 human-filtered instancesEvaluating a coding agent's model, tools, and execution workflow together. Report the subset and agent setup. Official benchmark
+
+These established benchmarks explain many published scores, but should not be
+the only evaluation for a new application. Public exposure and contamination can
+limit their usefulness. A high score on short Python functions does not establish
+that a model can resolve a real software issue across multiple files.
+
+Application-specific evaluations measure behavior that broad public benchmarks
+may not cover. Their value depends on representative tasks, explicit scoring
+criteria, and separation from training data.
+
+5. Understanding dataset scale
+
+Reported quantityWhat it tells usWhat it does not tell usTokensText volume under a particular tokenizerUnique knowledge, quality, or a directly comparable count under another tokenizerDocuments or filesNumber of recordsTheir lengths or whether near-duplicates remainConversationsNumber of dialogue examplesNumber of turns, supervised tokens, or correctnessPreference pairsNumber of comparisonsNumber of unique prompts or independent human judgmentsGB/TBStorage volume in a specified representationTraining tokens; compressed and unpacked sizes differ
+
+For example, a hypothetical corpus of 100 billion unique tokens sampled twice
+produces 200 billion training-token exposures. That does not mean the corpus
+contains 200 billion unique tokens. Likewise, a million short conversations may
+contain fewer tokens than a much smaller collection of long documents.
+
+Reported scale depends on the dataset revision, subset, split, tokenizer,
+filtering, and sampling weights. Derivatives and mixtures can overlap, so their
+headline sizes cannot always be added together.
+
+6. How datasets differ beyond size
+
+Origin: web documents, human-written examples, and model-generated examples
+have different strengths and failure modes. Synthetic data can target specific
+tasks at scale, but inherits errors and biases from its generation and filtering.
+
+Selection: filtering and deduplication change which information is represented.
+FineWeb and FineWeb-Edu illustrate how a shared source can yield different
+corpora with different objectives.
+
+Composition: a mixture's sampling weights affect what the model sees. A small
+component sampled repeatedly can have more influence than its storage size suggests.
+
+Provenance and terms: public availability does not give every constituent
+source identical permissions. Dataset cards document origins, processing, and
+usage conditions to varying degrees.
+
+Evaluation validity: benchmark scores describe performance on a particular
+set of tasks under a particular evaluation procedure. Overlap with training data,
+public exposure, and differences in prompting or tools affect interpretation.18:T3cdc,Docker
+
+1. Primer
+
+Suppose we have a small model that predicts y = weight * x + bias. We want to
+package its code and parameters, send them to another machine, and serve
+predictions there without manually recreating the Python environment.
+
+We will use a toy CPU model with fixed parameters and Flask for the HTTP endpoint.
+There is no training step, GPU, or external model download. The example keeps the
+packaging visible; a larger inference service follows the same path.
+
+1.1. Start with a Dockerfile
+
+Create a folder named tiny-inference with three files:
+
+tiny-inference/
+├── Dockerfile
+├── serve.py
+└── model.json
+
+The Dockerfile tells Docker how to assemble the service:
+
+# Start with Python and its supporting Linux files.
+FROM python:3.13-slim
+
+# Set the working directory for the build and running program.
+WORKDIR /app
+
+# Install the HTTP framework before copying application files.
+RUN pip install --no-cache-dir "Flask>=3.1,<4"
+
+# Add the model parameters and serving code.
+COPY model.json ./model.json
+COPY serve.py ./serve.py
+
+# Document the application's port; this does not open a host port.
+EXPOSE 8000
+
+# Set the startup command; building the image does not run it.
+CMD ["python", "serve.py"]
+
+See the Dockerfile overview.
+
+1.1.1. Give it something to serve
+
+In model.json, store the model parameters:
+
+{"weight": 2.0, "bias": 1.0}
+
+In serve.py, load them once and answer prediction requests:
+
+import json
+import math
+from pathlib import Path
+from flask import Flask, request
+
+app = Flask(__name__)
+model = json.loads(Path("model.json").read_text())
+
+
+@app.get("/predict")
+def predict():
+    x = request.args.get("x", type=float)
+    if x is None or not math.isfinite(x):
+        return {"error": "Provide a finite numeric x"}, 400
+    y = model["weight"] * x + model["bias"]
+    if not math.isfinite(y):
+        return {"error": "Prediction is outside the supported range"}, 400
+    return {"x": x, "prediction": y}
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
+
+For x=3, inference computes 2 * 3 + 1 = 7. Flask handles routing and turns
+the returned dictionary into a JSON response. Its built-in server is used here
+for the local demonstration. See the Flask quickstart.
+
+1.2. Build an image: the packaged service
+
+With Docker installed and running, execute this from tiny-inference/:
+
+docker build -t tiny-inference:1.0 .
+
+The final . supplies the build context, the directory whose files the
+builder can use. The result is an image: an immutable package of filesystem
+content and runtime configuration. It contains Python, Flask, model.json, and
+serve.py, plus the instruction to run python serve.py.
+
+The Dockerfile describes how to make the package. The image is the package that
+was actually built. No inference server is running yet.
+
+1.2.1. Name the image: tag versus digest
+
+In tiny-inference:1.0, tiny-inference is the repository name and 1.0 is a
+tag. A tag is a convenient label. Rebuilding with that same name can point
+it at a different image; the text 1.0 does not enforce immutability. Likewise,
+latest is an ordinary tag, not a guarantee of the newest build.
+
+A digest, such as sha256:…, identifies specific content. When distributing
+an image, a reference such as repository@sha256:… pins a particular manifest
+or image index. Changing that object's bytes changes its digest. The local
+image ID identifies the image configuration and is not interchangeable with
+that registry reference. We will capture the registry digest after publishing.
+
+See Docker image references and digest pulls.
+
+1.2.2. How Docker stores the image: layers
+
+Docker does not need to copy a complete Python installation for every service.
+The image reuses the base image's layers, then adds our changes. A layer is a
+filesystem changeset, not a full filesystem snapshot.
+
+flowchart BT
+    base["Base layers<br/>Python and supporting files"] --> flask["Install Flask"]
+    flask --> model["Add /app/model.json"]
+    model --> code["Add /app/serve.py"]
+    code --> view["One visible filesystem<br/>Python + Flask + model + server"]
+
+This diagram omits incidental filesystem changes such as creating /app.
+The actual number of layers depends on the base and build. Configuration
+instructions such as CMD do not need a filesystem layer.
+
+An image manifest lists the layers in order and references a configuration
+object holding defaults such as the command and working directory. Applying
+the layers in order produces the files the program sees. See
+Docker image layers
+and the OCI manifest format.
+
+1.3. Publish the image to a registry
+
+The image currently exists on our development machine. To let another machine
+retrieve it, publish it to a registry, a service that stores images. Docker
+Hub and Amazon ECR are examples. A repository groups named image versions
+inside that registry.
+
+For Docker Hub, replace YOUR_DOCKERHUB_USER below with your account name and
+create a tiny-inference repository in that account with your intended visibility:
+
+docker login
+docker tag tiny-inference:1.0 YOUR_DOCKERHUB_USER/tiny-inference:1.0
+docker push YOUR_DOCKERHUB_USER/tiny-inference:1.0
+
+docker tag gives the existing local image another reference; it does not
+rebuild or duplicate its contents. docker push uploads the content needed by
+the registry and associates the tag with it. These are walkthrough commands;
+adding this note does not publish an image.
+
+After the push, inspect the remote reference:
+
+docker buildx imagetools inspect YOUR_DOCKERHUB_USER/tiny-inference:1.0
+
+Record its reported digest to deploy exactly that published version later.
+See pushing images
+and inspecting registry images.
+
+1.3.1. What gets uploaded, and where compression fits
+
+Layers are represented as tar archives of filesystem changes. They are commonly
+compressed individually before distribution. OCI supports uncompressed tar,
+gzip, and zstd layer formats; support for particular encodings depends on the
+tools involved. The registry stores these layer blobs along with image
+metadata. See OCI layer media types.
+
+flowchart LR
+    layer["Layer changes"] --> archive["Tar archive"]
+    archive --> blob["Compressed blob"]
+    blob --> registry["Registry"]
+
+Our JSON model is tiny. Imagine instead that its layer were 300 MB uncompressed
+and 90 MB compressed. Sending that missing blob would transfer roughly 90 MB,
+plus protocol overhead. These numbers are illustrative: model weights and
+already-compressed files may compress much less effectively than repetitive text.
+
+Compression preserves the recovered files; it does not remove unwanted files
+or shrink the model's runtime memory requirements. Docker push progress can
+show uncompressed sizes even though the transferred data is compressed.
+Existing blobs can be reused, so a push need not upload the entire image again.
+See Docker push behavior.
+
+1.4. Pull it on the serving machine
+
+On another Docker host, retrieve the package:
+
+docker pull YOUR_DOCKERHUB_USER/tiny-inference:1.0
+
+Authenticate there too if the repository is private. Docker retrieves the
+metadata and missing layers, then prepares the filesystem for execution.
+For a pinned deployment, replace the placeholder below with the full digest
+recorded after publishing:
+
+docker pull YOUR_DOCKERHUB_USER/tiny-inference@sha256:FULL_DIGEST
+
+A pull by tag resolves whatever that tag points to at that time; a digest
+reference selects the recorded content. See pulling images.
+
+1.4.1. The serving machine must support the image's platform
+
+For the simplest walkthrough, use the same CPU architecture on both machines.
+An image built for an ARM laptop is not automatically a native AMD64 image.
+A multi-platform image index can point to separate platform-specific manifests,
+letting Docker select the appropriate one. Building for other architectures may
+require emulation or suitable builders. See Docker multi-platform builds.
+
+1.5. Run a container and request a prediction
+
+On the serving machine:
+
+docker run --rm --name tiny-inference \
+  -p 127.0.0.1:8000:8000 \
+  YOUR_DOCKERHUB_USER/tiny-inference:1.0
+
+Docker creates a container, an instance of the image, and starts the recorded
+command. Python loads model.json and listens on port 8000 inside the container.
+For a pinned deployment, use the same repository@sha256:FULL_DIGEST reference
+here as in the pull command.
+
+The -p mapping connects port 8000 on the host's loopback address to port 8000
+in the container. The application listens on 0.0.0.0 inside the container so
+traffic reaching its network interface can reach the server. EXPOSE alone
+would not create this mapping. See Docker run.
+
+In another terminal on that serving machine:
+
+curl 'http://127.0.0.1:8000/predict?x=3'
+
+Expected response:
+
+{"x": 3.0, "prediction": 7.0}
+
+The image supplies the files and defaults; the running container executes the
+inference. Two containers can use the same immutable image layers while running
+separate processes. The loopback mapping makes this a local demonstration;
+serving remote clients requires an appropriate host binding and network setup.
+
+1.5.1. What if the server writes a file?
+
+Each container has its own writable layer above the image. A new output file
+goes there unless its destination is mounted elsewhere. With an overlay-style
+backend, changing an image file copies it into the writable layer before
+modification: copy-on-write. The original image remains unchanged.
+
+A stopped container normally retains this layer, but our --rm option removes
+the container when it exits. For persistent prediction results, use a volume
+whose lifetime is independent of the container, or a bind mount exposing a
+host directory. See Docker storage.
+
+1.6. Change the model and publish version 1.1
+
+Change weight in model.json from 2.0 to 3.0, then build and publish a new
+version:
+
+docker build -t YOUR_DOCKERHUB_USER/tiny-inference:1.1 .
+docker push YOUR_DOCKERHUB_USER/tiny-inference:1.1
+
+The rebuilt service predicts 10 for x=3. Updating a tag or publishing version
+1.1 does not change an already-running container. Pull the new version and
+replace the running container to serve the new model.
+
+During rebuilding, the build cache lets Docker reuse work whose instruction
+and inputs are unchanged. Our Python base can be reused; the changed model
+invalidates its COPY step and following steps in that build sequence. The
+registry may still reuse blobs whose content is unchanged.
+
+For a larger inference service, install stable dependencies before copying
+frequently edited code. Use .dockerignore to exclude local caches and unused
+checkpoints from the build context. Cache reuse makes builds faster; it does
+not by itself make the final image smaller. See Docker cache optimization.
+
+2. When the real model is large
+
+2.1. Deleting an earlier layer's file does not remove its bytes
+
+Suppose we package a model archive this way:
+
+COPY model.tar /tmp/model.tar
+RUN mkdir /models && tar -xf /tmp/model.tar -C /models
+RUN rm /tmp/model.tar
+
+The archive remains in the COPY layer, even though it is absent from the final
+visible filesystem. Later layers hide earlier files; they do not rewrite them.
+Deletion uses special entries called whiteouts. Replacing a file generally
+stores the replacement, not a byte-level patch. See the OCI layer specification.
+
+A multi-stage build can keep the archive out of the final image:
+
+FROM python:3.13-slim AS unpack
+COPY model.tar /tmp/model.tar
+RUN mkdir /out && tar -xf /tmp/model.tar -C /out
+
+FROM python:3.13-slim
+WORKDIR /app
+RUN pip install --no-cache-dir "Flask>=3.1,<4"
+COPY --from=unpack /out/model.json ./model.json
+COPY serve.py ./serve.py
+EXPOSE 8000
+CMD ["python", "serve.py"]
+
+Assume this example archive contains model.json at its root. The final stage
+copies only the extracted model, rather than inheriting the unpack stage's
+archive layer. The intermediate stage may still occupy builder cache space.
+See multi-stage builds.
+
+2.2. Registry size, local disk use, and RAM measure different things
+
+QuestionWhat to countHow much must a fresh machine download?Missing encoded blobs, often compressed, plus metadata and overheadHow much filesystem data is unpacked?Expanded layer contents, including content hidden by later layersHow much disk space does Docker consume?Shared blobs, filesystem snapshots, container writes, caches, and overheadHow much memory does inference require?Loaded model, runtime, and working data; measure the running service
+
+The containerd image store retains compressed blobs and unpacked data. Images
+can also share layers, so summing individual image sizes can double-count data.
+See containerd disk usage.
+
+Use these commands to investigate an actual image or host:
+
+docker image history --no-trunc tiny-inference:1.0
+docker image inspect tiny-inference:1.0
+docker system df -v
+docker buildx du
+
+History helps locate large build contributions; it is not a complete filesystem
+audit. system df reports Docker storage accounting, while buildx du focuses
+on builder cache.
+
+2.3. Transporting large images
+
+Suppose our inference image now includes large model weights and already lives
+in one registry. We want the same image in another registry, without changing
+its contents. Use crane copy to transfer the published image:
+
+# Install crane and authenticate to both registries before copying.
+# Replace these example references with your actual image locations.
+SOURCE_IMAGE='source.example.com/team/inference:1.0'
+TARGET_IMAGE='target.example.com/team/inference:1.0'
+
+crane copy "$SOURCE_IMAGE" "$TARGET_IMAGE"
+
+# For an unchanged copy, these should report the same digest.
+crane digest "$SOURCE_IMAGE"
+crane digest "$TARGET_IMAGE"
+
+crane works with registry images without requiring a Docker daemon. The copy
+preserves the image's digest rather than rebuilding it. By default it copies
+the full image index for a multi-platform image; selecting one platform changes
+what is copied. See the crane copy documentation.
+
+Why can this be faster than pulling, tagging, and pushing with Docker?
+Crane transfers the existing layer blobs in their stored form. For compressed
+layers, it can carry the compressed bytes from source to destination without
+unpacking them into a local container filesystem or recompressing them. This
+avoids CPU work and local disk I/O that a Docker image-store workflow may incur.
+See crane's registry copy implementation.
+
+flowchart LR
+    source["Source registry<br/>Compressed layer blobs"] --> crane["crane<br/>Transfer existing blobs"]
+    crane --> target["Target registry<br/>Same blob bytes and digests"]
+
+For example, if a layer is 10 GB unpacked but 4 GB compressed, the copy can
+transfer the existing 4 GB blob without materializing the 10 GB filesystem.
+These numbers are illustrative. The destination still needs any missing blobs,
+and data normally passes through the machine running crane; this is not a
+server-side transfer between unrelated registries.
+
+The benefit is avoiding unnecessary processing, not making the network faster.
+If the destination's upload bandwidth is the bottleneck, transferring those
+4 GB still takes time. Nor does every Docker push recompress: the containerd
+image store retains compressed blobs, so the performance difference depends on
+the backend and cached content. See Docker image-store storage behavior.
+
+Use this when transporting an existing image unchanged. If the application or
+model changes, build a new image first, then copy that published result.
+
+Related notes
+
+AWS networking: When this image lives in ECR, pulling its metadata and downloading its layers require the appropriate ECR and S3 network paths.f:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$1","c",{"children":[["$","div",null,{"className":"search-container","children":[["$","p",null,{"className":"eyebrow","children":"Find a connection"}],["$","h1",null,{"children":"Search the library"}],["$","p",null,{"className":"page-intro","children":"Follow a topic, rediscover an idea, or find exactly what you need."}],["$","$10",null,{"fallback":["$","p",null,{"children":"Loading search…"}],"children":["$","$L12",null,{"notes":[{"file":"akashic/architecture.md","url":"/akashic/architecture","title":"Architecture","description":"How Akashic turns Markdown files into a searchable, interactive library.","tags":["akashic"],"text":"$13","hideTags":false},{"file":"akashic/getting-started.md","url":"/akashic/getting-started","title":"Getting started with Akashic","description":"Set up, run, and write notes in Akashic.","tags":["akashic"],"text":"$14","hideTags":false},{"file":"akashic/index.md","url":"/akashic","title":"Akashic","description":"","tags":["akashic"],"text":"Akashic\n\nGuides to using and developing this knowledge library.\n\nGetting started: Local setup, writing notes, and building the app.Writing notes: Markdown conventions and rendering examples.Architecture: Content pipeline, rendering, app structure, and development.","hideTags":false},{"file":"akashic/writing-notes.md","url":"/akashic/writing-notes","title":"Writing notes","description":"How to organize and write knowledge in Akashic.","tags":["akashic","markdown"],"text":"$15","hideTags":false},{"file":"aws/networking.md","url":"/aws/networking","title":"AWS networking","description":"","tags":["AWS","Network"],"text":"$16","hideTags":false},{"file":"datasets/llm.md","url":"/datasets/llm","title":"LLM datasets","description":"Why major LLM datasets exist, what they contain, their scale, and where they fit in training and evaluation.","tags":["LLM","Datasets"],"text":"$17","hideTags":false},{"file":"docker/index.md","url":"/docker","title":"Docker","description":"Follow a small model inference service from Dockerfile to image, registry, and running container.","tags":["Docker","Containers"],"text":"$18","hideTags":false},{"file":"index.md","url":"/","title":"Akashic","description":"A personal library of everything I learn.","tags":[],"text":"Akashic\n\nA place to collect, connect, and revisit what I learn.\n\nBrowse topics in the sidebar, search for a concept, or explore the tag index.\n\nStart writing\n\nAdd Markdown notes under docs/, grouping related subjects into folders. Each\nfolder can have an index.md introducing the subject. New notes appear in the\nsidebar automatically.\n\nThe writing guide demonstrates metadata, equations,\ndiagrams, images, and links. A reusable note template lives in templates/note.md\nat the repository root.\n\nHow Akashic works\n\nRead the architecture guide for the content pipeline,\nMarkdown rendering, app structure, development workflow, and extension points.","hideTags":false},{"file":"tags.md","url":"/tags","title":"Tags","description":"Find notes across subjects by tag.","tags":[],"text":"Tags\n\nNotes are grouped here automatically from their front matter tags.","hideTags":false}],"tags":["akashic","AWS","Containers","Datasets","Docker","LLM","markdown","Network"]}]}]]}],["$L19"],"$L1a"]}],"p":"$@1b","v":null,"s":"$b"}}]]
+c:[["children",{"s":"search","h":96,"d":{"r":["$","$1","c",{"children":[null,["$","$L8",null,{"parallelRouterKey":"children","template":["$","$L9",null,{}]}]]}],"p":"$@d","v":"$e","s":"$b"},"c":"$Qf"}]]
+0:{"t":{"t":{"s":"","h":80,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/akashic/_next/static/chunks/01d6euky2o51x.css","precedence":"next"}],["$","script","script-0",{"src":"/akashic/_next/static/chunks/38y2-2-4i7a0r.js","async":true}]],["$","html",null,{"lang":"en","data-scroll-behavior":"smooth","suppressHydrationWarning":true,"children":["$","body",null,{"children":["$","$L3",null,{"children":[["$","a",null,{"className":"skip-link","href":"#main-content","children":"Skip to content"}],["$","header",null,{"className":"site-header","children":[["$","$L4",null,{"className":"brand","href":"/","aria-label":"Akashic home","children":[["$","span",null,{"className":"brand-mark","aria-hidden":"true","children":"A"}],["$","span",null,{"children":"Akashic"}]]}],["$","$L5",null,{}],["$","div",null,{"className":"header-tools","children":[["$","$L4",null,{"className":"search-trigger","href":"/search","aria-label":"Search library","children":[["$","svg",null,{"width":"20","height":"20","viewBox":"0 0 24 24","fill":"none","stroke":"currentColor","strokeWidth":"1.8","strokeLinecap":"round","aria-hidden":"true","children":[["$","circle",null,{"cx":"10.5","cy":"10.5","r":"6.5"}],["$","path",null,{"d":"m16 16 4.5 4.5"}]]}],["$","span",null,{"children":"Search library"}]]}],["$","$L6",null,{}]]}]]}],["$","div",null,{"className":"app-layout","children":[["$","$L7",null,{"entries":[{"url":"/akashic/architecture","title":"Architecture"},{"url":"/akashic/getting-started","title":"Getting started with Akashic"},{"url":"/akashic","title":"Akashic"},{"url":"/akashic/writing-notes","title":"Writing notes"},{"url":"/aws/networking","title":"AWS networking"},{"url":"/datasets/llm","title":"LLM datasets"},{"url":"/docker","title":"Docker"},{"url":"/","title":"Akashic"},{"url":"/tags","title":"Tags"}],"tags":[{"tag":"akashic","count":4},{"tag":"AWS","count":1},{"tag":"Containers","count":1},{"tag":"Datasets","count":1},{"tag":"Docker","count":1},{"tag":"LLM","count":1},{"tag":"markdown","count":1},{"tag":"Network","count":1}]}],["$","main",null,{"id":"main-content","tabIndex":-1,"children":["$","$L8",null,{"parallelRouterKey":"children","template":["$","$L9",null,{}],"notFound":[["$","div",null,{"className":"empty-state","children":[["$","p",null,{"className":"eyebrow","children":"404"}],["$","h1",null,{"children":"That page isn’t in the library."}],["$","p",null,{"children":"It may have moved or been renamed."}],["$","$L4",null,{"href":"/search","children":"Search the library →"}]]}],[]]}]}]]}],["$","footer",null,{"className":"site-footer","children":[["$","span",null,{"children":"Akashic"}],["$","span",null,{"children":[9," pages · A growing collection of knowledge"]}]]}]]}]}]}]]}],"p":"$@a","v":null,"s":"$b"},"c":"$Qc"},"h":{"r":["$","$1","h",{"children":[null,["$","$L1d",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","$L1f",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$10",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Search · Akashic"}],["$","meta","1",{"name":"description","content":"A personal library of everything I learn."}]]}]}],null]}],null]}],"p":"$@20","v":null,"s":"$b"}},"a":"$@21","u":"$@22","b":"9-DpUtebAqal9ZxxXqH9X"}
+23:I[97367,["$2"],"OutletBoundary"]
+19:["$","script","script-0",{"src":"/akashic/_next/static/chunks/3lf24fbvbq_c8.js","async":true}]
+1a:["$","$L23",null,{"children":["$","$10",null,{"name":"Next.MetadataOutlet","children":"$@24"}]}]
+b:300
+24:null
+22:true
+b:C
+21:0
+d:"$undefined"
+a:"$undefined"
+20:"$undefined"
+1b:"$undefined"

@@ -1,0 +1,31 @@
+1:"$Sreact.fragment"
+2:"/akashic/_next/static/chunks/38y2-2-4i7a0r.js"
+3:I[2779,["$2"],"Theme"]
+4:I[22016,["$2"],""]
+5:I[80100,["$2"],"TopNavigation"]
+6:I[2779,["$2"],"ThemeToggle"]
+7:I[13474,["$2"],"Navigation"]
+8:I[39756,["$2"],"default"]
+9:I[37457,["$2"],"default"]
+10:I[97367,["$2"],"OutletBoundary"]
+11:"$Sreact.suspense"
+14:"ViewportBoundary"
+15:I[97367,["$2"],"$14"]
+16:"MetadataBoundary"
+17:I[97367,["$2"],"$16"]
+:HL["/akashic/_next/static/chunks/01d6euky2o51x.css","style"]
+b:X
+e:X
+e:C
+f:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$1","c",{"children":[["$","div",null,{"className":"empty-state","children":[["$","p",null,{"className":"eyebrow","children":"404"}],["$","h1",null,{"children":"That page isn’t in the library."}],["$","p",null,{"children":"It may have moved or been renamed."}],["$","$L4",null,{"href":"/search","children":"Search the library →"}]]}],null,["$","$L10",null,{"children":["$","$11",null,{"name":"Next.MetadataOutlet","children":"$@12"}]}]]}],"p":"$@13","v":null,"s":"$b"}}]]
+c:[["children",{"s":"/_not-found","h":96,"d":{"r":["$","$1","c",{"children":[null,["$","$L8",null,{"parallelRouterKey":"children","template":["$","$L9",null,{}]}]]}],"p":"$@d","v":"$e","s":"$b"},"c":"$Qf"}]]
+0:{"t":{"t":{"s":"","h":80,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/akashic/_next/static/chunks/01d6euky2o51x.css","precedence":"next"}],["$","script","script-0",{"src":"/akashic/_next/static/chunks/38y2-2-4i7a0r.js","async":true}]],["$","html",null,{"lang":"en","data-scroll-behavior":"smooth","suppressHydrationWarning":true,"children":["$","body",null,{"children":["$","$L3",null,{"children":[["$","a",null,{"className":"skip-link","href":"#main-content","children":"Skip to content"}],["$","header",null,{"className":"site-header","children":[["$","$L4",null,{"className":"brand","href":"/","aria-label":"Akashic home","children":[["$","span",null,{"className":"brand-mark","aria-hidden":"true","children":"A"}],["$","span",null,{"children":"Akashic"}]]}],["$","$L5",null,{}],["$","div",null,{"className":"header-tools","children":[["$","$L4",null,{"className":"search-trigger","href":"/search","aria-label":"Search library","children":[["$","svg",null,{"width":"20","height":"20","viewBox":"0 0 24 24","fill":"none","stroke":"currentColor","strokeWidth":"1.8","strokeLinecap":"round","aria-hidden":"true","children":[["$","circle",null,{"cx":"10.5","cy":"10.5","r":"6.5"}],["$","path",null,{"d":"m16 16 4.5 4.5"}]]}],["$","span",null,{"children":"Search library"}]]}],["$","$L6",null,{}]]}]]}],["$","div",null,{"className":"app-layout","children":[["$","$L7",null,{"entries":[{"url":"/akashic/architecture","title":"Architecture"},{"url":"/akashic/getting-started","title":"Getting started with Akashic"},{"url":"/akashic","title":"Akashic"},{"url":"/akashic/writing-notes","title":"Writing notes"},{"url":"/aws/networking","title":"AWS networking"},{"url":"/datasets/llm","title":"LLM datasets"},{"url":"/docker","title":"Docker"},{"url":"/","title":"Akashic"},{"url":"/tags","title":"Tags"}],"tags":[{"tag":"akashic","count":4},{"tag":"AWS","count":1},{"tag":"Containers","count":1},{"tag":"Datasets","count":1},{"tag":"Docker","count":1},{"tag":"LLM","count":1},{"tag":"markdown","count":1},{"tag":"Network","count":1}]}],["$","main",null,{"id":"main-content","tabIndex":-1,"children":["$","$L8",null,{"parallelRouterKey":"children","template":["$","$L9",null,{}],"notFound":[["$","div",null,{"className":"empty-state","children":[["$","p",null,{"className":"eyebrow","children":"404"}],["$","h1",null,{"children":"That page isn’t in the library."}],["$","p",null,{"children":"It may have moved or been renamed."}],["$","$L4",null,{"href":"/search","children":"Search the library →"}]]}],[]]}]}]]}],["$","footer",null,{"className":"site-footer","children":[["$","span",null,{"children":"Akashic"}],["$","span",null,{"children":[9," pages · A growing collection of knowledge"]}]]}]]}]}]}]]}],"p":"$@a","v":null,"s":"$b"},"c":"$Qc"},"h":{"r":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L15",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","$L17",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$11",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Akashic"}],["$","meta","1",{"name":"description","content":"A personal library of everything I learn."}]]}]}],null]}],null]}],"p":"$@18","v":null,"s":"$b"}},"a":"$@19","u":"$@1a","b":"9-DpUtebAqal9ZxxXqH9X"}
+12:null
+b:300
+1a:true
+b:C
+19:0
+d:"$undefined"
+a:"$undefined"
+18:"$undefined"
+13:"$undefined"

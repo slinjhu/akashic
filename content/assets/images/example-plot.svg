@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="260" viewBox="0 0 560 260" role="img" aria-labelledby="title desc">
+  <title id="title">Example linear plot</title>
+  <desc id="desc">A line rises from zero to two, illustrating y equals x.</desc>
+  <rect width="560" height="260" rx="12" fill="#f8fafc"/>
+  <g stroke="#64748b" stroke-width="2" fill="none">
+    <path d="M60 30V210H510"/>
+    <path d="M60 210L460 50" stroke="#4f46e5" stroke-width="4"/>
+  </g>
+  <g fill="#334155" font-family="sans-serif" font-size="16">
+    <text x="40" y="232">0</text><text x="255" y="232">1</text><text x="455" y="232">2</text>
+    <text x="515" y="215">x</text><text x="36" y="30">y</text><text x="265" y="100">y = x</text>
+  </g>
+</svg>
