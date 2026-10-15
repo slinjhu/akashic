@@ -127,7 +127,35 @@ For the app to connect to the database, we need both:
 
 For example, the database's security group could allow inbound TCP `5432` from the app's security group. A **port** identifies the service receiving a connection; PostgreSQL commonly listens on port `5432`. The database must actually be running and listening there.
 
-Security groups are **stateful**: replies to an allowed connection are automatically permitted. They contain allow rules, rather than explicit deny rules. See [AWS security groups](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html).
+Security groups contain allow rules, rather than explicit deny rules.
+
+### 5.1. What does “stateful” mean? Can traffic go both ways?
+
+**Traffic can flow both ways within an allowed connection. Permission to start a new connection is a separate question.**
+
+Suppose the app starts a database connection on TCP port `5432`:
+
+```mermaid
+sequenceDiagram
+    participant App as App: 10.0.1.25
+    participant DB as Database: 10.0.2.30
+    App->>DB: Start connection to port 5432
+    Note over App,DB: Requires app outbound and database inbound permission
+    DB-->>App: Return traffic on the allowed connection
+    Note over App,DB: Security groups automatically allow this return traffic
+```
+
+The security groups track the connection. The database's replies are allowed even without a matching outbound rule on its security group, and the app can receive those replies without a matching inbound rule on its security group. This connection tracking is what **stateful** means. See [AWS security groups](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html).
+
+Now suppose the database tries to start a **separate connection** to a service running on the app. That is not a reply. It needs database outbound permission and app inbound permission for that new connection.
+
+| Traffic | What the security groups require |
+|---|---|
+| App starts a connection to the database | App outbound and database inbound rules must allow it |
+| Database sends replies on that connection | Automatically allowed as return traffic |
+| Database starts a separate connection to the app | Database outbound and app inbound rules must allow it |
+
+The same principle applies when the app calls an external API: its response can return without an inbound security-group rule specifically allowing it. This automatic permission applies to security groups; it does not create a missing route or bypass other network filters.
 
 There is also a subnet-level filter called a **network ACL**. We'll assume the default allow-all ACL for our example and return to it later.
 
@@ -135,26 +163,33 @@ There is also a subnet-level filter called a **network ACL**. We'll assume the d
 
 ## 6. Add an internet gateway: public versus private subnets
 
-Suppose we want to add a web server that visitors can reach from the internet. Keep the app and database where they are, and add Subnet C for the web server:
+Suppose we want to add a web server that visitors can reach from the internet. Keep the app and database where they are, and add Subnet C for the web server.
+
+An **internet gateway (IGW)** connects a VPC to the internet. Attach one to the VPC and give Subnet C a route to it. This makes Subnet C public; Subnets A and B keep their local-only routes:
 
 ```mermaid
 flowchart LR
     subgraph vpc["VPC: 10.0.0.0/16"]
         direction LR
-        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+        subgraph subnetA["Private subnet A: 10.0.1.0/24"]
             app["App<br/>10.0.1.25"]
         end
-        subgraph subnetB["Subnet B: 10.0.2.0/24"]
+        subgraph subnetB["Private subnet B: 10.0.2.0/24"]
             database["Database<br/>10.0.2.30"]
         end
-        subgraph subnetC["Subnet C: 10.0.3.0/24"]
-            web["Web server<br/>10.0.3.40"]
+        subgraph subnetC["Public subnet C: 10.0.3.0/24"]
+            web["Web server<br/>Private IP: 10.0.3.40<br/>Public IPv4 address assigned"]
         end
+        igw["Internet gateway<br/>Attached to the VPC"]
         app -->|"Local route"| database
+        web <-->|"Subnet C route: 0.0.0.0/0 to IGW"| igw
     end
+    igw <--> internet["Internet"]
 ```
 
-An **internet gateway (IGW)** connects a VPC to the internet. Attach one to the VPC, then give Subnet C its own route table:
+The IGW attaches to the VPC, not to an individual subnet. The arrows show the web server's internet path; security rules still control which connections are allowed.
+
+Subnet C's route table now contains:
 
 | Destination | Target | Meaning |
 |---|---|---|
