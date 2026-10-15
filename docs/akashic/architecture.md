@@ -51,7 +51,7 @@ live beside their notes or in `docs/assets/`.
 6. Writes the note collection to `.generated/library.json`.
 
 `lib/content.ts` imports that generated index and exposes the notes, navigation
-entries, search data, and unique tags. Both `.generated/` and `public/content/`
+entries, search data, unique tags, and per-tag note counts. Both `.generated/` and `public/content/`
 are disposable outputs excluded from Git. Edit the source files in `docs/`;
 the next generation step recreates the outputs.
 
@@ -60,6 +60,11 @@ the next generation step recreates the outputs.
 `app/layout.tsx` defines the shared header, sidebar, appearance controls, and
 footer. `app/[[...slug]]/page.tsx` handles note paths of any depth: it finds the
 matching note and assembles its tags, content, and table of contents.
+
+The header has Library, Tags, and Search tabs. Library shows the topic tree;
+Tags shows tag counts with links to sections of the tag index; Search leaves
+the sidebar empty. The Akashic guides are ordinary Markdown pages in Library.
+The table of contents includes heading levels 2 through 4, indented by depth.
 
 The same page component adds the collection cards on the Library overview and the
 grouped listings on the tag index. `/search` has its own route, which reads the
@@ -81,7 +86,7 @@ how the resulting elements appear and behave.
 | Tables, task lists, and footnotes | GitHub-flavored Markdown support |
 | Tables | A scrollable container for narrower screens |
 | LaTeX equations | KaTeX, with bundled fonts |
-| Code blocks | Syntax highlighting and a Copy button |
+| Code blocks | Syntax highlighting for the common language set plus Dockerfile, and a Copy button |
 | Mermaid blocks | Default-size text, with source and fullscreen controls |
 | Relative Markdown links | Links to the corresponding app routes |
 | Images | Locally served assets with alt text |
@@ -99,7 +104,8 @@ browser APIs, or local state run in the browser:
 
 | Component | Responsibility |
 |---|---|
-| `components/navigation.tsx` | Active links, nested navigation, and the mobile menu |
+| `components/top-navigation.tsx` | Library, Tags, and Search tabs and their active state |
+| `components/navigation.tsx` | Topic tree or tag counts based on the tab, active links, and the mobile menu |
 | `components/search.tsx` | Text matching, result lists, and tag filtering |
 | `components/theme.tsx` | System appearance and saved light/dark preferences |
 | `components/code-block.tsx` | Copying code to the clipboard |

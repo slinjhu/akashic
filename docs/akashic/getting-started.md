@@ -28,9 +28,14 @@ metadata, and images update automatically. Stop the server with Ctrl+C.
 3. Add an `index.md` to introduce a subject when useful.
 
 Navigation follows folders automatically; no navigation list needs updating.
-Search covers titles, tags, and note text; the tag index groups notes automatically.
-Tags appear above the title. Appearance follows the system by default, with
-persistent light/dark overrides. Dates belong in Git history.
+Use Library for the topic tree, Tags for the grouped tag index, and Search for
+titles, tags, and note text. On Tags, the sidebar lists tags with note counts;
+click one to scroll to its section. Search currently has no sidebar content.
+These Akashic guides live in Library alongside other notes.
+
+Tags appear above the title unless the note sets `hide: [tags]`. The appearance
+button shows the current mode and cycles System → Light → Dark → System.
+System is the default, and the choice is saved. Dates belong in Git history.
 See [the writing guide](writing-notes.md) for equations, Mermaid
 diagrams, images, plots, and links.
 

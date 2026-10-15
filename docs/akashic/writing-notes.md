@@ -17,7 +17,8 @@ the folder hierarchy automatically. Use tags to connect notes across subjects.
 ## Metadata
 
 Begin each note with YAML front matter. Use `title` and `tags`; `description` is
-optional. Prefer consistent lowercase tags, using hyphens between words.
+optional. Reuse existing tag spellings: tags are case-sensitive, so `Docker`
+and `docker` would create separate entries.
 Git history records when content changes, so notes do not need date fields.
 
 ```yaml
@@ -32,6 +33,35 @@ tags:
 
 Copy `templates/note.md` from the repository root as a starting point. Templates
 are outside `docs/` so they do not appear in the published site or search results.
+
+Tags normally appear above the page title. Add `hide: [tags]` to front matter
+to hide that row while keeping the note in tag listings and search filters.
+
+## Headings and section numbers
+
+Use one `#` heading for the page title, then `##`, `###`, and `####` for sections,
+subsections, and sub-subsections. These three levels appear in the table of
+contents with matching indentation. Deeper headings still render in the page
+but are not included in the table of contents.
+
+Section numbers are part of the Markdown text, not automatic counters:
+
+```markdown
+## 1. Primer
+### 1.1. Build an image
+#### 1.1.1. Name the image
+## 2. Large images
+```
+
+Update those numbers when reorganizing a note. Heading links are generated from
+the heading text, so changing a heading or its number also changes its anchor.
+
+## Code blocks
+
+Give fenced code blocks a language such as `python`, `sh`, `json`, or
+`dockerfile` to enable syntax highlighting. The renderer supports its common
+language set plus Dockerfile; unknown languages remain plain text. Unlabelled
+blocks are not automatically detected. Each code block has a Copy button.
 
 ## Equations
 
@@ -99,13 +129,15 @@ plt.close(fig)
 
 ## Link ideas and sources
 
-Use relative Markdown links, such as `[Guides](index.md)`, to connect notes.
-Keep references in a Sources section so you can return to the original material.
+Use relative Markdown links, such as `[Akashic](index.md)`, to connect notes.
+Link sources near the claims they support; a Sources section can also collect
+references for further reading.
 
 ## Find notes
 
-Use the sidebar for the subject hierarchy, the search box for text, and the
-[tag index](../tags.md) for related notes across subjects.
+Use the Library tab's sidebar for the subject hierarchy and Search for text.
+The [Tags tab](../tags.md) groups related notes across subjects. Its sidebar
+shows note counts and jumps to each tag's section.
 
 ## Preview changes
 
