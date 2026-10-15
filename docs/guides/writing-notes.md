@@ -111,5 +111,5 @@ Use the sidebar for the subject hierarchy, the search box for text, and the
 
 Run `make dev` and open <http://127.0.0.1:8056>. Saving a Markdown file updates
 the page, navigation, and search index automatically. Code blocks include a Copy
-button, and the Appearance menu lets you follow the system or choose light or
+button, and the Appearance icon toggle lets you follow the system or choose light or
 dark mode.
