@@ -9,7 +9,7 @@ tags:
 
 Start with a network that has no internet connection. Put a server inside it. Then add only what that server needs to communicate.
 
-We'll use one example throughout: a VPC with address range `10.0.0.0/16`. These notes cover ordinary regional VPCs and IPv4; the addresses are illustrative.
+We'll use one example throughout: a VPC with address range `10.0.0.0/20`. These notes cover ordinary regional VPCs and IPv4; the addresses are illustrative.
 
 ## 1. Start with an empty VPC
 
@@ -19,7 +19,7 @@ Give it an address range:
 
 ```mermaid
 flowchart TB
-    vpc["VPC: 10.0.0.0/16<br/>No servers yet<br/>No internet connection"]
+    vpc["VPC: 10.0.0.0/20<br/>No servers yet<br/>No internet connection"]
 ```
 
 For this example, we deliberately start without an internet gateway or connections to other networks. AWS's default VPC and setup wizards may already include internet connectivity, so they may not look like this starting point. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
@@ -28,7 +28,7 @@ For this example, we deliberately start without an internet gateway or connectio
 
 ## 2. Understand the address range: CIDR
 
-`10.0.0.0/16` is **CIDR notation**, a compact way to describe a range of IP addresses. Each number between the dots is an **octet**: a group of 8 bits. Four octets make a 32-bit IPv4 address.
+`10.0.0.0/20` is **CIDR notation**, a compact way to describe a range of IP addresses. Each number between the dots is an **octet**: a group of 8 bits. Four octets make a 32-bit IPv4 address.
 
 ```mermaid
 ---
@@ -43,23 +43,23 @@ config:
     rowHeight: 64
 ---
 packet
-0-15: "Network ID — 16 fixed bits"
-16-31: "Host ID — 16 variable bits"
+0-19: "Network ID — 20 fixed bits"
+20-31: "Host ID — 12 variable bits"
 ```
 
-**`/16` sets the dividing line after the first 16 bits.** The network portion stays fixed; the host portion can vary. In `10.0.0.0/16`, that fixes `10.0` and lets the last two numbers vary, giving every address from `10.0.0.0` through `10.0.255.255`.
+**`/20` means 20 fixed network bits**, leaving `32 − 20 = 12` variable host bits. It fixes the first two octets (`10.0`) and the first four bits of the third octet. The third octet can range from `0` to `15`, and the last from `0` to `255`: the full range is `10.0.0.0` through `10.0.15.255`.
 
 The larger the number after `/`, the fewer bits can vary—and the smaller the address pool:
 
 | Example | Fixed part | Part that can vary | Total addresses |
 |---|---|---|---|
-| `10.0.0.0/16` | First 16 bits: `10.0` | Last two numbers | 65,536 |
+| `10.0.0.0/20` | First 20 bits | Last 12 bits | 4,096 |
 | `10.0.1.0/24` | First 24 bits: `10.0.1` | Last number | 256 |
 | `10.0.1.25/32` | All 32 bits | None | 1 |
 
-These examples line up with the dots because 16, 24, and 32 are multiples of 8. Other prefixes, such as `/20`, fix part of a number too. The rule is always the same: **`/n` fixes the first `n` bits**, leaving `2^(32 − n)` total addresses.
+The `/24` and `/32` boundaries line up with the dots because they are multiples of 8. Our `/20` boundary falls inside the third octet. The rule is always the same: **`/n` fixes the first `n` bits**, leaving `2^(32 − n)` total addresses.
 
-For now, our `/16` is the VPC's address pool. Next, we'll take a smaller `/24` range from it for a subnet.
+For now, our `/20` is the VPC's address pool. Next, we'll take a smaller `/24` range from it for a subnet.
 
 ## 3. Add a subnet and a server
 
@@ -67,7 +67,7 @@ A **subnet** takes a smaller address range from the VPC. This is where you place
 
 ```mermaid
 flowchart TB
-    subgraph vpc["VPC: 10.0.0.0/16"]
+    subgraph vpc["VPC: 10.0.0.0/20"]
         subgraph subnetA["Subnet A: 10.0.1.0/24"]
             app["App<br/>10.0.1.25"]
         end
@@ -90,7 +90,7 @@ Put a database in another subnet:
 
 ```mermaid
 flowchart LR
-    subgraph vpc["VPC: 10.0.0.0/16"]
+    subgraph vpc["VPC: 10.0.0.0/20"]
         direction LR
         subgraph subnetA["Subnet A: 10.0.1.0/24"]
             app["App<br/>10.0.1.25"]
@@ -108,7 +108,7 @@ Read each route as: “For this destination range, send traffic to this target.�
 
 | Destination | Target | Meaning |
 |---|---|---|
-| `10.0.0.0/16` | `local` | Keep traffic for this VPC inside this VPC |
+| `10.0.0.0/20` | `local` | Keep traffic for this VPC inside this VPC |
 
 The database address falls within that range, so the app has a local path to it. This connection stays inside the VPC.
 
@@ -169,7 +169,7 @@ An **internet gateway (IGW)** connects a VPC to the internet. Attach one to the 
 
 ```mermaid
 flowchart LR
-    subgraph vpc["VPC: 10.0.0.0/16"]
+    subgraph vpc["VPC: 10.0.0.0/20"]
         direction LR
         subgraph subnetA["Private subnet A: 10.0.1.0/24"]
             app["App<br/>10.0.1.25"]
@@ -193,7 +193,7 @@ Subnet C's route table now contains:
 
 | Destination | Target | Meaning |
 |---|---|---|
-| `10.0.0.0/16` | `local` | VPC destinations stay local |
+| `10.0.0.0/20` | `local` | VPC destinations stay local |
 | `0.0.0.0/0` | Internet gateway | Send other IPv4 traffic toward the internet |
 
 `0.0.0.0/0` means all IPv4 addresses. It acts as the fallback because routing chooses the **most specific matching range**. The database's `10.0.2.30` address still matches the more specific local route.
@@ -236,9 +236,9 @@ Keep Subnet C's route to the IGW. Give Subnet A its own table with a default rou
 
 | Subnet | Destination | Target |
 |---|---|---|
-| Private A | `10.0.0.0/16` | `local` |
+| Private A | `10.0.0.0/20` | `local` |
 | Private A | `0.0.0.0/0` | NAT gateway |
-| Public C | `10.0.0.0/16` | `local` |
+| Public C | `10.0.0.0/20` | `local` |
 | Public C | `0.0.0.0/0` | Internet gateway |
 
 NAT translates addresses and tracks connections. The external API sees the NAT gateway's Elastic IP, and its replies return to the app through NAT.
@@ -262,7 +262,7 @@ For S3, create a **gateway endpoint** and associate it with Subnet A's route tab
 
 | Destination | Target |
 |---|---|
-| `10.0.0.0/16` | `local` |
+| `10.0.0.0/20` | `local` |
 | Regional S3 prefix list | S3 gateway endpoint |
 
 A **prefix list** is a collection of IP ranges; AWS maintains this one for the service. Traffic matching it follows the endpoint route.
