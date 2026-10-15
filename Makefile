@@ -1,7 +1,14 @@
-.PHONY: env dev
+.PHONY: env dev build check
 
 env:
-	uv sync --locked
+	npm ci
 
 dev:
-	uv run --locked zensical serve
+	npm run dev
+
+build:
+	npm run build
+
+check:
+	npm run test
+	npm run typecheck

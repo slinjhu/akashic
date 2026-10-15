@@ -50,6 +50,9 @@ $$
 
 ## Diagrams
 
+Diagrams include zoom controls and a Source button for inspecting their Mermaid
+definition. Their colors follow the selected light or dark appearance.
+
 Use a fenced block with the language `mermaid`:
 
 ````markdown
@@ -101,3 +104,10 @@ Keep references in a Sources section so you can return to the original material.
 
 Use the sidebar for the subject hierarchy, the search box for text, and the
 [tag index](../tags.md) for related notes across subjects.
+
+## Preview changes
+
+Run `make dev` and open <http://127.0.0.1:8056>. Saving a Markdown file updates
+the page, navigation, and search index automatically. Code blocks include a Copy
+button, and the Appearance menu lets you follow the system or choose light or
+dark mode.
