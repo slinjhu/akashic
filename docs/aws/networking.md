@@ -17,10 +17,9 @@ A **VPC (Virtual Private Cloud)** is your own logically isolated network in an A
 
 Give it an address range:
 
-```text
-VPC: 10.0.0.0/16
-  No servers yet
-  No internet connection
+```mermaid
+flowchart TB
+    vpc["VPC: 10.0.0.0/16<br/>No servers yet<br/>No internet connection"]
 ```
 
 For this example, we deliberately start without an internet gateway or connections to other networks. AWS's default VPC and setup wizards may already include internet connectivity, so they may not look like this starting point. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
@@ -66,10 +65,13 @@ For now, our `/16` is the VPC's address pool. Next, we'll take a smaller `/24` r
 
 A **subnet** takes a smaller address range from the VPC. This is where you place a server, such as an **EC2 instance**, AWS's virtual machine.
 
-```text
-VPC: 10.0.0.0/16
-  Subnet A: 10.0.1.0/24
-    App server: 10.0.1.25
+```mermaid
+flowchart TB
+    subgraph vpc["VPC: 10.0.0.0/16"]
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+        end
+    end
 ```
 
 `10.0.1.0/24` covers `10.0.1.0` through `10.0.1.255`. AWS reserves some addresses in a subnet, so not every address is available for servers.
@@ -86,12 +88,18 @@ We start with one subnet to learn the pieces. For a production application that 
 
 Put a database in another subnet:
 
-```text
-VPC: 10.0.0.0/16
-  Subnet A: 10.0.1.0/24
-    App:      10.0.1.25
-  Subnet B: 10.0.2.0/24
-    Database: 10.0.2.30
+```mermaid
+flowchart LR
+    subgraph vpc["VPC: 10.0.0.0/16"]
+        direction LR
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+        end
+        subgraph subnetB["Subnet B: 10.0.2.0/24"]
+            database["Database<br/>10.0.2.30"]
+        end
+        app -->|"Local route"| database
+    end
 ```
 
 When the app connects to `10.0.2.30`, AWS needs to know where to send the traffic. A **route table** supplies that answer.
@@ -129,11 +137,21 @@ There is also a subnet-level filter called a **network ACL**. We'll assume the d
 
 Suppose we want to add a web server that visitors can reach from the internet. Keep the app and database where they are, and add Subnet C for the web server:
 
-```text
-VPC: 10.0.0.0/16
-  Subnet A: 10.0.1.0/24 — app at 10.0.1.25
-  Subnet B: 10.0.2.0/24 — database at 10.0.2.30
-  Subnet C: 10.0.3.0/24 — web server at 10.0.3.40
+```mermaid
+flowchart LR
+    subgraph vpc["VPC: 10.0.0.0/16"]
+        direction LR
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+        end
+        subgraph subnetB["Subnet B: 10.0.2.0/24"]
+            database["Database<br/>10.0.2.30"]
+        end
+        subgraph subnetC["Subnet C: 10.0.3.0/24"]
+            web["Web server<br/>10.0.3.40"]
+        end
+        app -->|"Local route"| database
+    end
 ```
 
 An **internet gateway (IGW)** connects a VPC to the internet. Attach one to the VPC, then give Subnet C its own route table:
@@ -287,15 +305,33 @@ Our example explains connectivity. To keep serving requests when an AZ fails, re
 
 A common production web layout uses at least two AZs, with a public subnet and a private application subnet in each:
 
-```text
-One VPC, one Region
-  AZ 1
-    Public subnet  — load balancer entry point
-    Private subnet — app instance 1
-  AZ 2
-    Public subnet  — load balancer entry point
-    Private subnet — app instance 2
+```mermaid
+flowchart TB
+    subgraph vpc["One VPC, one Region"]
+        subgraph az1["Availability Zone 1"]
+            subgraph public1["Public subnet"]
+                lb1["Load balancer<br/>Entry point in AZ 1"]
+            end
+            subgraph private1["Private subnet"]
+                app1["App instance 1"]
+            end
+        end
+        subgraph az2["Availability Zone 2"]
+            subgraph public2["Public subnet"]
+                lb2["Load balancer<br/>Entry point in AZ 2"]
+            end
+            subgraph private2["Private subnet"]
+                app2["App instance 2"]
+            end
+        end
+        lb1 --> app1
+        lb1 --> app2
+        lb2 --> app1
+        lb2 --> app2
+    end
 ```
+
+The two entry points belong to one load balancer spanning both AZs. The arrows show how it can reach app instances in either AZ.
 
 A **load balancer** sends requests to healthy app instances. If one AZ becomes unavailable, the other must have enough capacity to keep serving requests. AWS's [production VPC example](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html) uses this layout with an Auto Scaling group to maintain application instances.
 
