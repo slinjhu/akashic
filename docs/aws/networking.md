@@ -338,40 +338,90 @@ A rejected request does not fall back to NAT: routing has already selected the e
 
 Now the app needs to retrieve a password from **Amazon Secrets Manager**, an AWS service for storing and retrieving secrets. It supports a different kind of VPC endpoint: an **interface endpoint**.
 
-An interface endpoint creates a virtual network interface, called an **ENI**, with a private IP in each selected subnet. Think of it as a private entry point to the service. The underlying connectivity technology is called **AWS PrivateLink**; gateway endpoints use a different mechanism.
+We create an interface endpoint with a network interface, called an **ENI**, in Subnet A. Its private IP, `10.0.1.50`, is our entry point to Secrets Manager. **AWS PrivateLink** carries traffic from that interface to the service outside our VPC, without NAT or an internet gateway.
 
 ```mermaid
 flowchart LR
-    app["App: 10.0.1.25"] --> ep["Endpoint network interface<br/>Private IP in VPC"]
-    ep --> service["Secrets Manager"]
+    subgraph vpc["VPC: 10.0.0.0/20"]
+        subgraph subnetA["Subnet A: 10.0.1.0/24"]
+            app["App<br/>10.0.1.25"]
+            ep["Endpoint network interface (ENI)<br/>10.0.1.50"]
+            app --> ep
+        end
+    end
+    ep -->|AWS PrivateLink| service["Secrets Manager"]
 ```
 
-The app normally calls the service by its hostname. **DNS** turns that name into an IP address. With private DNS enabled for the endpoint, the service's usual hostname resolves inside the VPC to the endpoint's private IPs.
+With private DNS enabled, the app's usual Secrets Manager hostname resolves to this private IP. The app connects to it using the VPC's existing local route.
 
-The app can usually keep using the same service hostname. Its traffic now goes to the private interface. You do not add an S3-style service route: the destination IP is already reachable inside the VPC.
+### 9.1. Choose subnets and enable private DNS
 
-Private DNS requires VPC DNS support and DNS hostnames to be enabled. The endpoint's security group must allow client connections, commonly inbound HTTPS on TCP `443`. See [AWS interface endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html).
+The **interface endpoint belongs to the VPC**, while its **ENIs live in the subnets we select**. Here we select only Subnet A. Resources in Subnet B can also reach that ENI, provided security rules allow it; they do not need their own ENI.
 
-**Remember the mechanism:** a gateway endpoint changes the route for service traffic; an interface endpoint provides private IPs to connect to.
+Selecting two subnets in different Availability Zones creates two ENIs for the same endpoint, each with its own private IP. An interface endpoint allows only one selected subnet per AZ. These can be private subnets. See [AWS endpoint subnet configuration](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html).
 
-This also explains why a public destination IP does not always mean traffic goes through the internet. S3's hostname can resolve to public service IPs while the matching traffic follows the gateway endpoint route.
+**DNS** turns a hostname into an IP address. Enabling private DNS for the endpoint makes the service's usual hostname resolve inside the VPC to the endpoint's private IPs, so the app can keep using the same hostname. This requires VPC DNS support and DNS hostnames to be enabled. No S3-style service route is needed: the destination is already inside the VPC. See [AWS interface endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html).
 
-### 9.1. Why use a gateway endpoint for S3? Is it about performance?
+### 9.2. Allow connections with a security group
+
+A **security group** is created in a VPC and associated with network interfaces (ENIs), rather than with a subnet. Our EC2 app has an ENI too: its address is `10.0.1.25`. When we say "the app's security group," we mean the group attached to that interface. The endpoint's security group is attached to its ENI at `10.0.1.50`. A group is reusable: multiple ENIs, including those in different subnets of the VPC, can use the same group. See [AWS security group associations](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/changing-security-group.html).
+
+The app has a network path to `10.0.1.50`, but the endpoint's security group must allow the connection. Give it an inbound rule allowing TCP `443` from the app's security group. Referencing that group identifies the permitted source interfaces; it does not copy their security group rules. The app's outbound rules must also allow the HTTPS connection. Replies are automatically permitted because security groups are stateful. See [AWS security group rules](https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html).
+
+These rules control connections to the endpoint ENIs. They do not distinguish reading a password from changing it. A gateway endpoint has no ENI or security group of its own, although the app's network rules still apply. See [interface endpoint security groups](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) and [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+
+### 9.3. Limit requests with an endpoint policy
+
+Once the connection is allowed, an **endpoint policy** limits the service requests that can pass through it. The policy belongs to the interface endpoint, not to an individual ENI; it applies across all ENIs of that endpoint. Endpoint policies are available when the service supports them, as Secrets Manager does. See [AWS endpoint policies](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-access.html).
+
+To allow only reading one secret through this endpoint, attach this policy:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": [
+                "arn:aws:secretsmanager:us-west-2:111122223333:secret:app-password-AbCdEf"
+            ]
+        }
+    ]
+}
+```
+
+Replace the example ARN with the secret's actual ARN, including its generated suffix. This endpoint policy allows a read request for that secret to pass the endpoint check; writes and requests for other secrets fail it. The caller still needs permission to read the secret through the applicable IAM and resource policies, plus any required KMS permission. See [AWS Secrets Manager endpoint policies](https://docs.aws.amazon.com/secretsmanager/latest/userguide/vpc-endpoint-overview.html) and [GetSecretValue permissions](https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html).
+
+This works like our S3 gateway endpoint policy: both restrict **who may perform which actions on which resources through that endpoint**. Neither grants service access by itself nor restricts requests made through a different path.
+
+### 9.4. Compare gateway and interface endpoints
 
 **S3 supports both gateway and interface endpoints.** We chose a gateway endpoint for this example because the app is inside the VPC and needs same-Region S3 access. It gives us a simple route-based path with no additional gateway-endpoint charge. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
 
-The two designs connect to the service differently:
+Both are VPC endpoints. Their main differences are the traffic path, network controls, and cost:
 
-| Design | What changes in your VPC | How traffic reaches the service |
+| Feature | Gateway endpoint | Interface endpoint |
 |---|---|---|
-| Gateway endpoint | A service-specific route is added to selected route tables | Matching service IP ranges use the endpoint route |
-| Interface endpoint | ENIs with private IPs are created in selected subnets | The app connects to those private IPs, usually through DNS |
+| Entry point | A service-specific route in selected route tables | An ENI with a private IP in each selected subnet |
+| Traffic path | Packets addressed to the service follow the matching endpoint route | Packets addressed to the ENI's private IP pass through PrivateLink to the service |
+| Endpoint security group | None | Controls connections to the endpoint ENIs |
+| Endpoint charges | No additional hourly or data-processing charge | Hourly charge per AZ, plus data-processing charges |
+
+For our interface endpoint, the app sends actual HTTPS traffic to `10.0.1.50:443`. The ENI is part of the data path, not just a DNS entry. AWS carries the request onward through PrivateLink and returns the response through the connection. This private IP identifies an AWS-managed entry point; it does not mean we run a Secrets Manager server in our subnet. With the S3 gateway endpoint, packets remain addressed to S3's service IPs, and the route table selects the endpoint path without an endpoint ENI. See [AWS PrivateLink connectivity](https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html) and [gateway endpoint routing](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
+
+An interface endpoint's hourly charge continues while it is provisioned, even when idle. Selecting subnets in two AZs adds an hourly charge for each AZ, and data-processing charges cover both requests and responses. A gateway endpoint has neither of these endpoint charges; the underlying service's normal charges still apply. This makes cost a practical reason to use a gateway endpoint for our same-Region S3 traffic. See [AWS PrivateLink pricing](https://aws.amazon.com/privatelink/pricing/) and [S3 gateway endpoint pricing](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html).
 
 AWS offers gateway endpoints specifically for S3 and DynamoDB. Many other AWS services, including Secrets Manager and ECR, offer interface endpoints through PrivateLink. You choose from the endpoint types the service supports; you cannot turn an arbitrary service's interface endpoint into a gateway endpoint. See [AWS gateway endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html).
 
-**Do not read this as “storage needs a fast gateway; other APIs use slower ENIs.”** The AWS documentation describes different connectivity options, not a universal performance ranking or a performance-based reason for that service split. Interface endpoints have documented bandwidth limits and scaling behavior, so throughput-sensitive workloads should check those limits and measure their actual path. See [AWS PrivateLink quotas](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-limits-endpoints.html).
+**Throughput can affect the choice.** AWS documents interface endpoint bandwidth of up to **10 Gbps per Availability Zone by default, automatically scaling up to 100 Gbps per AZ**. This matters when many clients transfer large amounts of data through the same endpoint. These figures describe capacity for moving data, not the latency of an individual request; workloads that need high throughput should check the limits and measure their actual path. See [AWS PrivateLink quotas](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-limits-endpoints.html).
 
-For S3, the practical choice is usually about **where the client is and what connectivity it needs**. A gateway endpoint fits our in-VPC example. An S3 interface endpoint can also serve clients on premises through VPN or Direct Connect, which cannot use the VPC's S3 gateway endpoint directly. Interface endpoints incur endpoint charges. Both paths keep S3 traffic on the AWS network. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
+That makes throughput a factor in choosing an endpoint. It does not establish why AWS created the two endpoint types, or prove that a gateway endpoint is always faster.
+
+The choice also depends on **where the client is and what connectivity it needs**. A gateway endpoint fits our in-VPC example. An S3 interface endpoint can also serve clients on premises through VPN or Direct Connect, which cannot use the VPC's S3 gateway endpoint directly. Both paths keep S3 traffic on the AWS network. See [AWS S3 endpoint comparison](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html).
 
 ## 10. Put the pieces together: pull a container image from ECR
 
