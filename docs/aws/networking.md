@@ -23,6 +23,12 @@ VPC: 10.0.0.0/16
   No internet connection
 ```
 
+For this example, we deliberately start without an internet gateway or connections to other networks. AWS's default VPC and setup wizards may already include internet connectivity, so they may not look like this starting point. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
+
+**So far:** we have a network boundary and an address pool. We have not created a path to the internet.
+
+## 2. Understand the address range: CIDR
+
 `10.0.0.0/16` is **CIDR notation**, a compact way to describe a range of IP addresses. Each number between the dots is an **octet**: a group of 8 bits. Four octets make a 32-bit IPv4 address.
 
 ```mermaid
@@ -56,11 +62,7 @@ These examples line up with the dots because 16, 24, and 32 are multiples of 8. 
 
 For now, our `/16` is the VPC's address pool. Next, we'll take a smaller `/24` range from it for a subnet.
 
-For this example, we deliberately start without an internet gateway or connections to other networks. AWS's default VPC and setup wizards may already include internet connectivity, so they may not look like this starting point. See [AWS internet gateway documentation](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html).
-
-**So far:** we have a network boundary and an address pool. We have not created a path to the internet.
-
-## 2. Add a subnet and a server
+## 3. Add a subnet and a server
 
 A **subnet** takes a smaller address range from the VPC. This is where you place a server, such as an **EC2 instance**, AWS's virtual machine.
 
@@ -72,11 +74,15 @@ VPC: 10.0.0.0/16
 
 `10.0.1.0/24` covers `10.0.1.0` through `10.0.1.255`. AWS reserves some addresses in a subnet, so not every address is available for servers.
 
-A VPC belongs to one Region. Each subnet belongs to one **Availability Zone (AZ)** within that Region. An AZ is a separate location for running resources; a VPC can contain subnets in several AZs. See [AWS subnet concepts](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
+A VPC belongs to one Region. Each subnet belongs to exactly one **Availability Zone (AZ)** within that Region. A VPC can contain many subnets, including several in the same AZ or subnets in different AZs. See [AWS subnet concepts](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html).
+
+An AZ is one or more data centers with separate power and networking infrastructure. Its purpose is **failure isolation**: a problem in one AZ is less likely to affect another. AZs within a Region have fast network connections so an application can run across them. See [AWS Availability Zones](https://docs.aws.amazon.com/whitepapers/latest/aws-fault-isolation-boundaries/availability-zones.html).
+
+We start with one subnet to learn the pieces. For a production application that must survive an AZ outage, we'll need subnets and working copies of the application in multiple AZs. Creating extra subnets alone does not create those copies.
 
 **So far:** the app has an address inside our network. It still has no internet path.
 
-## 3. Add a second subnet: how does traffic find its way?
+## 4. Add a second subnet: how does traffic find its way?
 
 Put a database in another subnet:
 
@@ -102,7 +108,7 @@ Each subnet uses one subnet route table at a time. Subnets can share a table; wi
 
 **Separate subnets do not automatically block communication.** A subnet divides addresses and determines placement. Traffic restrictions are a separate concern.
 
-## 4. Add permission to use the path
+## 5. Add permission to use the path
 
 A route answers **“Where does traffic go?”** A **security group** answers **“Is this traffic allowed?”**
 
@@ -119,7 +125,7 @@ There is also a subnet-level filter called a **network ACL**. We'll assume the d
 
 **So far:** the app and database can communicate privately when the rules allow it. Neither needs internet access for this connection.
 
-## 5. Add an internet gateway: public versus private subnets
+## 6. Add an internet gateway: public versus private subnets
 
 Suppose we want to add a web server that visitors can reach from the internet. Keep the app and database where they are, and add Subnet C for the web server:
 
@@ -153,7 +159,7 @@ To make the web server reachable, give it a public IPv4 address and allow its we
 
 **The distinction:** “public” describes a subnet's route. It does not mean every resource in it is reachable from the internet. Attaching an IGW alone also does not make all subnets public.
 
-## 6. Keep the app private, but let it call the internet
+## 7. Keep the app private, but let it call the internet
 
 Now the app at `10.0.1.25` needs to call an external API. We want to keep it in private Subnet A with only its private IP.
 
@@ -188,7 +194,7 @@ An external host cannot use this NAT path to start an unsolicited connection to 
 
 **So far:** the app can call the internet while its subnet remains private. Its default route points to NAT, not directly to the IGW.
 
-## 7. Reach S3 through a gateway endpoint
+## 8. Reach S3 through a gateway endpoint
 
 Suppose the app now needs to read files from **Amazon S3**, AWS's object storage service. We can give it a path specifically to S3.
 
@@ -214,7 +220,7 @@ S3 has not moved into our subnet. The endpoint gives us a route to the AWS-manag
 
 **So far:** the app can reach the database locally and S3 through the endpoint. Without its NAT route, it can no longer call the external API.
 
-## 8. Reach another service through a private IP
+## 9. Reach another service through a private IP
 
 Now the app needs to retrieve a password from **Secrets Manager**. This service uses a different kind of VPC endpoint: an **interface endpoint**.
 
@@ -236,7 +242,7 @@ Private DNS requires VPC DNS support and DNS hostnames to be enabled. The endpoi
 
 This also explains why a public destination IP does not always mean traffic goes through the internet. S3's hostname can resolve to public service IPs while the matching traffic follows the gateway endpoint route.
 
-## 9. Put the pieces together: pull a container image from ECR
+## 10. Put the pieces together: pull a container image from ECR
 
 Keep the app in Subnet A with its S3 endpoint route and no NAT route. We want its EC2 instance to pull a private container image from **Amazon ECR**, AWS's container image registry, in the same Region.
 
@@ -256,7 +262,7 @@ Use private DNS for the ECR endpoints, allow HTTPS to their interfaces, and asso
 
 This example covers the image pull; the application may need other services once it starts. Special cases, including an initial pull-through-cache fetch or externally hosted Windows layers, can need additional connectivity. See [AWS ECR endpoint requirements](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html).
 
-## 10. Add the remaining permission checks
+## 11. Add the remaining permission checks
 
 We already used security groups. Once the path exists, additional controls can still block traffic or deny a service operation:
 
@@ -275,7 +281,31 @@ For EC2, omitting a security group means AWS uses the VPC's default group. Its o
 
 **A path and permission are separate requirements.** Allowing HTTPS does not create a route. Creating an endpoint does not grant access to every resource behind it.
 
-## 11. Trace any connection with the same questions
+## 12. Extend the design across Availability Zones
+
+Our example explains connectivity. To keep serving requests when an AZ fails, repeat the needed parts of the application in another AZ within the same VPC.
+
+A common production web layout uses at least two AZs, with a public subnet and a private application subnet in each:
+
+```text
+One VPC, one Region
+  AZ 1
+    Public subnet  — load balancer entry point
+    Private subnet — app instance 1
+  AZ 2
+    Public subnet  — load balancer entry point
+    Private subnet — app instance 2
+```
+
+A **load balancer** sends requests to healthy app instances. If one AZ becomes unavailable, the other must have enough capacity to keep serving requests. AWS's [production VPC example](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html) uses this layout with an Auto Scaling group to maintain application instances.
+
+The distinction is simple: **subnets provide places to run resources; redundant resources and failover provide availability.** Two subnets in the same AZ do not protect against an AZ outage. Putting the only app server in one AZ and the only database in another does not either: losing either one still breaks the application.
+
+Include dependencies in the design: the database needs replication and failover, and each surviving app instance needs working network paths. With the zonal NAT gateways used in our example, a common resilient layout gives each AZ its own NAT gateway instead of making both depend on one AZ.
+
+One subnet can be enough for a learning environment or a workload that accepts downtime. Choose the production layout based on availability needs; the goal is surviving failures, not reaching a particular subnet count.
+
+## 13. Trace any connection with the same questions
 
 Once the pieces are familiar, follow one request from start to finish:
 
