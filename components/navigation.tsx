@@ -22,23 +22,27 @@ function buildTree(entries: Entry[]) {
   return root;
 }
 
-export function Navigation({ entries }: { entries: Entry[] }) {
+export function Navigation({ entries, tags }: { entries: Entry[]; tags: { tag: string; count: number }[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const tree = buildTree(entries);
+  const isTags = pathname === "/tags";
+  const isHelp = pathname === "/guides" || pathname.startsWith("/guides/");
+  const tree = buildTree(isHelp ? entries.filter(entry => entry.url === "/guides" || entry.url.startsWith("/guides/")) : entries);
   const link = (url: string, title: string) => <Link href={url} aria-current={pathname === url ? "page" : undefined} onClick={() => setOpen(false)}>{title}</Link>;
   function branches(parent: Tree): React.ReactNode {
     return [...parent.children.entries()].map(([key, node]) => <li key={key}>
       {node.children.size ? <details open><summary>{node.url ? link(node.url, node.label) : <span>{node.label.toUpperCase() === "AWS" ? "AWS" : node.label}</span>}</summary><ul>{branches(node)}</ul></details> : node.url && link(node.url, node.label)}
     </li>);
   }
+  if (pathname === "/search") return <aside className="sidebar" aria-hidden="true" />;
   return <>
-    <button className="mobile-nav" aria-expanded={open} aria-controls="library-nav" onClick={() => setOpen(!open)}>Browse library <span>{open ? "−" : "+"}</span></button>
-    <nav id="library-nav" className={`sidebar ${open ? "is-open" : ""}`} aria-label="Library">
-      <p className="eyebrow">Your library</p>
-      <ul className="nav-main"><li>{link("/", "Overview")}</li><li>{link("/tags", "All tags")}</li><li>{link("/search", "Search notes")}</li></ul>
-      <p className="eyebrow nav-section">Topics</p><ul className="nav-tree">{branches(tree)}</ul>
-      <div className="sidebar-footer">Keep learning.<br/><span>Make it your own.</span></div>
+    <button className="mobile-nav" aria-expanded={open} aria-controls="library-nav" onClick={() => setOpen(!open)}>{isTags ? "Browse tags" : isHelp ? "Browse help" : "Browse library"} <span>{open ? "−" : "+"}</span></button>
+    <nav id="library-nav" className={`sidebar ${open ? "is-open" : ""}`} aria-label={isTags ? "Tags" : isHelp ? "Help" : "Library"}>
+      <p className="eyebrow">{isTags ? "Tags" : isHelp ? "Help" : "Topics"}</p>
+      {isTags ? <ul className="sidebar-tags">{tags.map(({ tag, count }) => <li key={tag}>
+        <a href={`#tag:${encodeURIComponent(tag)}`} onClick={() => setOpen(false)}><span>{tag}</span><span className="sidebar-tag-count">{count}</span></a>
+      </li>)}</ul> : <ul className="nav-tree">{branches(tree)}</ul>}
+      {!isTags && <div className="sidebar-footer">Keep learning.<br/><span>Make it your own.</span></div>}
     </nav>
   </>;
 }
