@@ -12,7 +12,7 @@
     "build": "node scripts/build.mjs",
     "start": "node scripts/serve.mjs",
     "publish": "node scripts/publish.mjs",
-    "typecheck": "npm run content && tsc --noEmit",
+    "typecheck": "npm run content && next typegen && tsc --noEmit",
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
