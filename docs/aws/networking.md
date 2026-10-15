@@ -306,6 +306,34 @@ The existing NAT and internet gateway provide this path; adding another S3 gatew
 
 The app still needs permission to access the remote bucket, and its network rules must allow the connection. If we removed NAT without providing another suitable path, the local gateway endpoint would continue to serve matching local-Region S3 traffic, but it would not make the remote bucket reachable.
 
+### 8.4. Control access with a gateway endpoint policy
+
+The S3 route selects traffic by destination IP range, so it can carry requests for many buckets in the Region. An **endpoint policy** narrows what callers may do through that path. It is attached to the gateway endpoint and can restrict the calling identity, S3 actions, and resources. The default policy places no additional restriction on endpoint access; it does not make buckets public or grant callers S3 permissions.
+
+Suppose our app should only read objects in `bucket`. We could give the endpoint this policy, shown as a decoded JSON policy document:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::bucket/*"
+            ]
+        }
+    ]
+}
+```
+
+`Principal: "*"` applies this endpoint allowance to any caller using the endpoint; it does not make the bucket public. The action permits reading objects, and the resource covers object keys inside `bucket`. A request for `report.csv` can pass this endpoint check, but the caller still needs S3 authorization through the applicable IAM and bucket policies. Uploading an object, listing the bucket, or reading another bucket would fail the endpoint check under this policy.
+
+A rejected request does not fall back to NAT: routing has already selected the endpoint path. Conversely, this policy does not govern requests that use a different path, such as our cross-Region NAT connection. Restricting a bucket to requests from a particular endpoint requires a bucket policy. See [AWS endpoint policies](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-access.html).
+
 ## 9. Reach another service through a private IP
 
 Now the app needs to retrieve a password from **Amazon Secrets Manager**, an AWS service for storing and retrieving secrets. It supports a different kind of VPC endpoint: an **interface endpoint**.
