@@ -1,10 +1,16 @@
-# Akashic
+---
+title: Getting started with Akashic
+description: Set up, run, and write notes in Akashic.
+tags: [akashic]
+---
+
+# Getting started with Akashic
 
 A Markdown-first personal knowledge library built with Next.js, React, and TypeScript.
 
 ## Preview locally
 
-Install Node.js 22 or newer, then run:
+Install Node.js 22 or newer, then run these commands from the repository root:
 
 ```sh
 make env
@@ -25,7 +31,7 @@ Navigation follows folders automatically; no navigation list needs updating.
 Search covers titles, tags, and note text; the tag index groups notes automatically.
 Tags appear above the title. Appearance follows the system by default, with
 persistent light/dark overrides. Dates belong in Git history.
-See [the writing guide](docs/guides/writing-notes.md) for equations, Mermaid
+See [the writing guide](writing-notes.md) for equations, Mermaid
 diagrams, images, plots, and links.
 
 ## Build

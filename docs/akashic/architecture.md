@@ -32,11 +32,11 @@ hierarchy; tags connect ideas across subjects.
 |---|---|---|
 | `docs/index.md` | `/` | Library overview |
 | `docs/aws/networking.md` | `/aws/networking` | A knowledge note |
-| `docs/guides/index.md` | `/guides` | A subject overview |
+| `docs/akashic/index.md` | `/akashic` | A subject overview |
 | `docs/tags.md` | `/tags` | Introduction to the generated tag index |
 
 The app keeps existing relative Markdown links usable. For example, a link from
-this page to `writing-notes.md` becomes `/guides/writing-notes`. Images may
+this page to `writing-notes.md` becomes `/akashic/writing-notes`. Images may
 live beside their notes or in `docs/assets/`.
 
 ## Preparing the content
