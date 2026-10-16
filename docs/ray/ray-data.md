@@ -108,11 +108,63 @@ We need to process many batches concurrently and write results as we go.
 **Ray Data** handles the dataset pipeline: reading input, distributing batches to
 workers, and writing output. The embedding model still does the inference.
 
+The diagram shows data flowing through read tasks, actors, and write tasks.
+Two worker nodes each host two actors. An actor is a Python process, not a machine.
+
+```mermaid
+---
+config:
+  flowchart:
+    nodeSpacing: 16
+    rankSpacing: 30
+    padding: 8
+---
+flowchart LR
+    subgraph input["S3 · input Parquet files"]
+        f1["part-000.parquet"]
+        f2["part-001.parquet"]
+        fn["… more files"]
+    end
+
+    subgraph cluster["Ray cluster"]
+        read["Distributed read tasks<br/>Decode Parquet into CPU-memory blocks"]
+
+        subgraph worker1["Worker node A"]
+            a1["Actor 1"]
+            a2["Actor 2"]
+        end
+        subgraph worker2["Worker node B"]
+            a3["Actor 3"]
+            a4["Actor 4"]
+        end
+
+        write["Distributed write tasks<br/>Encode output blocks as Parquet"]
+        read -->|"Batches"| worker1
+        read -->|"Batches"| worker2
+        worker1 -->|"IDs + embeddings"| write
+        worker2 -->|"IDs + embeddings"| write
+    end
+
+    subgraph output["S3 · output Parquet files"]
+        o1["embeddings-000.parquet"]
+        o2["embeddings-001.parquet"]
+        on["… more files"]
+    end
+    input --> read
+    write --> output
+```
+
+Arrows carry data. Read and write tasks run on cluster nodes with available
+resources; the separate boxes describe their roles, not additional dedicated
+machines. Input files are divided into blocks and batches, so a file
+is not permanently assigned to one actor, and output file boundaries need not
+match input files.
+
 ### 2.1. Read from S3, embed on GPUs, write to S3
 
 Assume the records are stored in S3 Parquet files with `id` and `text` columns.
 Each row has a unique ID and a non-null text string. The example uses an existing
-Ray cluster with eight available NVIDIA GPUs and enough CPU resources for both
+Ray cluster with four available NVIDIA GPUs and enough CPU resources for both
 inference and data loading. All workers need CUDA-enabled PyTorch, compatible
 packages, access to the model files, and permission to read and write the S3
 locations. The bucket paths below are placeholders.
@@ -164,9 +216,9 @@ if __name__ == "__main__":
         Embedder,
         batch_format="numpy",
         batch_size=256,  # Rows handed to a worker per Ray batch.
-        compute=ray.data.ActorPoolStrategy(size=8),
+        compute=ray.data.ActorPoolStrategy(size=4),
         num_cpus=1,
-        num_gpus=1,  # One GPU per worker: eight GPUs total.
+        num_gpus=1,  # One GPU per worker: four GPUs total.
     )
 
     # Execute the pipeline and write distributed output without collecting it.
@@ -175,8 +227,7 @@ if __name__ == "__main__":
 ```
 
 With `batch_format="numpy"`, the worker receives and returns a dictionary mapping
-column names to NumPy arrays. Annotations help readers, editors, and type
-checkers; they do not enforce column names, array shapes, or dtypes at runtime.
+column names to NumPy arrays.
 See Ray's annotated
 [`map_batches` examples](https://docs.ray.io/en/latest/data/api/doc/ray.data.Dataset.map_batches.html).
 
@@ -239,18 +290,12 @@ does not copy a model already loaded in another process.
 
 ### 2.3. How the work is distributed
 
-Ray creates eight persistent workers, called **actors**, from the `Embedder`
+Ray creates four persistent workers, called **actors**, from the `Embedder`
 class. Each actor initializes its model once and reuses it for many batches.
 This avoids paying the model-loading cost for every call. The workers can run
 on different machines; each processes different records with a complete copy of
 the model. See Ray's
 [batch inference guide](https://docs.ray.io/en/latest/data/batch_inference.html).
-
-`num_gpus=1` reserves a logical GPU resource for each actor, and Ray sets the
-worker's GPU visibility. `device="cuda"` makes the model use that GPU. Both
-settings matter: requesting a GPU alone does not move a model onto it. Each
-model replica and its inference batch must fit in one GPU's memory. See
-[Ray accelerator support](https://docs.ray.io/en/latest/ray-core/scheduling/accelerators.html).
 
 The two batch sizes control different parts of the pipeline. Ray hands a worker
 up to 256 rows, possibly fewer at block boundaries. The worker then processes
@@ -360,7 +405,7 @@ See [Ray Data's execution model](https://docs.ray.io/en/latest/data/data-interna
 
 ### 2.6. Measure before scaling further
 
-Eight GPUs do not guarantee an eightfold speedup. Measure records per second on
+Four GPUs do not guarantee a fourfold speedup. Measure records per second on
 representative input, separating startup and model downloads from steady-state
 processing. Tune the model batch size on one worker, then increase the worker
 count. If throughput stops improving, check GPU utilization, CPU tokenization,
@@ -375,15 +420,15 @@ make it possible to determine which results are complete.
 
 ### 3.1. Match the worker pool to available capacity
 
-The example requests eight actors, each with one GPU and one logical CPU. These
-resources must be available together on a node for an actor to start. Eight GPUs
+The example requests four actors, each with one GPU and one logical CPU. These
+resources must be available together on a node for an actor to start. Four GPUs
 alone are insufficient if the accompanying CPU resources are unavailable.
 
 When capacity is intentionally variable, replace the fixed pool with a range:
 
 ```python
 # In the existing map_batches call:
-compute=ray.data.ActorPoolStrategy(min_size=1, max_size=8)
+compute=ray.data.ActorPoolStrategy(min_size=1, max_size=4)
 ```
 
 This allows the pool to grow with demand and available resources. The pool
@@ -394,7 +439,7 @@ capacity. See
 
 ### 3.2. Make work small enough to redistribute
 
-Suppose seven workers finish their current batches quickly while one gets a
+Suppose three workers finish their current batches quickly while one gets a
 batch of unusually long texts. That slow batch becomes a **straggler**. Scheduling
 more work on the other workers helps overall throughput, but does not shorten
 the batch already running.
