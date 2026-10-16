@@ -124,8 +124,7 @@ on the cluster:
 uv add "ray[data]"
 ```
 
-Save this as `embed_ray.py` and run it on the cluster's head node with
-`uv run python embed_ray.py`:
+Save this as `embed_ray.py`. Section 2.2 explains how to submit it to the cluster:
 
 ```python
 import numpy as np
@@ -189,7 +188,56 @@ do not rely on file order or row arrival order.
 it does not provision machines. See the
 [starting Ray guide](https://docs.ray.io/en/latest/ray-core/starting-ray.html).
 
-### 2.2. How the work is distributed
+### 2.2. Submit the program to the cluster
+
+First get the program onto the cluster; then Ray distributes its work to actors.
+One option is to SSH into the head node, clone or copy the project there, and run
+`uv run python embed_ray.py` in its prepared environment.
+
+Alternatively, use **Ray Jobs** to submit from your laptop or CI machine. Install
+the CLI dependencies locally, using a Ray version compatible with the cluster:
+
+```sh
+uv add "ray[data,default]"
+```
+
+From the project directory containing `embed_ray.py`, run:
+
+```sh
+uv run ray job submit \
+  --address="http://<head-node-address>:8265" \
+  --working-dir="." \
+  -- python embed_ray.py
+```
+
+The address is the cluster's reachable job-submission endpoint. The command
+packages and uploads the working directory, then asks the cluster to run
+`python embed_ray.py`. With these options, the entrypoint runs on the head node
+by default. The command streams logs while the job runs; your laptop does not
+compute embeddings. See the
+[Ray Jobs quickstart](https://docs.ray.io/en/latest/cluster/running-applications/job-submission/quickstart.html).
+
+The job's working directory is made available to its driver and workers. Keep it
+focused on application files; use `.gitignore` or runtime-environment exclusions
+for local environments, caches, and large data files. Our input records remain
+in S3 and are read by the pipeline, rather than uploaded with the code.
+
+Code distribution and dependency installation are separate. `uv add` on your
+laptop updates the local project; it does not install packages on cluster nodes.
+For this submission command, assume the cluster environment already contains
+Ray Data, Sentence Transformers, and CUDA-enabled PyTorch. A shared container
+image can provide these consistently. Alternatively, configure a job-level
+**runtime environment** to install dependencies for the driver and workers before
+they execute. Uploading `pyproject.toml` and `uv.lock` alone does not synchronize
+that environment. See
+[Ray environment dependencies](https://docs.ray.io/en/latest/ray-core/handling-dependencies.html).
+
+Model weights are another input. Each actor loads the model from its node's cache
+or downloads it during initialization. Prepopulating the cache or providing an
+accessible model directory avoids repeated downloads; copying the Python script
+does not copy a model already loaded in another process.
+
+### 2.3. How the work is distributed
 
 Ray creates eight persistent workers, called **actors**, from the `Embedder`
 class. Each actor initializes its model once and reuses it for many batches.
@@ -219,7 +267,58 @@ be enough independent input work to feed the GPUs, and enough memory for active
 blocks, batches, and models. See
 [Ray Data internals](https://docs.ray.io/en/latest/data/data-internals.html).
 
-### 2.3. Follow the data from Parquet to worker and back
+### 2.4. Where the code runs and how data moves
+
+In either workflow above, `embed_ray.py` runs on the head node. That Python process
+is the **driver**: it defines the pipeline and coordinates its execution. The
+head node also hosts cluster control services. An **actor** is a separate Python
+worker process, scheduled on a node with the requested CPU and GPU resources.
+The driver and head node are distinct roles; the driver runs on the head node
+here because that is where we launched it or where Ray Jobs placed it.
+
+| Code | Where it executes | What happens |
+|---|---|---|
+| `ray.init(address="auto")` | Driver | Connects this Python process to the cluster |
+| `read_parquet(...)` and `map_batches(...)` | Driver | Build the dataset's execution plan; input discovery and metadata work may also happen |
+| `Embedder.__init__()` | Each actor | Loads a separate model onto that actor's GPU |
+| `Embedder.__call__(batch)` | An actor assigned a batch | Tokenizes text, computes embeddings, and returns output arrays |
+| `embedded.write_parquet(...)` | Called by the driver; writing runs in distributed tasks | Triggers the pipeline, waits for completion, and saves output to S3 |
+
+Defining `class Embedder` on the driver does not instantiate the model there.
+Ray makes the callable class available to its workers and instantiates it in
+each actor process. The actors do not each rerun the script's main block. Worker
+environments still need the imported packages and any model files they use.
+See Ray's
+[batch inference guide](https://docs.ray.io/en/latest/data/batch_inference.html).
+
+The `Dataset` variables on the driver represent the distributed computation;
+they are not Python lists containing all the records. Transformations are lazy,
+so defining `embedded` does not compute every embedding immediately. The write
+call consumes the dataset and drives execution. See
+[Ray Data key concepts](https://docs.ray.io/en/latest/data/key-concepts.html).
+
+Follow one batch through the pipeline:
+
+1. A read task fetches Parquet data from S3 and decodes it into CPU-memory blocks.
+2. Ray passes references to blocks through the pipeline. When a consumer runs
+   on another node, the required data is transferred to that node. Ray's
+   per-node shared-memory object stores support this exchange; local numeric
+   arrays can often be read without an additional copy.
+3. The actor receives a batch in CPU memory. Sentence Transformers tokenizes the
+   strings, transfers model inputs to its GPU, and computes embeddings. With
+   the default NumPy output used here, the vectors return to CPU memory.
+4. Output blocks feed write tasks, which encode Parquet and upload it to S3.
+   If writing happens on another node, that may require another network transfer.
+
+The driver coordinates this work without relaying every batch through its own
+Python process. Read tasks, actors, and write tasks may be placed on the same or
+different nodes; exact placement and operator fusion can change the physical
+path. The important transfers are **S3 ↔ CPU memory**, **between nodes when
+needed**, and **CPU memory ↔ GPU memory**. The model stays loaded in the actor
+across batches. See
+[Ray object serialization and transfer](https://docs.ray.io/en/latest/ray-core/objects/serialization.html).
+
+### 2.5. Follow the data from Parquet to worker and back
 
 **A file, a block, and a batch are different units.** Parquet files are the
 storage layout. Read tasks produce in-memory blocks; there is no required
@@ -259,7 +358,7 @@ its vector. Worker batches, output blocks, and output files need not have matchi
 boundaries. Reading, inference, and writing can overlap as blocks become ready.
 See [Ray Data's execution model](https://docs.ray.io/en/latest/data/data-internals.html).
 
-### 2.4. Measure before scaling further
+### 2.6. Measure before scaling further
 
 Eight GPUs do not guarantee an eightfold speedup. Measure records per second on
 representative input, separating startup and model downloads from steady-state
@@ -267,7 +366,126 @@ processing. Tune the model batch size on one worker, then increase the worker
 count. If throughput stops improving, check GPU utilization, CPU tokenization,
 S3 reading, and output writing before adding machines.
 
-For a billion-record run, record the model revision and preprocessing settings,
-validate output IDs and vector dimensions, and check for non-finite values.
-Plan how to resume interrupted work without duplicating completed records;
-distributed execution alone is not an application-level checkpointing strategy.
+## 3. Run a large pipeline reliably
+
+A billion-record job may outlive a worker process or a machine. Available GPUs
+can change, some batches take much longer than others, and a small fraction of
+records may be malformed. A reliable pipeline must keep useful work moving and
+make it possible to determine which results are complete.
+
+### 3.1. Match the worker pool to available capacity
+
+The example requests eight actors, each with one GPU and one logical CPU. These
+resources must be available together on a node for an actor to start. Eight GPUs
+alone are insufficient if the accompanying CPU resources are unavailable.
+
+When capacity is intentionally variable, replace the fixed pool with a range:
+
+```python
+# In the existing map_batches call:
+compute=ray.data.ActorPoolStrategy(min_size=1, max_size=8)
+```
+
+This allows the pool to grow with demand and available resources. The pool
+controls model workers; a separately configured **cluster autoscaler** adds or
+removes machines. Requesting more actors does not by itself create cloud
+capacity. See
+[actor-pool configuration](https://docs.ray.io/en/latest/data/api/doc/ray.data.ActorPoolStrategy.html).
+
+### 3.2. Make work small enough to redistribute
+
+Suppose seven workers finish their current batches quickly while one gets a
+batch of unusually long texts. That slow batch becomes a **straggler**. Scheduling
+more work on the other workers helps overall throughput, but does not shorten
+the batch already running.
+
+Balance work at two levels. At the dataset level, provide enough reasonably sized
+blocks to keep workers busy; repartition when the existing layout leaves too few
+independent pieces. At the model level, account for text length. Two batches of
+256 records can have very different token counts and memory requirements.
+
+For embedding workloads, grouping similar-length texts can reduce padding waste.
+A token budget can bound the amount of text in each model call more directly
+than a row count. Both require preprocessing or batching logic; `batch_size=32`
+alone does not implement them. For our MiniLM example, truncation limits model
+input length, but oversized source strings still cost memory and tokenization
+work before truncation.
+
+Smaller batches reduce the amount of work tied up in one call, but increase
+coordination overhead. More partitions also cost scheduling and potentially data
+movement. Measure before repartitioning the entire dataset. Ray cannot split a
+single oversized record into meaningful passages automatically. See
+[performance tuning](https://docs.ray.io/en/latest/data/performance-tips.html) and
+[block-size limitations](https://docs.ray.io/en/latest/data/data-internals.html).
+
+### 3.3. Recover workers and make retries safe
+
+If an established model worker dies because its process or node fails, Ray Data
+can restart the actor and retry interrupted work. The replacement calls
+`Embedder.__init__` again, loading a new model copy. It needs schedulable resources
+and access to the model files; the old process's in-memory state is gone.
+Ray Data supplies restart and retry defaults for its workers, which differ from
+the defaults for manually created Ray Core actors. See the
+[Ray Data recovery configuration](https://github.com/ray-project/ray/blob/ray-2.59.0/python/ray/data/_internal/execution/operators/actor_pool_map_operator.py).
+
+Recovery means a batch may be computed more than once. Imagine a worker finishes
+an external database write, then crashes before reporting success. Retrying its
+function could perform the same write again. Therefore, keep `__call__` focused
+on computing and returning embeddings. If it must make external writes, those
+writes need a stable deduplication key or an idempotent update operation.
+
+This separates two requirements: **computation may repeat, while the published
+dataset should contain one result per input ID**. Ray's retry mechanisms do not
+make arbitrary external side effects exactly once. See
+[actor fault tolerance](https://docs.ray.io/en/latest/ray-core/fault_tolerance/actors.html).
+
+### 3.4. Publish only complete, validated output
+
+For our S3 pipeline, treat output publication as an explicit step. The following
+is an application design to add around the tutorial code, not a guarantee
+provided by `write_parquet()`:
+
+1. Freeze the input file list, ideally including immutable object versions, and
+   verify that record IDs are unique. Record the model revision and preprocessing
+   configuration for the run.
+2. Write each attempt to its own S3 prefix. An interrupted attempt may leave
+   partial files; do not mix them into a later attempt's output.
+3. Validate the output against the input: no missing or unexpected IDs, exactly
+   one result per ID, vectors of length 384, and no non-finite values. Equal total
+   row counts are insufficient because a duplicate can hide a missing record.
+4. Publish a manifest listing the validated files. Consumers read only files
+   named by the committed manifest, rather than every object under a broad prefix.
+
+At billion-record scale, perform these checks as distributed aggregations and
+joins rather than collecting all IDs on the driver. A manifest is useful only
+if consumers honor it and concurrent publishers cannot overwrite each other's
+commit decision.
+
+For resumability, divide the frozen input into stable partitions and track one
+committed output attempt for each partition. After a restart, skip only validated,
+committed partitions. This tracking must survive loss of the driver; actor
+restarts alone do not resume an entire application after its coordinating process
+exits. Rerunning a write into the same S3 prefix is not a substitute for this
+commit protocol.
+
+### 3.5. Isolate invalid records without silently losing data
+
+A transient worker failure may disappear on retry. A null text or a consistently
+failing input will not become valid because it runs on another GPU. An unhandled
+exception in the batch function can fail the pipeline.
+
+Ray Data defaults to `max_errored_blocks=0`. Increasing this setting allows failed
+blocks to be dropped, including valid records alongside the offending input.
+That is unsuitable when every input must be accounted for. See
+[Ray Data error configuration](https://docs.ray.io/en/latest/data/api/data_context.html).
+
+Validate text types, nulls, and length limits before inference. For an expected
+data-related failure in a batch, a recovery path can split the batch and retry
+smaller groups to isolate the offending rows. Record rejected IDs with their
+error details in a separate output. Avoid catching every exception and silently
+returning fewer rows: that can hide programming errors and missing results.
+
+Track two distinct outcomes: successfully embedded IDs and rejected IDs awaiting
+repair. Together they should account for the input exactly once. A run with
+rejected records is accounted for, but its embedding dataset is not complete
+until those records are repaired and successfully processed.
