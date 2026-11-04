@@ -143,7 +143,7 @@ inspect how one learning step updates the weights.
 Give the model `Here will I lie`. A **forward pass** uses its current weights
 to turn this prefix into scores for the next token. In our Shakespeare example,
 the continuation is ` tonight`. A model must learn to assign it a useful
-probability; random weights will not reliably predict it.
+probability.
 
 GPT-2's tokenizer encodes this prompt as `[4342, 481, 314, 6486]`. We have one
 prompt containing four tokens, so the input tensor has shape `[1, 4]`. Follow
@@ -196,34 +196,44 @@ and learn during training. See the `wpe` definition and `GPT.forward` in
 
 ### 2.3. Build context with Transformer blocks
 
-Token and position embeddings prepare the input; **Transformer blocks** make
-its representations depend on context by updating each token's vector using
-information from the current and earlier positions.
+Token and position embeddings prepare the input; **Transformer blocks** update
+its representations using context. For ` lie`, that context includes `Here`,
+` will`, ` I`, and itself. A different prefix can produce a different
+representation for the same token.
 
-For ` lie`, attention can use `Here`, ` will`, ` I`, and itself. A different
-prefix, such as “I am a villain: yet I,” supplies different information and can
-produce a different representation for the same token. The following subsections
-follow the operations inside one block.
+Our model has **four Transformer blocks in sequence**. Each block contains
+attention with **four heads**, followed by a **multilayer perceptron (MLP)**,
+a feed-forward network. Attention mixes information across permitted token
+positions; the MLP transforms the features at each position.
 
-#### 2.3.1. Attention heads
+Each stage normalizes its input, computes an update, and adds that update back
+to its input. This addition is a **residual connection**: it preserves a path
+for existing information and gradients while the stage learns what to change.
+The block's input and output both have shape `[1, 4, 128]` for our four-token
+prompt. We will follow one block before repeating it.
 
-An **attention head** is one calculation that mixes information from permitted
-token positions. For ` lie`, it computes how strongly to draw from `Here`,
-` will`, ` I`, and itself, then forms one mixture of their information.
+![Inside one Transformer block: attention mixes permitted token positions, a feed-forward network transforms features, and each stage adds its input. The tensor stays shape one by four by one hundred twenty-eight.](../assets/images/nanogpt-transformer-block.svg)
 
-Our model uses four heads so it can form four different mixtures at once.
-Each head learns its own way of matching positions. One large head could also
-work, but would provide just one set of attention weights; four heads provide
-four sets, giving the model more ways to combine context. Their roles are
-learned rather than assigned.
+#### 2.3.1. Prepare Q, K, and V for four heads
 
-Each head first computes three vectors for every token: a **query (Q)** and
-**key (K)** for matching positions, and a **value (V)** containing information
-to mix. They come from three learned **projections**: matrix multiplications
-that turn the token's current features into features suited to each role.
+An **attention head** computes one mixture of information from permitted token
+positions. Four heads let the block form four different mixtures in parallel.
+Each learns its own way of matching positions; their roles are learned rather
+than assigned.
 
-Follow ` lie` across all four heads. Layer normalization takes the token’s existing
-128-feature vector and normalizes its values. Call the resulting row vector
+To decide what to mix, each head needs three vectors at every position:
+
+- A **query (Q)** represents what information this position is looking for.
+- A **key (K)** represents what a position offers for matching.
+- A **value (V)** represents the information to mix into the result.
+
+These are learned numerical representations. For ` lie`, its query will be
+compared with the keys at `Here`, ` will`, ` I`, and itself; the associated
+values supply the information to combine. All three are derived from the same
+input sequence, which is why this is called **self-attention**.
+
+Follow ` lie` across all four heads in this block. Layer normalization takes
+the token’s existing 128-feature vector and normalizes its values. Call the resulting row vector
 $x$. Multiplying it by three different matrices gives
 $Q = xW_Q$, $K = xW_K$, and $V = xW_V$. Each matrix has shape
 `[128, 128]`, so each result has 128 features covering all four heads.
@@ -238,51 +248,16 @@ feature. Q, K, and V are recomputed from the current input on each forward pass.
 
 ![The normalized vector x multiplies one combined weight matrix W containing three 128-by-128 submatrices WQ, WK, and WV. The 384-feature result splits into Q, K, and V, each with 128 features, then each splits into four 32-feature head vectors.](../assets/images/nanogpt-qkv-projections.svg)
 
-All four heads receive the **full 128-feature input**. Each learns different
-projection weights to produce its own 32-feature Q, K, and V vectors. A
-**Transformer block contains all four heads**. Within it, each head applies
-its projection weights at every token position. Different heads use different
-portions of the combined matrix $W$; different Transformer blocks have separate
-matrices. At this stage, each position is
-projected independently. Mixing information across positions happens afterward.
+All four heads receive the **full 128-feature input**. Each uses different
+portions of the combined matrix $W$ to produce its own 32-feature Q, K, and V
+vectors. The weights are shared across token positions within this block;
+different Transformer blocks have separate matrices. Each position is still
+projected independently here. Mixing information across positions comes next.
 
-nanoGPT implements the combined projection as one `128 → 384` linear layer.
+For the whole prompt, nanoGPT implements the combined projection as
+`nn.Linear(128, 384, bias=False)`. It transforms `[1, 4, 128]` into `[1, 4, 384]`.
 The matrices above use the mathematical input-by-output convention; PyTorch
-stores linear weights transposed, as output-by-input. See
-[`CausalSelfAttention` in model.py](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
-The next section follows how these vectors determine what each head mixes.
-
-#### 2.3.2. Queries, keys, and values
-
-To update ` lie`, the model needs to decide which earlier positions to draw
-from and what information to take from them. Think of looking up information:
-you have a **query**, compare it against **keys**, and retrieve the associated
-**values**. Attention makes this a soft lookup: it gives each position a weight
-and blends the values instead of choosing one exact match.
-
-For ` lie`, its query is compared with the keys at `Here`, ` will`, ` I`, and
-itself. Their values supply the information used to update its vector. Separating
-these roles lets the model learn how to match relevant positions and what
-information to pass along. All three come from the same input, which is why
-this is called **self-attention**.
-
-![The query from lie is dotted with each key and scaled by the square root of 32 to produce four scalar scores. Softmax normalizes the scores together into illustrative weights 0.1, 0.2, 0.1, and 0.6. Each weight multiplies its corresponding value vector, and the four weighted vectors are added into one 32-number head output.](../assets/images/nanogpt-attention-lookup.svg)
-
-Start with the input to attention: the normalized tensor of shape
-`[1, 4, 128]`. A learned linear layer transforms each position's 128 features
-into three sets of 128 numbers:
-
-- A **query (Q)** represents what information this position is looking for.
-- A **key (K)** represents what a position offers for matching.
-- A **value (V)** represents the information to mix into the result.
-
-This is a **128 → 384** linear layer, `nn.Linear(128, 384, bias=False)`,
-with a weight tensor of shape `[384, 128]` in PyTorch. It transforms
-`[1, 4, 128]` into `[1, 4, 384]`; splitting the last dimension gives Q, K,
-and V, each with shape `[1, 4, 128]`.
-
-These are numerical vectors, not explicit questions or dictionary entries.
-nanoGPT creates them together, then separates them in `CausalSelfAttention`:
+stores the combined weights transposed, with shape `[384, 128]`.
 
 ```python
 q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
@@ -292,58 +267,18 @@ q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
 
 Each tensor is then split into four heads and rearranged to
 `[1, 4, 4, 32]`: 1 prompt, 4 heads, 4 positions, and 32 features per head.
-Q, K, and V are computed anew from the input each time; the linear layer's
-weights are the parameters learned during training. See
-[`CausalSelfAttention.forward`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+See [`CausalSelfAttention.forward`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py)
+for the projection, split, and rearrangement.
 
-**Q and K determine the attention weights**
+#### 2.3.2. Compute one head's mixture of context
 
-Follow one head at the ` lie` position. Its query has 32 numbers. A **dot
-product** between that query and another position's key gives one score.
-Comparing the query with all
-4 keys gives 4 scores, scaled by dividing by $\sqrt{32}$.
+Follow one head at ` lie`. Its query has 32 numbers. A **dot product** with
+another position's key produces one scalar score. Comparing this query with
+all four keys gives four scores, each scaled by dividing by $\sqrt{32}$.
 
-At ` lie`, position 3, all four prompt positions are permitted. Earlier
-positions must have later positions masked out. **Softmax** then converts the
-scores into nonnegative attention weights that sum to 1. One head might produce
-`[0.1, 0.2, 0.1, 0.6]` for the ` lie` query. These are illustrative values,
-not measured weights from our model.
-
-Repeating this for every query position, head, and prompt produces an attention
-weight tensor of shape `[1, 4, 4, 4]`. The last two dimensions mean **query
-position × key position**. They describe relationships between positions,
-rather than features of a single token.
-
-**The weights combine V into the output**
-
-For that same query, multiply each position's 32-number value vector by its
-attention weight and add the results. The result is one 32-number vector
-containing a mixture of information from permitted positions. Q and K determine
-the mixture's weights; V supplies the information being mixed.
-
-| Tensor | Shape | Meaning |
-|---|---|---|
-| Q, K, and V, each | `[1, 4, 4, 32]` | One 32-number vector per position and head |
-| Attention weights | `[1, 4, 4, 4]` | How strongly each query draws from each key position |
-| Weighted values | `[1, 4, 4, 32]` | One mixture per query position and head |
-| Joined heads and output projection | `[1, 4, 128]` | An update matching the block's input shape |
-
-The four heads' results are joined and passed through another learned linear
-layer. The block adds this attention output to its input. **Attention** names
-the whole operation; **attention weights** name the particular tensor used to
-mix V.
-
-The calculation is written compactly as:
-
-$$
-\operatorname{Attention}(Q,K,V)
-= \operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d}} + M\right)V.
-$$
-
-$d$ is the feature width of one attention head. The mask $M$ is zero at permitted
-positions and negative infinity at forbidden ones, giving future positions zero
-probability after softmax. This scaled dot-product construction is described in
-[Attention Is All You Need](https://arxiv.org/abs/1706.03762).
+Before turning these scores into weights, we must prevent predictions from
+seeing future tokens. At ` lie`, position 3, all four prompt positions are
+permitted. Earlier positions must have later positions masked out.
 
 For the first four tokens of “Here will I lie tonight.”, the allowed
 connections are:
@@ -364,27 +299,60 @@ prediction only sees its permitted prefix. Generation builds that prefix one
 token at a time. See PyTorch's
 [causal attention API](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
 
-The attention computation follows this flow:
+Set forbidden scores to negative infinity, then apply **softmax** across the
+key positions. This gives forbidden positions zero weight and makes the allowed
+weights nonnegative and sum to 1. For the ` lie` query, one head might produce
+`[0.1, 0.2, 0.1, 0.6]`. These values are illustrative, not measured from our model.
 
-1. Learned transformations of each token's 128 features prepare the inputs for
-   four heads, each working with 32 features per position.
-2. Each head computes its own attention weights and mixes information across
-   permitted positions, producing 32 numbers per position.
-3. The four results are joined into 128 numbers per position.
-4. A learned output layer transforms those 128 numbers into an update, which
-   the block adds to its input.
+Multiply each position's 32-feature value vector by its corresponding scalar
+weight and add the four results. This produces **one 32-feature output for
+this head at ` lie`**. Q and K determine the mixture's weights; V supplies the
+information being mixed.
 
-#### 2.3.3. Transform features and repeat the block
+![The query from lie is dotted with each key and scaled by the square root of 32 to produce four scalar scores. Softmax normalizes the scores together into illustrative weights 0.1, 0.2, 0.1, and 0.6. Each weight multiplies its corresponding value vector, and the four weighted vectors are added into one 32-number head output.](../assets/images/nanogpt-attention-lookup.svg)
 
-Each Transformer block contains both attention and a **multilayer perceptron
-(MLP)**, a small feed-forward network. Attention first mixes information from
-permitted positions. The MLP then transforms the features at each position
-independently. For ` lie`, those features already incorporate context from
-`Here`, ` will`, and ` I` through attention.
+The same computation, written for all query positions in one head, is:
 
-Follow the vector for ` lie` after the attention output has been added to the
-block's input. Call this vector $h$. A second layer normalization within the
-block gives $z = \operatorname{LayerNorm}(h)$, still with 128 features. The MLP
+$$
+\operatorname{Attention}(Q,K,V)
+= \operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d}} + M\right)V.
+$$
+
+Here $d=32$. The mask $M$ is zero at permitted positions and negative infinity
+at forbidden ones; softmax operates across keys for each query. This
+scaled dot-product construction is described in
+[Attention Is All You Need](https://arxiv.org/abs/1706.03762).
+
+Repeating the calculation for every query position and head gives attention
+weights shaped `[1, 4, 4, 4]`: **prompt × head × query position × key position**.
+Multiplying those weights by V gives outputs shaped `[1, 4, 4, 32]`:
+**prompt × head × query position × features**. The weights describe relationships
+between positions; the outputs contain the mixed features. **Attention** names
+the whole operation, while **attention weights** name the coefficients used to
+mix V.
+
+#### 2.3.3. Join the heads and add the attention update
+
+At each position, join the four 32-feature head outputs into one 128-feature
+vector. A learned output projection transforms it into the attention update.
+Add that update to the vector that entered the block, before normalization.
+This completes the attention stage's residual connection.
+
+| Stage | Shape for the whole prompt |
+|---|---|
+| Four head outputs | `[1, 4, 4, 32]` — prompt, head, position, features |
+| Joined heads | `[1, 4, 128]` — prompt, position, features |
+| Output projection and residual addition | `[1, 4, 128]` |
+
+For ` lie`, the resulting vector now includes information mixed from the
+permitted positions. Call it $h$. It is ready for the MLP inside the same block.
+
+#### 2.3.4. Transform each position's features with the MLP
+
+The MLP processes each token position independently using the same learned
+matrices. At ` lie`, its input already contains context gathered by attention.
+
+A second layer normalization within the block gives $z = \operatorname{LayerNorm}(h)$, still with 128 features. The MLP
 computes:
 
 $$
@@ -432,24 +400,29 @@ $$
 h_{\text{out}} = h + \operatorname{MLP}(\operatorname{LayerNorm}(h)).
 $$
 
-Both attention and the MLP use residual connections. They preserve a path for
-existing information and gradients while each stage learns an update. One
-complete block computes the following, with separate layer normalizations:
+The MLP uses the same weights at all token positions in this block. For the
+whole prompt, its intermediate tensor expands to `[1, 4, 512]`, then returns
+to `[1, 4, 128]` for the residual addition.
+
+#### 2.3.5. Pass the result to the next block
+
+Putting the two stages together, one block computes:
 
 ```text
-h = x + attention(layer_norm_1(x))
+h = block_input + attention(layer_norm_1(block_input))
 output = h + mlp(layer_norm_2(h))
 ```
 
-We repeat four blocks, each receiving the previous block's output. Throughout
-these blocks, the input and output prompt tensors stay `[1, 4, 128]`; inside
-each MLP the intermediate tensor expands to `[1, 4, 512]`. The same MLP weights
-serve all four token positions within a block, while each of the four blocks
-has its own attention and MLP weights. There are four MLPs in this model, one
-per block. nanoGPT defines this sequence in
-[`GPT.forward` and `Block`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+The two layer normalizations have separate learned parameters. The next block
+takes `output` as its input and repeats the
+same structure with its own attention and MLP weights.
 
-![Inside one Transformer block: attention mixes permitted token positions, a feed-forward network transforms features, and each stage adds its input. The tensor stays shape one by four by one hundred twenty-eight.](../assets/images/nanogpt-transformer-block.svg)
+We run four such blocks sequentially. There are four attention heads and one
+MLP in each block: sixteen heads and four MLPs across the model. Throughout
+the stack, each block's input and output have shape `[1, 4, 128]`, while their
+values are refined by successive attention and MLP updates. nanoGPT defines
+this sequence in
+[`GPT.forward` and `Block`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
 ### 2.4. Turn the final vector into next-token probabilities
 
