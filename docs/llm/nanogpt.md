@@ -150,7 +150,23 @@ and chunk size 64.
 
 ![Three eight-character chunks selected from one paragraph and stacked as the three rows of a batch; the lab uses twelve rows of sixty-four characters.](../assets/images/nanogpt-chunks-batch.svg)
 
-### 2.2. From chunks to predictions
+### 2.2. Embeddings: a learned table inside the model
+
+A character ID tells us which character we have, but gives the network no useful
+features to work with. An **embedding table** supplies a vector for each ID.
+In this lab, `nn.Embedding(65, 128)` creates 65 rows of 128 numbers; looking up
+an ID simply selects its row.
+
+![Character a has ID 39, which selects row 39 of a 65-by-128 embedding table. The selected row becomes the character's feature vector; the table starts randomly and learns during training.](../assets/images/nanogpt-embedding.svg)
+
+The table is part of the model's weights. Its numbers start randomly, then
+prediction errors produce gradients that update them during training. The
+features have no predefined meanings, and the learned table is saved with the
+rest of the model. nanoGPT names the table `wte` (word token embedding) and performs the lookup
+with `self.transformer.wte(idx)` in
+[`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+
+### 2.3. From chunks to predictions
 
 We give it 12 text chunks, each containing 64 character IDs. The network turns
 each ID into a vector of 128 features and adds information about its position.
@@ -161,6 +177,8 @@ features. The output layer converts the final features into 65 scores per
 position, one for each possible next character.
 
 ![The lab's GPT network, from character IDs through embeddings and four Transformer blocks to next-character scores, with tensor shapes at each stage.](../assets/images/nanogpt-network.svg)
+
+### 2.4. Run one learning step
 
 `model(x, y)` runs the inputs through this network and measures the prediction
 loss against `y`. The remaining code computes gradients and updates the weights
@@ -222,7 +240,7 @@ adding to approximately 1, a nonzero gradient, and a nonzero parameter change.
 The last loss often falls, but one update is not guaranteed to help, and
 improvement on the same batch does not establish improvement on unseen text.
 
-### 2.3. What the dimensions mean
+### 2.5. What the dimensions mean
 
 One **batch** contains `B = 12` text chunks. Each has `T = 64` positions, and
 each position has a representation with `C = 128` learned features. The vocabulary
@@ -240,7 +258,7 @@ The IDs stay integers. An **embedding** is a trainable table that looks up a
 vector for each ID. Position embeddings add information about where a token is
 in the chunk. Both tables learn along with the rest of the model.
 
-### 2.4. Why the loss teaches probabilities
+### 2.6. Why the loss teaches probabilities
 
 For one target character, cross-entropy loss is $-\ln p(\text{target})$. Assigning
 the right character probability 0.5 gives loss about 0.69; probability 0.01 gives

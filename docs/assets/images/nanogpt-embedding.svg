@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="334" viewBox="0 0 800 334" role="img" aria-labelledby="title desc">
+  <title id="title">An embedding lookup selects a row of the model's learned table</title>
+  <desc id="desc">The character a maps to ID 39. That ID selects row 39 of a table with 65 rows and 128 numbers per row. The selected row is the character's embedding vector. Displayed numbers are illustrative. The table is initialized randomly and updated through gradients during training.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="800" height="334" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a">
+    <text x="400" y="38" text-anchor="middle" font-size="23" font-weight="700">An ID selects one row of the embedding table</text>
+    <text x="449" y="80" text-anchor="middle" font-size="18" font-weight="600">65 rows × 128 numbers</text>
+    <rect x="250" y="96" width="410" height="218" rx="8" fill="#e2e8f0" stroke="#94a3b8"/>
+    <g font-family="monospace" font-size="18" text-anchor="middle">
+      <text x="455" y="126">0.08, 0.02, −0.05, 0.14, …, −0.11</text>
+      <text x="449" y="162">…</text>
+      <rect x="251" y="180" width="408" height="44" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="455" y="208">0.12, −0.04, 0.07, 0.19, …, 0.31</text>
+      <text x="449" y="256">…</text>
+      <text x="455" y="294">−0.03, 0.17, 0.09, −0.12, …, 0.06</text>
+    </g>
+    <g font-size="16" text-anchor="end" fill="#475569">
+      <text x="730" y="126">ID 0</text>
+      <text x="730" y="208" fill="#1d4ed8" font-weight="700">ID 39</text>
+      <text x="730" y="294">ID 64</text>
+    </g>
+    <rect x="30" y="174" width="132" height="56" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="96" y="208" text-anchor="middle" font-family="monospace" font-size="21">a → 39</text>
+    <path d="M172 202 H238" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  </g>
+</svg>
