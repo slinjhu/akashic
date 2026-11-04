@@ -15,11 +15,10 @@ and a way to measure prediction errors. A learning algorithm repeatedly adjusts
 the model's internal numbers, called **weights**, to reduce those errors. The
 result is a set of learned weights that can be saved and used to generate text.
 
-**GPT** stands for *Generative Pre-trained Transformer*. The Transformer is the
-neural network architecture that processes text and its context. Pretraining is
-the stage where it learns from a text collection, before any further training
-for tasks such as following instructions. This guide focuses on that first
-stage: starting with random weights and learning from text.
+**GPT** stands for *Generative Pre-trained Transformer*. A **Transformer** turns words
+into representations whose meanings depend on the surrounding words. **Pretraining** is the stage where the model learns from a text collection,
+before any further training for tasks such as following instructions. This guide
+focuses on that first stage: starting with random weights and learning from text.
 
 **nanoGPT** is a small Python implementation of GPT and its training loop. It
 makes the process visible: you can read how examples are constructed, inspect
@@ -44,7 +43,7 @@ nanochat. Its compact implementation remains useful for this exercise. The lab
 uses revision `3adf61e154c3fe3fca428ad6bc3818b27a3b8291` so the code you read
 matches the explanations.
 
-You need basic Python, a terminal, Git, and Python 3.11 or 3.12. A CPU is enough;
+You need basic Python, a terminal, Git, and [uv](https://docs.astral.sh/uv/getting-started/installation/). A CPU is enough;
 training speed depends on your machine. Work through sections 1–6 in order,
 then use the experiments to test your understanding. All commands after setup
 run inside the separate `nanoGPT` checkout, with its virtual environment active.
@@ -53,31 +52,38 @@ run inside the separate `nanoGPT` checkout, with its virtual environment active.
 
 ### 1.1. Create an isolated workspace
 
-Run this in a directory for experiments, outside the Akashic repository:
+Create a temporary folder for the experiment:
 
 ```sh
+mkdir -p /tmp/nanogpt-lab
+cd /tmp/nanogpt-lab
 git clone https://github.com/karpathy/nanoGPT.git
 cd nanoGPT
 git checkout 3adf61e154c3fe3fca428ad6bc3818b27a3b8291
-python3.11 -m venv .venv
+uv venv --python 3.11
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install torch numpy requests tiktoken
+uv pip install torch numpy requests tiktoken
 python -c "import torch; print(torch.__version__); print(torch.rand(2, 3))"
 ```
 
-Use `python3.12` instead if that is your installed version. These shell examples
-use macOS/Linux syntax. On Windows, activate the environment with
-`.venv\Scripts\Activate.ps1` in PowerShell. For a CUDA installation, use the
-command from the [PyTorch installer](https://pytorch.org/get-started/locally/)
-instead of the generic `pip install torch` command.
+**[tiktoken](https://github.com/openai/tiktoken)** is OpenAI's library for splitting
+text into tokens, such as words or word fragments, and converting them into numeric
+IDs that language models can process.
 
 We only need these four packages for character training and sampling. We will
-not download pretrained GPT-2 weights. Save your resolved environment for later:
+not download pretrained GPT-2 weights.
 
 ```sh
-python -m pip freeze > requirements-lab.txt
 python data/shakespeare_char/prepare.py
+```
+
+```text
+length of dataset in characters: 1,115,394
+all the unique characters:
+ !$&',-.3:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+vocab size: 65
+train has 1,003,854 tokens
+val has 111,540 tokens
 ```
 
 The [preparation script](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/data/shakespeare_char/prepare.py)
@@ -92,56 +98,39 @@ data; the final 10% is held out for validation. It writes:
 | `val.bin` | Held-out IDs in the same format |
 | `meta.pkl` | Character-to-ID and ID-to-character mappings |
 
+`meta.pkl` stores a Python dictionary with three entries (mappings abbreviated):
+
+```python
+{
+    "vocab_size": 65,
+    "stoi": {"\n": 0, " ": 1, "!": 2, ..., "a": 39, ..., "z": 64},
+    "itos": {0: "\n", 1: " ", 2: "!", ..., 39: "a", ..., 64: "z"},
+}
+```
+
+`stoi` maps characters to IDs for encoding text; `itos` maps IDs back to
+characters for decoding predictions. `vocab_size` is the number of unique
+characters.
+
 The tokenizer is a fixed lookup table here. Learning an ID does not give a
 character meaning; the model will learn how IDs relate through prediction.
 
-### 1.2. Inspect the shift that creates labels
+### 1.2. Learn to predict the next character
 
-Save this as `inspect_data.py`, then run `python inspect_data.py`:
+Every character in the training text gives us a question: given the text so far,
+what comes next? The character that actually follows is the correct answer,
+called the **target**.
 
-```python
-import pickle
-from pathlib import Path
-import numpy as np
+Take `ROMEO:` followed by a newline. Given `R`, the model should predict `O`.
+Given `RO`, it should predict `M`. Continue this way until, given `ROMEO:`, it
+should predict a newline. This short passage supplies six training questions.
 
-root = Path("data/shakespeare_char")
-with (root / "meta.pkl").open("rb") as f:
-    meta = pickle.load(f)
-encode = lambda text: [meta["stoi"][c] for c in text]
-decode = lambda ids: "".join(meta["itos"][int(i)] for i in ids)
+The text itself supplies the correct answers, so nobody needs to label them by
+hand. This is called **self-supervised learning**.
 
-print("ROMEO: IDs:", encode("ROMEO:"))
-data = np.memmap(root / "train.bin", dtype=np.uint16, mode="r")
-x, y = data[:8], data[1:9]
-print("input: ", repr(decode(x)))
-print("target:", repr(decode(y)))
-for t in range(len(x)):
-    print(repr(decode(x[:t + 1])), "->", repr(decode(y[t:t + 1])))
-```
-
-For a short illustrative window containing `ROMEO:\n`, the relationship is:
-
-```text
-input:   R O M E O :
-target:  O M E O : \n
-
-visible prefix   next character to predict
-R                O
-RO               M
-ROM              E
-ROME             O
-ROMEO            :
-ROMEO:           \n
-```
-
-One six-character input supplies six prediction targets. There is no human
-labeling step: shifting the text supplies the answers. This is **self-supervised
-learning**. Later, a causal mask will prevent each prediction from seeing its
-answer in a future input position.
-
-**Checkpoint:** you should be able to explain why `y = x` would teach copying
-rather than next-character prediction, and why the last target requires one more
-character than the input window.
+The model assigns probabilities to possible next characters. We compare those
+predictions with the correct answers, then adjust its weights to make those
+answers more likely. Next, we will inspect one such learning step.
 
 ## 2. See one learning step before running thousands
 
@@ -154,14 +143,46 @@ were, and gradients tell an optimizer how to change the parameters.
 flowchart LR
   X["Character IDs"] --> M["Model parameters"]
   M --> P["Next-character scores"]
-  P --> L["Loss against shifted targets"]
+  P --> L["Loss against correct next characters"]
   L --> G["Backward: parameter gradients"]
   G --> U["Optimizer update"]
   U --> M
 ```
 
-Save this as `inspect_step.py`. It uses the actual nanoGPT model with a small
-architecture we will reuse for training:
+### 2.1. The neural network we will create
+
+The code below creates a small GPT neural network with random weights. Its
+structure is defined in nanoGPT's
+[`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py);
+`GPTConfig` chooses its size, and `GPT(...)` builds it.
+
+#### 2.1.1. Windows and batches
+
+A **window** limits how much text the model processes at once, keeping memory
+and computation manageable. Random starting positions give it varied examples
+from across the training text. Windows can overlap; text left out of one step
+remains available for later steps. A **batch** groups several windows so the
+computer can process them together and each weight update uses prediction
+errors from multiple examples. The SVG uses a small example with batch size 3
+and window size 8; the lab uses batch size 12 and window size 64.
+
+![Three eight-character windows selected from one paragraph and stacked as the three rows of a batch; the lab uses twelve rows of sixty-four characters.](../assets/images/nanogpt-windows-batch.svg)
+
+#### 2.1.2. From windows to predictions
+
+We give it 12 text windows, each containing 64 character IDs. The network turns
+each ID into a vector of 128 features and adds information about its position.
+Four **Transformer blocks** then update those features using the preceding text.
+Each block has four **attention heads**, which combine information from different
+positions, and a **feed-forward network**, which transforms each position's
+features. The output layer converts the final features into 65 scores per
+position, one for each possible next character.
+
+![The lab's GPT network, from character IDs through embeddings and four Transformer blocks to next-character scores, with tensor shapes at each stage.](../assets/images/nanogpt-network.svg)
+
+`model(x, y)` runs the inputs through this network and measures the prediction
+loss against `y`. The remaining code computes gradients and updates the weights
+once. Save it as `inspect_step.py`:
 
 ```python
 import pickle
@@ -173,38 +194,40 @@ torch.manual_seed(1337)
 with open("data/shakespeare_char/meta.pkl", "rb") as f:
     meta = pickle.load(f)
 data = np.memmap("data/shakespeare_char/train.bin", dtype=np.uint16, mode="r")
-B, T, C = 12, 64, 128
-starts = torch.randint(len(data) - T, (B,))
+B, T, C = 12, 64, 128  # Batch size, sequence length, embedding width
+# Pick B random starting positions in the training text, one per window.
+# Leave room for T input characters plus the next character needed for targets.
+starts = torch.randint(len(data) - T, (B,))  # [B] = [12]
 x = torch.stack([
     torch.tensor(data[int(i):int(i) + T].astype(np.int64)) for i in starts
-])
+])  # x: [B, T] = [12, 64]
 y = torch.stack([
     torch.tensor(data[int(i) + 1:int(i) + T + 1].astype(np.int64)) for i in starts
-])
+])  # y: [B, T] = [12, 64]
 model = GPT(GPTConfig(
     vocab_size=meta["vocab_size"], block_size=T,
     n_layer=4, n_head=4, n_embd=C, dropout=0.0, bias=False,
 ))
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.1)
 
-logits, loss = model(x, y)
+logits, loss = model(x, y)  # logits: [B, T, 65] = [12, 64, 65]; loss: scalar []
 print("input, target:", x.shape, y.shape)
 print("logits:", logits.shape)
 print("initial loss:", loss.item())
-probs = logits[0, 0].softmax(dim=-1)
+probs = logits[0, 0].softmax(dim=-1)  # [65]: probabilities at the first position
 print("probability sum:", probs.sum().item())
 print("first target probability:", probs[y[0, 0]].item())
 
-parameter = model.transformer.h[0].attn.c_attn.weight
-before = parameter.detach().clone()
+parameter = model.transformer.h[0].attn.c_attn.weight  # [3*C, C] = [384, 128]
+before = parameter.detach().clone()  # [384, 128]
 optimizer.zero_grad(set_to_none=True)
-loss.backward()
+loss.backward()  # parameter.grad: [384, 128], matching parameter
 print("gradient norm:", parameter.grad.norm().item())
 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 optimizer.step()
 print("largest parameter change:", (parameter - before).abs().max().item())
 with torch.no_grad():
-    _, after_loss = model(x, y)
+    _, after_loss = model(x, y)  # after_loss: scalar []
 print("same-batch loss after update:", after_loss.item())
 ```
 
@@ -217,7 +240,7 @@ adding to approximately 1, a nonzero gradient, and a nonzero parameter change.
 The last loss often falls, but one update is not guaranteed to help, and
 improvement on the same batch does not establish improvement on unseen text.
 
-### 2.1. What the dimensions mean
+### 2.2. What the dimensions mean
 
 One **batch** contains `B = 12` text windows. Each has `T = 64` positions, and
 each position has a representation with `C = 128` learned features. The vocabulary
@@ -235,7 +258,7 @@ The IDs stay integers. An **embedding** is a trainable table that looks up a
 vector for each ID. Position embeddings add information about where a token is
 in the window. Both tables learn along with the rest of the model.
 
-### 2.2. Why the loss teaches probabilities
+### 2.3. Why the loss teaches probabilities
 
 For one target character, cross-entropy loss is $-\ln p(\text{target})$. Assigning
 the right character probability 0.5 gives loss about 0.69; probability 0.01 gives
