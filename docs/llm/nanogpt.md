@@ -166,7 +166,41 @@ rest of the model. nanoGPT names the table `wte` (word token embedding) and perf
 with `self.transformer.wte(idx)` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
-### 2.3. From chunks to predictions
+### 2.3. Add information about position
+
+The two `O` characters in `ROMEO:` have the same character embedding, but occur
+at different positions.
+
+Consider “She deposited money at the bank” and “She sat on the river bank.”
+The characters in `bank` have the same embeddings in both sentences, but the
+surrounding text gives the word different meanings. Transformer blocks combine
+information from that context. To interpret how the text fits together, the
+network also needs its order: `wpe` supplies each character's position within
+the chunk. It helps the network use context in order; it does not assign a
+financial or riverside meaning by itself.
+
+To give the network information about order, nanoGPT
+uses a second learned table, **`wpe`** (word position embedding). In this lab,
+`nn.Embedding(64, 128)` provides one vector for each position from 0 to 63
+within a chunk.
+
+At each position, the network adds the character vector and the position vector
+element by element:
+
+```python
+character_vector = wte[character_id]  # 128 numbers
+position_vector = wpe[position]      # 128 numbers
+combined = character_vector + position_vector  # Still 128 numbers
+```
+
+This illustrates the lookup; nanoGPT performs it for the whole batch with
+`tok_emb + pos_emb`. The `O` at position 1 and the `O` at position 4 therefore
+receive different position vectors. Positions restart at 0 for each chunk.
+Like character embeddings, position embeddings start randomly and learn during
+training. See the `wpe` definition and `GPT.forward` in
+[`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+
+### 2.4. From chunks to predictions
 
 We give it 12 text chunks, each containing 64 character IDs. The network turns
 each ID into a vector of 128 features and adds information about its position.
@@ -178,7 +212,7 @@ position, one for each possible next character.
 
 ![The lab's GPT network, from character IDs through embeddings and four Transformer blocks to next-character scores, with tensor shapes at each stage.](../assets/images/nanogpt-network.svg)
 
-### 2.4. Run one learning step
+### 2.5. Run one learning step
 
 `model(x, y)` runs the inputs through this network and measures the prediction
 loss against `y`. The remaining code computes gradients and updates the weights
@@ -240,7 +274,7 @@ adding to approximately 1, a nonzero gradient, and a nonzero parameter change.
 The last loss often falls, but one update is not guaranteed to help, and
 improvement on the same batch does not establish improvement on unseen text.
 
-### 2.5. What the dimensions mean
+### 2.6. What the dimensions mean
 
 One **batch** contains `B = 12` text chunks. Each has `T = 64` positions, and
 each position has a representation with `C = 128` learned features. The vocabulary
@@ -258,7 +292,7 @@ The IDs stay integers. An **embedding** is a trainable table that looks up a
 vector for each ID. Position embeddings add information about where a token is
 in the chunk. Both tables learn along with the rest of the model.
 
-### 2.6. Why the loss teaches probabilities
+### 2.7. Why the loss teaches probabilities
 
 For one target character, cross-entropy loss is $-\ln p(\text{target})$. Assigning
 the right character probability 0.5 gives loss about 0.69; probability 0.01 gives
