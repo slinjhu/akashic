@@ -121,9 +121,7 @@ Every character in the training text gives us a question: given the text so far,
 what comes next? The character that actually follows is the correct answer,
 called the **target**.
 
-Take `ROMEO:` followed by a newline. Given `R`, the model should predict `O`.
-Given `RO`, it should predict `M`. Continue this way until, given `ROMEO:`, it
-should predict a newline. This short passage supplies six training questions.
+![The passage ROMEO: followed by a newline supplies six next-character predictions: R to O, RO to M, ROM to E, ROME to O, ROMEO to colon, and ROMEO: to newline.](../assets/images/nanogpt-next-character.svg)
 
 The text itself supplies the correct answers, so nobody needs to label them by
 hand. This is called **self-supervised learning**.
