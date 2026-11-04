@@ -56,6 +56,12 @@ Section numbers are part of the Markdown text, not automatic counters:
 Update those numbers when reorganizing a note. Heading links are generated from
 the heading text, so changing a heading or its number also changes its anchor.
 
+Headings below the page title form a collapsible tree in the rendered note.
+Click a heading or focus it and press Enter or Space to fold its content and
+nested sections. Sections start expanded; **Expand all** and **Collapse all**
+control the whole note. Reopening a parent preserves its children's fold states.
+Table-of-contents links open the destination section and its parents automatically.
+
 ## Code blocks
 
 Give fenced code blocks a language such as `python`, `sh`, `json`, or

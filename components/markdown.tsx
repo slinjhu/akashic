@@ -11,11 +11,13 @@ import Link from "next/link";
 import { resolveContentUrl } from "@/lib/paths.mjs";
 import { CodeBlock } from "./code-block";
 import { Diagram } from "./mermaid";
+import rehypeSections from "@/lib/rehype-sections.mjs";
+import { SectionTree } from "./section-tree";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
-  return <div className="prose"><Markdown
+  return <SectionTree key={file}><Markdown
     remarkPlugins={[remarkGfm, remarkMath]}
-    rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }]]}
+    rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }], rehypeSections]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{
       a: ({ href, children, ...props }) => href?.startsWith("/") && !href.startsWith("//") ? <Link href={href} title={props.title}>{children}</Link> : <a href={href} title={props.title} rel={href?.startsWith("http") ? "noreferrer" : undefined}>{children}</a>,
@@ -35,5 +37,5 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
         return <CodeBlock text={text} language={language}>{children as ReactNode}</CodeBlock>;
       },
     }}
-  >{body}</Markdown></div>;
+  >{body}</Markdown></SectionTree>;
 }
