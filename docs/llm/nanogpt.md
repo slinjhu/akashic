@@ -333,8 +333,6 @@ layer. The block adds this attention output to its input. **Attention** names
 the whole operation; **attention weights** name the particular tensor used to
 mix V.
 
-![Q and K produce attention weights of shape one by four by four by four; those weights mix V into thirty-two features per head, and the joined output has shape one by four by one hundred twenty-eight.](../assets/images/nanogpt-qkv.svg)
-
 The calculation is written compactly as:
 
 $$
@@ -378,23 +376,77 @@ The attention computation follows this flow:
 
 #### 2.3.3. Transform features and repeat the block
 
-After attention, a small feed-forward network, or **MLP**, transforms each
-position independently: expand width 128 to 512, apply GELU, then project to 128.
-Attention mixes positions; the MLP transforms features within each position.
+Each Transformer block contains both attention and a **multilayer perceptron
+(MLP)**, a small feed-forward network. Attention first mixes information from
+permitted positions. The MLP then transforms the features at each position
+independently. For ` lie`, those features already incorporate context from
+`Here`, ` will`, and ` I` through attention.
 
-Both parts use **residual connections**, adding their output to their input.
-This preserves a path for existing information and gradients. Layer normalization
-normalizes each position's features before each part. One block computes:
+Follow the vector for ` lie` after the attention output has been added to the
+block's input. Call this vector $h$. A second layer normalization within the
+block gives $z = \operatorname{LayerNorm}(h)$, still with 128 features. The MLP
+computes:
+
+$$
+\operatorname{MLP}(z) = \operatorname{GELU}(zW_1)W_2.
+$$
+
+Using row vectors, the dimensions are:
+
+| Step | Computation | Shape for one token |
+|---|---|---|
+| Normalized input | $z$ | `[1, 128]` |
+| Expand features | $u = zW_1$, with $W_1$ shaped `[128, 512]` | `[1, 512]` |
+| Apply a nonlinearity | $a = \operatorname{GELU}(u)$ | `[1, 512]` |
+| Project back | $m = aW_2$, with $W_2$ shaped `[512, 128]` | `[1, 128]` |
+
+$W_1$ and $W_2$ are learned matrices. Expanding to 512 features gives the network
+more intermediate combinations of the input features to work with. Projecting
+back to 128 makes the result compatible with the residual addition and the next
+block. This expands the **feature dimension**, not the number of tokens.
+Our lab uses `bias=False` and `dropout=0.0`, so these equations omit bias terms
+and dropout. PyTorch stores each linear weight matrix transposed relative to
+the mathematical convention above. See nanoGPT's
+[`MLP` implementation](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+
+**GELU gives the MLP a nonlinear transformation.** It acts separately on each
+of the 512 numbers:
+
+$$
+\operatorname{GELU}(u_i) = u_i\Phi(u_i),
+$$
+
+where $\Phi$ is the standard normal cumulative distribution function. For
+example, GELU maps $-2$ to approximately $-0.046$, $0$ to $0$, and $2$ to
+approximately $1.954$. It smoothly suppresses strongly negative values while
+largely preserving strongly positive ones. It does not mix positions or
+normalize probabilities. See [PyTorch's GELU definition](https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html).
+
+Without this nonlinearity, the two matrix multiplications would collapse to
+$zW_1W_2 = z(W_1W_2)$, equivalent to one linear projection. GELU lets the MLP
+learn transformations that a single linear projection cannot express.
+
+**The residual connection adds the MLP's update to $h$:**
+
+$$
+h_{\text{out}} = h + \operatorname{MLP}(\operatorname{LayerNorm}(h)).
+$$
+
+Both attention and the MLP use residual connections. They preserve a path for
+existing information and gradients while each stage learns an update. One
+complete block computes the following, with separate layer normalizations:
 
 ```text
-x = x + attention(layer_norm(x))
-x = x + mlp(layer_norm(x))
+h = x + attention(layer_norm_1(x))
+output = h + mlp(layer_norm_2(h))
 ```
 
 We repeat four blocks, each receiving the previous block's output. Throughout
-these blocks, the prompt tensor stays `[1, 4, 128]`; its values become more
-context-dependent. The same learned parameters within a block serve every
-position. nanoGPT defines this sequence in
+these blocks, the input and output prompt tensors stay `[1, 4, 128]`; inside
+each MLP the intermediate tensor expands to `[1, 4, 512]`. The same MLP weights
+serve all four token positions within a block, while each of the four blocks
+has its own attention and MLP weights. There are four MLPs in this model, one
+per block. nanoGPT defines this sequence in
 [`GPT.forward` and `Block`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
 ![Inside one Transformer block: attention mixes permitted token positions, a feed-forward network transforms features, and each stage adds its input. The tensor stays shape one by four by one hundred twenty-eight.](../assets/images/nanogpt-transformer-block.svg)
