@@ -300,5 +300,5 @@ public exposure, and differences in prompting or tools affect interpretation.
 ## Related notes
 
 For a small pretraining experiment you can run and inspect, follow the
-[nanoGPT hands-on guide](../llm/nanogpt.md), from character tokens to a trained
+[nanoGPT hands-on guide](../llm/nanogpt.md), from subword tokens to a trained
 model and generated text.

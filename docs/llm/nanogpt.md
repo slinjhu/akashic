@@ -1,6 +1,6 @@
 ---
 title: nanoGPT — train a language model you can inspect
-description: A hands-on path from characters and next-token prediction to attention, gradients, training, and generation with nanoGPT.
+description: A hands-on path from subword tokens and next-token prediction to attention, gradients, training, and generation with nanoGPT.
 tags:
   - LLM
   - training
@@ -28,15 +28,14 @@ then to generated dialogue. Along the way, you will connect each command to the
 part of learning it performs. See the
 [nanoGPT source](https://github.com/karpathy/nanoGPT) for the implementation.
 
-Start with one task: given `ROMEO:`, predict the next character. A language model
+Start with one task: given `The bank`, predict the next token. A language model
 assigns a probability to every possible next token. Training adjusts its numbers
-so that the characters actually found in the text become more probable.
+so that the tokens actually found in the text become more probable.
 
-In this lab, a **token** is one character, including spaces and newlines. We will
-train a tiny GPT on Shakespeare, inspect one update, and generate new text. This
-is the core learning mechanism used in much larger language models, at a scale
-where you can follow the tensors. It will learn some spelling and dialogue
-patterns; expect imperfect imitation rather than a useful assistant.
+In this lab, a **token** can be a whole word, a word fragment, or punctuation.
+We use GPT-2's subword tokenizer, train a small GPT on Shakespeare, inspect one
+update, and generate new text. It will learn some language and dialogue patterns;
+expect imperfect imitation rather than a useful assistant.
 
 [nanoGPT](https://github.com/karpathy/nanoGPT) is deprecated upstream in favor of
 nanochat. Its compact implementation remains useful for this exercise. The lab
@@ -66,67 +65,75 @@ uv pip install torch numpy requests tiktoken
 python -c "import torch; print(torch.__version__); print(torch.rand(2, 3))"
 ```
 
+### 1.2. See how text becomes tokens
+
 **[tiktoken](https://github.com/openai/tiktoken)** is OpenAI's library for splitting
 text into tokens, such as words or word fragments, and converting them into numeric
 IDs that language models can process.
 
-We only need these four packages for character training and sampling. We will
-not download pretrained GPT-2 weights.
+We use GPT-2's tokenizer with randomly initialized model weights. The tokenizer
+already knows how to split text; our model still has to learn what those tokens
+mean in context.
 
 ```sh
-python data/shakespeare_char/prepare.py
+python data/shakespeare/prepare.py
 ```
 
 ```text
-length of dataset in characters: 1,115,394
-all the unique characters:
- !$&',-.3:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
-vocab size: 65
-train has 1,003,854 tokens
-val has 111,540 tokens
+train has 301,966 tokens
+val has 36,059 tokens
 ```
 
-The [preparation script](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/data/shakespeare_char/prepare.py)
-downloads Tiny Shakespeare and builds a sorted vocabulary of 65 characters.
-Each character gets an integer ID. The first 90% of the text becomes training
-data; the final 10% is held out for validation. It writes:
+The [preparation script](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/data/shakespeare/prepare.py)
+downloads Tiny Shakespeare, splits the text 90%/10% for training and validation,
+and encodes each split with `tiktoken.get_encoding("gpt2")`.
 
-| File under `data/shakespeare_char/` | Purpose |
+| File under `data/shakespeare/` | Purpose |
 |---|---|
 | `input.txt` | Readable source text |
-| `train.bin` | Training IDs stored as unsigned 16-bit integers |
-| `val.bin` | Held-out IDs in the same format |
-| `meta.pkl` | Character-to-ID and ID-to-character mappings |
+| `train.bin` | Training token IDs stored as unsigned 16-bit integers |
+| `val.bin` | Held-out token IDs in the same format |
 
-`meta.pkl` stores a Python dictionary with three entries (mappings abbreviated):
+The vocabulary contains 50,257 tokens. Encoding turns text into IDs; decoding
+turns those IDs back into text.
 
-```python
-{
-    "vocab_size": 65,
-    "stoi": {"\n": 0, " ": 1, "!": 2, ..., "a": 39, ..., "z": 64},
-    "itos": {0: "\n", 1: " ", 2: "!", ..., 39: "a", ..., 64: "z"},
-}
+Use one sentence to see the tokenizer's output:
+
+```sh
+python - <<'PYCODE'
+import tiktoken
+enc = tiktoken.get_encoding("gpt2")
+ids = enc.encode_ordinary("The bank is near the river.")
+print("IDs:", ids)
+print("Pieces:", [enc.decode([i]) for i in ids])
+print("Word fragments:", [enc.decode([i]) for i in enc.encode_ordinary("tokenization")])
+PYCODE
 ```
 
-`stoi` maps characters to IDs for encoding text; `itos` maps IDs back to
-characters for decoding predictions. `vocab_size` is the number of unique
-characters.
+```text
+IDs: [464, 3331, 318, 1474, 262, 7850, 13]
+Pieces: ['The', ' bank', ' is', ' near', ' the', ' river', '.']
+Word fragments: ['token', 'ization']
+```
 
-The tokenizer is a fixed lookup table here. Learning an ID does not give a
-character meaning; the model will learn how IDs relate through prediction.
+In this sentence, the words each fit into one token, and most include a leading
+space. Combining a word with its preceding space can save a separate space token
+while preserving the original text. Other words split into fragments, as
+`tokenization` shows. A token is
+therefore not always a whole word. In the diagrams, `_` denotes a space.
 
-### 1.2. Learn to predict the next character
+### 1.3. Learn to predict the next token
 
-Every character in the training text gives us a question: given the text so far,
-what comes next? The character that actually follows is the correct answer,
-called the **target**.
+Every token after the first gives us a training question: given the text so far,
+what comes next? The token that actually follows is the correct answer, called
+the **target**.
 
-![The passage ROMEO: followed by a newline supplies six next-character predictions: R to O, RO to M, ROM to E, ROME to O, ROMEO to colon, and ROMEO: to newline.](../assets/images/nanogpt-next-character.svg)
+![The sentence The bank is near the river. supplies six predictions, from The predicting a space followed by bank through The bank is near the river predicting a period.](../assets/images/nanogpt-next-token.svg)
 
 The text itself supplies the correct answers, so nobody needs to label them by
 hand. This is called **self-supervised learning**.
 
-The model assigns probabilities to possible next characters. We compare those
+The model assigns probabilities to possible next tokens. We compare those
 predictions with the correct answers, then adjust its weights to make those
 answers more likely. Next, we will inspect one such learning step.
 
@@ -136,81 +143,76 @@ answers more likely. Next, we will inspect one such learning step.
 
 Each training step needs text for the model to learn from. Rather than process
 the entire dataset at once, we take short, consecutive **text chunks**.
-Their length (`block_size`) limits how much context the model can use and keeps memory and
-computation manageable.
+Their length (`block_size`) limits how much context the model can use and keeps
+memory and computation manageable.
 
 We group several chunks into a **batch**, process them together, and use their
 combined prediction errors to update the weights once. For the next step, we
 choose new random starting positions so the model sees varied parts of the
-dataset. Chunks can overlap; characters left out of one batch remain available
+dataset. Chunks can overlap; tokens left out of one batch remain available
 for later batches.
 
-The illustration uses batch size 3 and chunk size 8; the lab uses batch size 12
-and chunk size 64.
+The illustration uses batch size 3 and chunk size 4; the lab uses batch size 12
+and chunk size 64. Chunk size counts tokens, so a chunk can contain different
+numbers of words or characters.
 
-![Three eight-character chunks selected from one paragraph and stacked as the three rows of a batch; the lab uses twelve rows of sixty-four characters.](../assets/images/nanogpt-chunks-batch.svg)
+![Three overlapping four-token chunks selected from one tokenized sentence and stacked as the rows of a batch.](../assets/images/nanogpt-chunks-batch.svg)
 
 ### 2.2. Embeddings: a learned table inside the model
 
-A character ID tells us which character we have, but gives the network no useful
+A token ID tells us which token we have, but gives the network no useful
 features to work with. An **embedding table** supplies a vector for each ID.
-In this lab, `nn.Embedding(65, 128)` creates 65 rows of 128 numbers; looking up
-an ID simply selects its row.
+In this lab, `nn.Embedding(50257, 128)` creates 50,257 rows of 128 numbers;
+looking up an ID simply selects its row.
 
-![Character a has ID 39, which selects row 39 of a 65-by-128 embedding table. The selected row becomes the character's feature vector; the table starts randomly and learns during training.](../assets/images/nanogpt-embedding.svg)
+![The token consisting of a space followed by bank, shown as _bank, has ID 3331, selecting its row of 128 features from a 50,257-row embedding table.](../assets/images/nanogpt-embedding.svg)
 
 The table is part of the model's weights. Its numbers start randomly, then
 prediction errors produce gradients that update them during training. The
 features have no predefined meanings, and the learned table is saved with the
-rest of the model. nanoGPT names the table `wte` (word token embedding) and performs the lookup
-with `self.transformer.wte(idx)` in
+rest of the model. nanoGPT names the table `wte` (word token embedding) and
+performs the lookup with `self.transformer.wte(idx)` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
 ### 2.3. Add information about position
 
-The two `O` characters in `ROMEO:` have the same character embedding, but occur
-at different positions.
-
 Consider “She deposited money at the bank” and “She sat on the river bank.”
-The characters in `bank` have the same embeddings in both sentences, but the
-surrounding text gives the word different meanings. Transformer blocks combine
-information from that context. To interpret how the text fits together, the
-network also needs its order: `wpe` supplies each character's position within
-the chunk. It helps the network use context in order; it does not assign a
-financial or riverside meaning by itself.
+The token ` bank` starts with the same embedding in both sentences, but the
+surrounding text gives it different meanings. Transformer blocks combine that
+context. They also need information about the order of tokens; a token embedding
+by itself identifies a piece of text without saying where it occurs.
 
-To give the network information about order, nanoGPT
-uses a second learned table, **`wpe`** (word position embedding). In this lab,
-`nn.Embedding(64, 128)` provides one vector for each position from 0 to 63
-within a chunk.
+A second learned table, **`wpe`** (word position embedding), supplies that signal.
+In this lab, `nn.Embedding(64, 128)` provides one vector for each token position
+from 0 to 63 within a chunk.
 
-At each position, the network adds the character vector and the position vector
+At each position, the network adds the token vector and the position vector
 element by element:
 
 ```python
-character_vector = wte[character_id]  # 128 numbers
-position_vector = wpe[position]      # 128 numbers
-combined = character_vector + position_vector  # Still 128 numbers
+token_vector = wte[token_id]     # 128 numbers
+position_vector = wpe[position]  # 128 numbers
+combined = token_vector + position_vector  # Still 128 numbers
 ```
 
 This illustrates the lookup; nanoGPT performs it for the whole batch with
-`tok_emb + pos_emb`. The `O` at position 1 and the `O` at position 4 therefore
-receive different position vectors. Positions restart at 0 for each chunk.
-Like character embeddings, position embeddings start randomly and learn during
-training. See the `wpe` definition and `GPT.forward` in
+`tok_emb + pos_emb`. In “The bank is near the river.”, ` bank` receives the
+position-1 vector and ` river` receives the position-5 vector. Positions restart
+at 0 for each chunk. Like token embeddings, position embeddings start randomly
+and learn during training. See the `wpe` definition and `GPT.forward` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
 ### 2.4. From chunks to predictions
 
-We give it 12 text chunks, each containing 64 character IDs. The network turns
+We give it 12 text chunks, each containing 64 token IDs. The network turns
 each ID into a vector of 128 features and adds information about its position.
 Four **Transformer blocks** then update those features using the preceding text.
 Each block has four **attention heads**, which combine information from different
 positions, and a **feed-forward network**, which transforms each position's
-features. The output layer converts the final features into 65 scores per
-position, one for each possible next character.
+features. The output layer converts the final features into 50,257 scores per
+position, one for each possible next token.
 
-![The lab's GPT network, from character IDs through embeddings and four Transformer blocks to next-character scores, with tensor shapes at each stage.](../assets/images/nanogpt-network.svg)
+![The lab's GPT network, from token IDs through embeddings and four Transformer blocks to next-token scores, with tensor shapes at each stage.](../assets/images/nanogpt-network.svg)
 
 ### 2.5. Run one learning step
 
@@ -219,18 +221,18 @@ loss against `y`. The remaining code computes gradients and updates the weights
 once. Save it as `inspect_step.py`:
 
 ```python
-import pickle
 import numpy as np
 import torch
+import tiktoken
 from model import GPT, GPTConfig
 
 torch.manual_seed(1337)
-with open("data/shakespeare_char/meta.pkl", "rb") as f:
-    meta = pickle.load(f)
-data = np.memmap("data/shakespeare_char/train.bin", dtype=np.uint16, mode="r")
+enc = tiktoken.get_encoding("gpt2")
+V = enc.n_vocab  # 50,257 token IDs
+data = np.memmap("data/shakespeare/train.bin", dtype=np.uint16, mode="r")
 B, T, C = 12, 64, 128  # Batch size, sequence length, embedding width
 # Pick B random starting positions in the training text, one per chunk.
-# Leave room for T input characters plus the next character needed for targets.
+# Leave room for T input tokens plus the next token needed for targets.
 starts = torch.randint(len(data) - T, (B,))  # [B] = [12]
 x = torch.stack([
     torch.tensor(data[int(i):int(i) + T].astype(np.int64)) for i in starts
@@ -239,16 +241,16 @@ y = torch.stack([
     torch.tensor(data[int(i) + 1:int(i) + T + 1].astype(np.int64)) for i in starts
 ])  # y: [B, T] = [12, 64]
 model = GPT(GPTConfig(
-    vocab_size=meta["vocab_size"], block_size=T,
+    vocab_size=V, block_size=T,
     n_layer=4, n_head=4, n_embd=C, dropout=0.0, bias=False,
 ))
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.1)
 
-logits, loss = model(x, y)  # logits: [B, T, 65] = [12, 64, 65]; loss: scalar []
+logits, loss = model(x, y)  # logits: [B, T, V] = [12, 64, 50257]; loss: scalar []
 print("input, target:", x.shape, y.shape)
 print("logits:", logits.shape)
 print("initial loss:", loss.item())
-probs = logits[0, 0].softmax(dim=-1)  # [65]: probabilities at the first position
+probs = logits[0, 0].softmax(dim=-1)  # [50257]: probabilities at the first position
 print("probability sum:", probs.sum().item())
 print("first target probability:", probs[y[0, 0]].item())
 
@@ -269,7 +271,7 @@ print("same-batch loss after update:", after_loss.item())
 python inspect_step.py
 ```
 
-Expect input and target shapes `[12, 64]`, logits `[12, 64, 65]`, probabilities
+Expect input and target shapes `[12, 64]`, logits `[12, 64, 50257]`, probabilities
 adding to approximately 1, a nonzero gradient, and a nonzero parameter change.
 The last loss often falls, but one update is not guaranteed to help, and
 improvement on the same batch does not establish improvement on unseen text.
@@ -278,14 +280,14 @@ improvement on the same batch does not establish improvement on unseen text.
 
 One **batch** contains `B = 12` text chunks. Each has `T = 64` positions, and
 each position has a representation with `C = 128` learned features. The vocabulary
-size is `V = 65`.
+size is `V = 50257`.
 
 | Stage | Shape | Meaning |
 |---|---|---|
 | Input and target IDs | `[B, T]` | One integer at each position |
 | Token embeddings plus position embeddings | `[B, T, C]` | One vector at each position |
 | Each Transformer block | `[B, T, C]` | Context-aware vectors, same dimensions |
-| Output logits during training | `[B, T, V]` | One score per possible next character |
+| Output logits during training | `[B, T, V]` | One score per possible next token |
 | Mean loss | Scalar | Average error across `B × T` predictions |
 
 The IDs stay integers. An **embedding** is a trainable table that looks up a
@@ -294,8 +296,8 @@ in the chunk. Both tables learn along with the rest of the model.
 
 ### 2.7. Why the loss teaches probabilities
 
-For one target character, cross-entropy loss is $-\ln p(\text{target})$. Assigning
-the right character probability 0.5 gives loss about 0.69; probability 0.01 gives
+For one target token, cross-entropy loss is $-\ln p(\text{target})$. Assigning
+the right token probability 0.5 gives loss about 0.69; probability 0.01 gives
 about 4.61. Confident wrong predictions are expensive.
 
 For the whole batch:
@@ -305,8 +307,8 @@ L = -\frac{1}{BT}\sum_{b=1}^{B}\sum_{t=1}^{T}
 \ln p_\theta(y_{b,t}\mid x_{b,1},\ldots,x_{b,t}).
 $$
 
-$\theta$ means all trainable parameters. Predicting every character uniformly
-would give $\ln 65 \approx 4.17$. A random model will be near, rather than exactly
+$\theta$ means all trainable parameters. Predicting every token uniformly
+would give $\ln 50257 \approx 10.82$. A random model will be near, rather than exactly
 at, that baseline. nanoGPT passes raw logits into
 [PyTorch cross-entropy](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html),
 which performs the necessary normalization internally. Do not apply softmax
@@ -330,10 +332,10 @@ gradients, and the one that changes weights. The inspected script is a simplifie
 step; nanoGPT's trainer also groups parameters for weight decay and schedules
 the learning rate.
 
-## 3. Give each prediction access to earlier characters
+## 3. Give each prediction access to earlier tokens
 
-An embedding alone represents the current character. To distinguish the `O` in
-`ROMEO` from an `O` elsewhere, the model needs context. **Self-attention** lets a
+An embedding alone represents the current token. To interpret ` bank` using
+words such as `money` or `river`, the model needs context. **Self-attention** lets a
 position gather information from other positions in its own input chunk.
 
 ### 3.1. Queries, keys, and values
@@ -358,24 +360,23 @@ positions and negative infinity at forbidden ones, giving future positions zero
 probability after softmax. This scaled dot-product construction is described in
 [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
 
-For the `ROMEO:` chunk, the allowed connections are:
+For the first four tokens of “The bank is near the river.”, the allowed
+connections are:
 
 ```text
-                    key position
-                 R O M E O :
-query at R       ✓ · · · · ·
-query at O       ✓ ✓ · · · ·
-query at M       ✓ ✓ ✓ · · ·
-query at E       ✓ ✓ ✓ ✓ · ·
-query at O       ✓ ✓ ✓ ✓ ✓ ·
-query at :       ✓ ✓ ✓ ✓ ✓ ✓
+                      key position
+                   The  _bank  _is  _near
+query at The        ✓     ·     ·     ·
+query at _bank      ✓     ✓     ·     ·
+query at _is        ✓     ✓     ✓     ·
+query at _near      ✓     ✓     ✓     ✓
 ```
 
-The `R` position predicts `O`, but cannot see that next `O`. The colon position
-can see the whole prefix and predicts what follows it. This **causal mask** makes
+The `The` position predicts ` bank`, but cannot see it. The ` near` position
+can see all four input tokens and predicts ` the`. This **causal mask** makes
 parallel training valid: all targets are available for scoring, while each
-prediction only sees its permitted prefix. Generation will build that prefix
-one character at a time. See PyTorch's
+prediction only sees its permitted prefix. Generation builds that prefix one
+token at a time. See PyTorch's
 [causal attention API](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
 
 ### 3.2. Build one block, then repeat it
@@ -398,7 +399,7 @@ x = x + mlp(layer_norm(x))
 ```
 
 We repeat four blocks, apply a final normalization, and project each position
-to 65 logits. The same model parameters serve every position. Read
+to 50,257 logits. The same model parameters serve every position. Read
 [`GPT.forward`, `Block`, and `CausalSelfAttention`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py)
 with the shape table beside you. nanoGPT also shares the token embedding weights
 with the output projection.
@@ -408,7 +409,7 @@ with the output projection.
 ```python
 model.eval()
 changed = x.clone()
-changed[:, 32:] = (changed[:, 32:] + 1) % meta["vocab_size"]
+changed[:, 32:] = (changed[:, 32:] + 1) % V
 with torch.no_grad():
     original, _ = model(x, y)
     modified, _ = model(changed, y)
@@ -429,8 +430,8 @@ the trainer's defaults; do not run bare `python train.py`, whose defaults target
 a much larger model and a different dataset.
 
 ```python
-dataset = 'shakespeare_char'
-out_dir = 'out-lab'
+dataset = 'shakespeare'
+out_dir = 'out-subword-lab'
 init_from = 'scratch'
 device = 'cpu'
 dtype = 'float32'
@@ -457,19 +458,25 @@ log_interval = 10
 always_save_checkpoint = False
 ```
 
-This model has about 0.8 million parameters. Those are the numbers the optimizer
-learns. Settings you choose, such as width, batch size, and learning rate, are
+This model has about 7.2 million parameters, mostly in the shared token embedding
+and output table. The larger vocabulary makes this more expensive than a
+character-level model, especially on a CPU. Settings you choose, such as width,
+batch size, and learning rate, are
 **hyperparameters**. Here, dropout is zero, so no activations are randomly dropped
 during training. The learning rate warms up over 20 iterations, then follows a
 cosine decay toward `min_lr` at iteration 2,000. Starting gently helps avoid large
 early updates; reducing the rate later makes updates smaller as training proceeds.
 
-### 4.1. Make checkpoint loading explicit
+### 4.1. Match the vocabulary and load checkpoints
+
+The upstream trainer rounds GPT-2's vocabulary up to 50,304 entries. This lab
+uses exactly 50,257, matching the inspection code and keeping every possible
+output ID decodable. The following patch changes that fallback in `train.py`.
 
 The pinned nanoGPT predates PyTorch 2.6's `torch.load` default of
 `weights_only=True`. Its training checkpoints contain more than plain weights,
 including validation statistics that can cause the restricted loader to fail.
-Before sampling or resuming, run this once in your experiment checkout:
+Before training, run this once in your experiment checkout:
 
 ```sh
 python - <<'PY'
@@ -486,6 +493,11 @@ for name in ("train.py", "sample.py"):
         print("Already updated", name)
     else:
         raise RuntimeError(f"Unexpected checkpoint loading code in {name}")
+path = Path("train.py")
+source = path.read_text()
+source = source.replace("else 50304", "else 50257")
+source = source.replace("50304 (50257 rounded up for efficiency)", "50257")
+path.write_text(source)
 PY
 ```
 
@@ -496,11 +508,11 @@ lab and trust. PyTorch explains the change and its implications in its
 ### 4.2. Start with a short run
 
 ```sh
-python train.py config/train_lab.py --out_dir=out-smoke --max_iters=200
+python train.py config/train_lab.py --out_dir=out-subword-smoke --max_iters=200
 ```
 
 The trainer prints `tokens per iteration will be: 768`, because
-`12 × 64 × 1 = 768` next-character targets contribute to one optimizer update.
+`12 × 64 × 1 = 768` next-token targets contribute to one optimizer update.
 It samples chunks with replacement; an iteration is not a full pass through
 the corpus. Around 2,000 updates expose the model to about 1.536 million token
 positions, with repeats. An **epoch** would instead mean one complete pass over
@@ -518,9 +530,9 @@ python train.py config/train_lab.py
 ```
 
 Let it finish, or stop with Ctrl-C after a checkpoint has been saved. Look for
-`saving checkpoint to out-lab`. Checkpoints are considered at evaluation
+`saving checkpoint to out-subword-lab`. Checkpoints are considered at evaluation
 boundaries after step zero, and this config saves only when validation loss
-improves. `out-lab/ckpt.pt` therefore holds the best observed checkpoint, which
+improves. `out-subword-lab/ckpt.pt` therefore holds the best observed checkpoint, which
 may precede the final iteration. There is no separate automatic final save.
 See the [training loop](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/train.py).
 
@@ -534,7 +546,7 @@ See the [training loop](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3
   Twenty evaluation batches produce a noisy estimate; one uptick is not a trend.
 
 The validation split helps choose a checkpoint, so it is not an untouched final
-test set. Lower character loss measures better prediction on this distribution;
+test set. Lower token loss measures better prediction on this distribution;
 it does not establish reasoning ability or factual accuracy.
 
 **Checkpoint:** explain why a model that memorizes training passages can have
@@ -543,31 +555,30 @@ excellent training loss and disappointing validation loss.
 ## 5. Generate text using the learned weights
 
 ```sh
-python sample.py --out_dir=out-lab --device=cpu --dtype=float32 \
-  --start='ROMEO:' --num_samples=2 --max_new_tokens=300 \
-  --temperature=0.8 --top_k=65 --seed=1337
+python sample.py --out_dir=out-subword-lab --device=cpu --dtype=float32 \
+  --start='The bank' --num_samples=2 --max_new_tokens=300 \
+  --temperature=0.8 --top_k=200 --seed=1337
 ```
 
-Use `--out_dir=out-smoke` to sample the short run instead. Keep
-`data/shakespeare_char/meta.pkl` beside its data: the sampler uses the checkpoint's
-dataset setting to find the character mappings. Its prompt can only contain
-characters in that vocabulary; an emoji will fail to encode.
+Use `--out_dir=out-subword-smoke` to sample the short run instead. With no
+`meta.pkl` in `data/shakespeare/`, nanoGPT's sampler uses GPT-2's tiktoken
+encoder and decoder, matching preparation.
 
 Generation repeatedly:
 
-1. Encodes the prompt and passes its latest 64 characters through the model.
+1. Encodes the prompt and passes its latest 64 tokens through the model.
 2. Takes the last position's logits and converts them to probabilities.
-3. Samples one character, appends it, and repeats.
+3. Samples one token, appends it, and repeats.
 
-This is **autoregressive generation**: earlier generated characters become
-inputs for later predictions. The model can print more than 64 characters, but
+This is **autoregressive generation**: earlier generated tokens become
+inputs for later predictions. The model can print more than 64 tokens, but
 each prediction only uses the most recent 64. Sampling does not run backward
 or update parameters. See [`sample.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/sample.py).
 
 **Temperature** divides the logits before softmax. Values below 1 sharpen the
 distribution; values above 1 flatten it. Use a positive value. **Top-k** keeps
-only the highest-scoring k candidates before sampling. Here `65` keeps the
-whole vocabulary. Try temperature `0.5` and `1.2` with the same seed, prompt,
+only the highest-scoring k candidates before sampling. Here `200` keeps the
+200 highest-scoring tokens. Try temperature `0.5` and `1.2` with the same seed, prompt,
 and checkpoint. More varied text does not mean better learned weights.
 
 **Checkpoint:** describe the difference between training on the true continuation
@@ -589,11 +600,11 @@ fixed unless the experiment explicitly changes them.
 ### 6.1. How much history helps?
 
 ```sh
-python train.py config/train_lab.py --out_dir=out-context16 --block_size=16
+python train.py config/train_lab.py --out_dir=out-subword-context16 --block_size=16
 ```
 
-Predict what a 16-character chunk can still learn: local spelling may survive,
-while longer structure is harder to use. There is a confound: keeping batch size
+Predict what a 16-token chunk can still learn: nearby word patterns may survive,
+while longer relationships are harder to use. There is a confound: keeping batch size
 12 also reduces targets per update from 768 to 192. To hold that count fixed,
 rerun with `--gradient_accumulation_steps=4` and a different output directory.
 Accumulation averages gradients across four microbatches before one update.
@@ -602,7 +613,7 @@ The shorter context remains the intended difference.
 ### 6.2. Does more capacity help on the same data?
 
 ```sh
-python train.py config/train_lab.py --out_dir=out-width256 --n_embd=256
+python train.py config/train_lab.py --out_dir=out-subword-width256 --n_embd=256
 ```
 
 Keep four heads: 256 is divisible by four. Wider layers add capacity and compute;
@@ -628,7 +639,7 @@ python train.py config/train_lab.py --init_from=resume \
   --max_iters=4000 --lr_decay_iters=4000
 ```
 
-This restores weights, optimizer state, and the saved iteration from `out-lab`.
+This restores weights, optimizer state, and the saved iteration from `out-subword-lab`.
 Reusing the same config preserves the other settings. Extending the decay
 schedule changes the learning-rate curve, so this is a continuation experiment,
 not an exact replay of an uninterrupted run. The checkpoint also does not
@@ -659,7 +670,7 @@ the number of targets per update without holding all microbatches at once.
 ### 7.1. Train on your own text
 
 After completing the baseline, create `data/my_text/` in the experiment checkout.
-Copy `data/shakespeare_char/prepare.py` there and put your UTF-8 corpus at
+Copy `data/shakespeare/prepare.py` there and put your UTF-8 corpus at
 `data/my_text/input.txt` before running the copied script. Because the file
 exists, preparation uses it rather than downloading Shakespeare.
 
@@ -668,31 +679,29 @@ python data/my_text/prepare.py
 python train.py config/train_lab.py --dataset=my_text --out_dir=out-my-text
 ```
 
-Use enough text that both splits have more than `block_size` characters. Keep
-the vocabulary within the script's `uint16` representation. The split is by
-character offset, so repeated documents can leak across splits. For a serious
-experiment, deduplicate and separate documents before tokenization. Keep the
-resulting mappings with the checkpoint: a new vocabulary changes the meaning
-of IDs and cannot be swapped into an old model.
+Use enough text that both encoded splits have more than `block_size` tokens.
+Keep GPT-2's tokenizer so the IDs retain the same meaning. The split is by
+character offset before tokenization, so repeated documents can leak across
+splits. For a serious experiment, deduplicate and separate documents first.
 
 ### 7.2. Connect this to large language models
 
 This lab is **pretraining from scratch**: randomly initialized parameters learn
-to continue a text distribution. Modern text LLMs commonly use subword tokens,
-larger corpora, and much larger models. Their exact architectures and training
-recipes vary. Character-level and subword-level losses are not directly
-comparable because the prediction units differ.
+to continue a text distribution. Larger models use far more data and parameters,
+with varying architectures and training recipes. Losses from different
+tokenizers are not directly comparable because their prediction units differ.
 
 **Fine-tuning** starts with learned weights and performs further updates.
-nanoGPT includes GPT-2 fine-tuning examples, but those need GPT-2's tokenizer and
-compatible architecture; our 65-character checkpoint is not compatible with
-GPT-2's vocabulary. **Instruction tuning** trains on examples of desired task or
-conversation behavior. Preference-based training adds another learning signal.
+nanoGPT includes GPT-2 fine-tuning examples. We share GPT-2's tokenizer, but our
+four-layer, 128-feature network has different dimensions, so GPT-2's pretrained
+weights do not fit this architecture. **Instruction tuning** trains on examples
+of desired task or conversation behavior. Preference-based training adds another
+learning signal.
 Those steps are outside this lab. Use the
 [LLM datasets note](../datasets/llm.md) to connect each training stage to its data.
 
 You now have concrete objects behind the training process: text supplies
-shifted targets; a causal Transformer produces logits; loss and backpropagation
+next-token targets; a causal Transformer produces logits; loss and backpropagation
 produce gradients; an optimizer changes weights; validation checks held-out
 prediction; generation repeatedly uses the learned distribution.
 
@@ -703,7 +712,7 @@ prediction; generation repeatedly uses the learned distribution.
 | `train.bin` not found | Run preparation from the nanoGPT root and check `dataset`. |
 | No `ckpt.pt` | Wait for a save message after a positive evaluation step. Step zero does not save. |
 | Checkpoint weights-only loading error | Apply section 4.1 to your trusted local checkpoints. |
-| `KeyError` when encoding a prompt | Use characters present in `meta.pkl`. |
+| Token ID cannot be decoded | Apply section 4.1 before training so the output vocabulary matches tiktoken. |
 | Garbled decoding or token-index errors | Keep the checkpoint with the dataset and tokenizer that created it. |
 | Attention head assertion | `n_embd` must be divisible by `n_head`. |
 | No CUDA, MPS failure, or device mismatch | Return both training and sampling to `--device=cpu --dtype=float32`. |
