@@ -227,17 +227,6 @@ To decide what to mix, each head needs three vectors at every position:
 - A **key (K)** represents what a position offers for matching.
 - A **value (V)** represents the information to mix into the result.
 
-Think of a **soft lookup**: compare a query with available keys, then retrieve
-information from their associated values. For ` lie`, its query is compared
-with the keys at `Here`, ` will`, ` I`, and itself. Each comparison is a dot
-product that produces a numerical match score. These learned scores determine
-how strongly to draw from each position; they do not test whether two tokens
-are equal.
-
-After scaling and masking, softmax converts the scores into weights. Instead
-of selecting one exact match, attention blends the associated **value vectors**
-using those weights. Section 2.3.2 follows that computation step by step.
-
 Q, K, and V are all derived from the same input sequence, which is why this is
 called **self-attention**.
 
@@ -264,13 +253,9 @@ matrices, producing different Q, K, and V vectors from its own input.
 Different Transformer blocks have separate matrices. Each position is still
 projected independently here. Mixing information across positions comes next.
 
-#### 2.3.2. Compute one head's mixture of context
+#### 2.3.2. Mask future tokens
 
-Follow one head at ` lie`. Its query has 32 numbers. A **dot product** with
-another position's key produces one scalar score. Comparing this query with
-all four keys gives four scores, each scaled by dividing by $\sqrt{32}$.
-
-Before turning these scores into weights, we must prevent predictions from
+Before mixing information across positions, we must prevent predictions from
 seeing future tokens. At ` lie`, position 3, all four prompt positions are
 permitted. Earlier positions must have later positions masked out.
 
@@ -292,6 +277,18 @@ parallel training valid: all targets are available for scoring, while each
 prediction only sees its permitted prefix. Generation builds that prefix one
 token at a time. See PyTorch's
 [causal attention API](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
+
+#### 2.3.3. Compare keys and blend values
+
+Think of attention as a **soft lookup**: compare a query with available keys,
+then blend information from their associated **value vectors** instead of
+selecting one exact match.
+
+Follow one head at ` lie`. Its 32-number query is compared with the keys at
+`Here`, ` will`, ` I`, and itself. Each comparison is a **dot product** that
+produces one scalar match score. The four scores are each scaled by dividing
+by $\sqrt{32}$. They determine how strongly to draw from each position after
+masking and softmax; they do not test whether two tokens are equal.
 
 Set forbidden scores to negative infinity, then apply **softmax** across the
 key positions. This gives forbidden positions zero weight and makes the allowed
@@ -325,7 +322,7 @@ between positions; the outputs contain the mixed features. **Attention** names
 the whole operation, while **attention weights** name the coefficients used to
 mix V.
 
-#### 2.3.3. Join the heads and add the attention update
+#### 2.3.4. Join the heads and add the attention update
 
 At each position, join the four 32-feature head outputs into one 128-feature
 vector. A learned output projection transforms it into the attention update.
@@ -341,7 +338,7 @@ This completes the attention stage's residual connection.
 For ` lie`, the resulting vector now includes information mixed from the
 permitted positions. Call it $h$. It is ready for the MLP inside the same block.
 
-#### 2.3.4. Transform each position's features with the MLP
+#### 2.3.5. Transform each position's features with the MLP
 
 The MLP processes each token position independently using the same learned
 matrices. At ` lie`, its input already contains context gathered by attention.
@@ -398,7 +395,7 @@ The MLP uses the same weights at all token positions in this block. For the
 whole prompt, its intermediate tensor expands to `[1, 4, 512]`, then returns
 to `[1, 4, 128]` for the residual addition.
 
-#### 2.3.5. Pass the result to the next block
+#### 2.3.6. Pass the result to the next block
 
 Putting the two stages together, one block computes:
 
