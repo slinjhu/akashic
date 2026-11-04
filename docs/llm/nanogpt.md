@@ -227,10 +227,19 @@ To decide what to mix, each head needs three vectors at every position:
 - A **key (K)** represents what a position offers for matching.
 - A **value (V)** represents the information to mix into the result.
 
-These are learned numerical representations. For ` lie`, its query will be
-compared with the keys at `Here`, ` will`, ` I`, and itself; the associated
-values supply the information to combine. All three are derived from the same
-input sequence, which is why this is called **self-attention**.
+Think of a **soft lookup**: compare a query with available keys, then retrieve
+information from their associated values. For ` lie`, its query is compared
+with the keys at `Here`, ` will`, ` I`, and itself. Each comparison is a dot
+product that produces a numerical match score. These learned scores determine
+how strongly to draw from each position; they do not test whether two tokens
+are equal.
+
+After scaling and masking, softmax converts the scores into weights. Instead
+of selecting one exact match, attention blends the associated **value vectors**
+using those weights. Section 2.3.2 follows that computation step by step.
+
+Q, K, and V are all derived from the same input sequence, which is why this is
+called **self-attention**.
 
 Follow ` lie` across all four heads in this block. Layer normalization takes
 the token’s existing 128-feature vector and normalizes its values. Call the resulting row vector
@@ -250,25 +259,10 @@ feature. Q, K, and V are recomputed from the current input on each forward pass.
 
 All four heads receive the **full 128-feature input**. Each uses different
 portions of the combined matrix $W$ to produce its own 32-feature Q, K, and V
-vectors. The weights are shared across token positions within this block;
-different Transformer blocks have separate matrices. Each position is still
+vectors. Within a Transformer block, every token uses the same learned projection
+matrices, producing different Q, K, and V vectors from its own input.
+Different Transformer blocks have separate matrices. Each position is still
 projected independently here. Mixing information across positions comes next.
-
-For the whole prompt, nanoGPT implements the combined projection as
-`nn.Linear(128, 384, bias=False)`. It transforms `[1, 4, 128]` into `[1, 4, 384]`.
-The matrices above use the mathematical input-by-output convention; PyTorch
-stores the combined weights transposed, with shape `[384, 128]`.
-
-```python
-q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
-# self.c_attn(x): [1, 4, 384]
-# q, k, v: each [1, 4, 128]
-```
-
-Each tensor is then split into four heads and rearranged to
-`[1, 4, 4, 32]`: 1 prompt, 4 heads, 4 positions, and 32 features per head.
-See [`CausalSelfAttention.forward`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py)
-for the projection, split, and rearrangement.
 
 #### 2.3.2. Compute one head's mixture of context
 
