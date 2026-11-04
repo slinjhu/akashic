@@ -28,7 +28,7 @@ then to generated dialogue. Along the way, you will connect each command to the
 part of learning it performs. See the
 [nanoGPT source](https://github.com/karpathy/nanoGPT) for the implementation.
 
-Start with one task: given `The bank`, predict the next token. A language model
+Start with one task: given `Here will I lie`, predict the next token. A language model
 assigns a probability to every possible next token. Training adjusts its numbers
 so that the tokens actually found in the text become more probable.
 
@@ -103,7 +103,7 @@ Use one sentence to see the tokenizer's output:
 python - <<'PYCODE'
 import tiktoken
 enc = tiktoken.get_encoding("gpt2")
-ids = enc.encode_ordinary("The bank is near the river.")
+ids = enc.encode_ordinary("Here will I lie tonight.")
 print("IDs:", ids)
 print("Pieces:", [enc.decode([i]) for i in ids])
 print("Word fragments:", [enc.decode([i]) for i in enc.encode_ordinary("tokenization")])
@@ -111,8 +111,8 @@ PYCODE
 ```
 
 ```text
-IDs: [464, 3331, 318, 1474, 262, 7850, 13]
-Pieces: ['The', ' bank', ' is', ' near', ' the', ' river', '.']
+IDs: [4342, 481, 314, 6486, 9975, 13]
+Pieces: ['Here', ' will', ' I', ' lie', ' tonight', '.']
 Word fragments: ['token', 'ization']
 ```
 
@@ -128,7 +128,7 @@ Every token after the first gives us a training question: given the text so far,
 what comes next? The token that actually follows is the correct answer, called
 the **target**.
 
-![The sentence The bank is near the river. supplies six predictions, from The predicting a space followed by bank through The bank is near the river predicting a period.](../assets/images/nanogpt-next-token.svg)
+![The sentence Here will I lie tonight. supplies five predictions, from Here predicting a space followed by will through Here will I lie tonight predicting a period.](../assets/images/nanogpt-next-token.svg)
 
 The text itself supplies the correct answers, so nobody needs to label them by
 hand. This is called **self-supervised learning**.
@@ -165,7 +165,7 @@ features to work with. An **embedding table** supplies a vector for each ID.
 In this lab, `nn.Embedding(50257, 128)` creates 50,257 rows of 128 numbers;
 looking up an ID simply selects its row.
 
-![The token consisting of a space followed by bank, shown as _bank, has ID 3331, selecting its row of 128 features from a 50,257-row embedding table.](../assets/images/nanogpt-embedding.svg)
+![The token consisting of a space followed by lie, shown as _lie, has ID 6486, selecting its row of 128 features from a 50,257-row embedding table.](../assets/images/nanogpt-embedding.svg)
 
 The table is part of the model's weights. Its numbers start randomly, then
 prediction errors produce gradients that update them during training. The
@@ -176,8 +176,12 @@ performs the lookup with `self.transformer.wte(idx)` in
 
 ### 2.3. Add information about position
 
-Consider “She deposited money at the bank” and “She sat on the river bank.”
-The token ` bank` starts with the same embedding in both sentences, but the
+In *Richard III*, Act 5, Scene 3, “Here will I lie tonight” uses **lie** to mean
+rest or sleep, while “I am a villain: yet I lie” uses it to mean say something
+untrue. Both lines occur in our training text; see the
+[scene](https://www.folgerdigitaltexts.org/R3/).
+
+The token ` lie` starts with the same embedding in both passages, but the
 surrounding text gives it different meanings. Transformer blocks combine that
 context. They also need information about the order of tokens; a token embedding
 by itself identifies a piece of text without saying where it occurs.
@@ -196,8 +200,8 @@ combined = token_vector + position_vector  # Still 128 numbers
 ```
 
 This illustrates the lookup; nanoGPT performs it for the whole batch with
-`tok_emb + pos_emb`. In “The bank is near the river.”, ` bank` receives the
-position-1 vector and ` river` receives the position-5 vector. Positions restart
+`tok_emb + pos_emb`. In “Here will I lie tonight.”, ` lie` receives the
+position-3 vector and ` tonight` receives the position-4 vector. Positions restart
 at 0 for each chunk. Like token embeddings, position embeddings start randomly
 and learn during training. See the `wpe` definition and `GPT.forward` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
@@ -334,8 +338,8 @@ the learning rate.
 
 ## 3. Give each prediction access to earlier tokens
 
-An embedding alone represents the current token. To interpret ` bank` using
-words such as `money` or `river`, the model needs context. **Self-attention** lets a
+An embedding alone represents the current token. To interpret ` lie` using
+its surrounding text, the model needs context. **Self-attention** lets a
 position gather information from other positions in its own input chunk.
 
 ### 3.1. Queries, keys, and values
@@ -360,20 +364,20 @@ positions and negative infinity at forbidden ones, giving future positions zero
 probability after softmax. This scaled dot-product construction is described in
 [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
 
-For the first four tokens of “The bank is near the river.”, the allowed
+For the first four tokens of “Here will I lie tonight.”, the allowed
 connections are:
 
 ```text
                       key position
-                   The  _bank  _is  _near
-query at The        ✓     ·     ·     ·
-query at _bank      ✓     ✓     ·     ·
-query at _is        ✓     ✓     ✓     ·
-query at _near      ✓     ✓     ✓     ✓
+                   Here  _will  _I  _lie
+query at Here       ✓      ·     ·    ·
+query at _will      ✓      ✓     ·    ·
+query at _I         ✓      ✓     ✓    ·
+query at _lie       ✓      ✓     ✓    ✓
 ```
 
-The `The` position predicts ` bank`, but cannot see it. The ` near` position
-can see all four input tokens and predicts ` the`. This **causal mask** makes
+The `Here` position predicts ` will`, but cannot see it. The ` lie` position
+can see all four input tokens and predicts ` tonight`. This **causal mask** makes
 parallel training valid: all targets are available for scoring, while each
 prediction only sees its permitted prefix. Generation builds that prefix one
 token at a time. See PyTorch's
@@ -556,7 +560,7 @@ excellent training loss and disappointing validation loss.
 
 ```sh
 python sample.py --out_dir=out-subword-lab --device=cpu --dtype=float32 \
-  --start='The bank' --num_samples=2 --max_new_tokens=300 \
+  --start='Here will I lie' --num_samples=2 --max_new_tokens=300 \
   --temperature=0.8 --top_k=200 --seed=1337
 ```
 

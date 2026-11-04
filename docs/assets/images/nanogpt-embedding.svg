@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="334" viewBox="0 0 800 334" role="img" aria-labelledby="title desc">
   <title id="title">An embedding lookup selects a row of the model's learned table</title>
-  <desc id="desc">The token consisting of a space followed by bank maps to ID 3331. That ID selects row 3331 of a table with 50,257 rows and 128 numbers per row. The selected row is the token's embedding vector. Displayed numbers are illustrative. The table is initialized randomly and updated through gradients during training.</desc>
+  <desc id="desc">The token consisting of a space followed by lie maps to ID 6486. That ID selects row 6486 of a table with 50,257 rows and 128 numbers per row. The selected row is the token's embedding vector. Displayed numbers are illustrative. The table is initialized randomly and updated through gradients during training.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M0 0 L10 5 L0 10 z" fill="#475569"/>
@@ -21,11 +21,11 @@
     </g>
     <g font-size="16" text-anchor="start" fill="#475569">
       <text x="680" y="126">ID 0</text>
-      <text x="680" y="208" fill="#1d4ed8" font-weight="700">ID 3331</text>
+      <text x="680" y="208" fill="#1d4ed8" font-weight="700">ID 6486</text>
       <text x="680" y="294">ID 50256</text>
     </g>
     <rect x="30" y="174" width="132" height="56" rx="8" fill="#dcfce7" stroke="#4ade80"/>
-    <text x="96" y="208" text-anchor="middle" font-family="monospace" font-size="16">_bank → 3331</text>
+    <text x="96" y="208" text-anchor="middle" font-family="monospace" font-size="16">_lie → 6486</text>
     <path d="M172 202 H238" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
   </g>
 </svg>
