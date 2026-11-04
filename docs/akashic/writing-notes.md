@@ -62,6 +62,10 @@ nested sections. Sections start expanded; **Expand all** and **Collapse all**
 control the whole note. Reopening a parent preserves its children's fold states.
 Table-of-contents links open the destination section and its parents automatically.
 
+Open the gear button at the top right for settings. The card contains switches
+for the left navigation and right table of contents, plus an appearance selector. Their visibility is saved in this browser and
+restored after refresh. On narrow screens, opened panels appear above the content.
+
 ## Code blocks
 
 Give fenced code blocks a language such as `python`, `sh`, `json`, or
