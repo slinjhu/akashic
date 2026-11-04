@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="326" viewBox="0 0 860 326" role="img" aria-labelledby="title desc">
+  <title id="title">Add the token and position vectors element by element</title>
+  <desc id="desc">The token vector [0.12, -0.04, 0.07, 0.19, ..., 0.31] is added element by element to the position vector [0.05, -0.10, 0.40, -0.03, ..., 0.02], producing [0.17, -0.14, 0.47, 0.16, ..., 0.33]. Each vector has 128 numbers. Values are illustrative.</desc>
+  <rect width="860" height="326" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a">
+    <text x="430" y="36" text-anchor="middle" font-size="23" font-weight="700">Add each pair of numbers at the same index</text>
+    <g text-anchor="end" font-size="18">
+      <text x="235" y="106">Token vector</text>
+      <text x="235" y="170">Position vector</text>
+      <text x="235" y="248" font-weight="600">Combined vector</text>
+    </g>
+    <rect x="278" y="78" width="496" height="42" rx="6" fill="#dbeafe" stroke="#60a5fa"/>
+    <rect x="278" y="142" width="496" height="42" rx="6" fill="#ede9fe" stroke="#a78bfa"/>
+    <rect x="278" y="220" width="496" height="42" rx="6" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="260" y="170" text-anchor="middle" font-size="26">+</text>
+    <path d="M278 201 H774" stroke="#64748b" stroke-width="2"/>
+    <g font-family="monospace" font-size="18" text-anchor="middle">
+      <text x="526" y="106">0.12, −0.04, 0.07, 0.19, …, 0.31</text>
+      <text x="526" y="170">0.05, −0.10, 0.40, −0.03, …, 0.02</text>
+      <text x="526" y="248">0.17, −0.14, 0.47, 0.16, …, 0.33</text>
+    </g>
+    <text x="430" y="301" text-anchor="middle" font-size="16" fill="#475569">128 numbers + 128 numbers → 128 numbers · illustrative values</text>
+  </g>
+</svg>

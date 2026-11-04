@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="560" viewBox="0 0 940 560" role="img" aria-labelledby="title desc">
+  <title id="title">One query looks up information from four key–value pairs</title>
+  <desc id="desc">For one head and the lie position in Here will I lie, the query derived from lie matches the keys derived from Here, will, I, and lie. Illustrative attention weights are 0.1, 0.2, 0.1, and 0.6. Each weight multiplies its associated value vector; adding these contributions produces one 32-number mixture. The query, keys, and values are each 32-number vectors.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="940" height="560" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a" text-anchor="middle">
+    <text x="470" y="36" font-size="23" font-weight="700">Here will I lie: one query, four key–value pairs</text>
+    <text x="470" y="65" font-size="16" fill="#475569">Follow one head at “lie” · each Q, K, and V vector has 32 numbers</text>
+    <rect x="30" y="198" width="165" height="90" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+    <text x="112" y="232" font-size="19" font-weight="700">Query from “lie”</text>
+    <text x="112" y="260" font-size="17">What to match</text>
+    <text x="345" y="109" font-size="17" font-weight="600">Key</text>
+    <text x="520" y="109" font-size="17" font-weight="600">Value</text>
+    <text x="765" y="109" font-size="17" font-weight="600">Weight × value</text>
+    <g fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M195 243 H224 V151 H273"/>
+      <path d="M224 213 H273"/>
+      <path d="M224 243 V275 H273"/>
+      <path d="M224 275 V337 H273"/>
+      <path d="M590 151 H652"/>
+      <path d="M590 213 H652"/>
+      <path d="M590 275 H652"/>
+      <path d="M590 337 H652"/>
+      <path d="M852 151 H882 V431 H843"/>
+      <path d="M852 213 H882"/>
+      <path d="M852 275 H882"/>
+      <path d="M852 337 H882"/>
+    </g>
+    <g fill="#ede9fe" stroke="#a78bfa">
+      <rect x="275" y="128" width="140" height="46" rx="6"/>
+      <rect x="275" y="190" width="140" height="46" rx="6"/>
+      <rect x="275" y="252" width="140" height="46" rx="6"/>
+      <rect x="275" y="314" width="140" height="46" rx="6"/>
+    </g>
+    <g fill="#fef3c7" stroke="#fbbf24">
+      <rect x="450" y="128" width="140" height="46" rx="6"/>
+      <rect x="450" y="190" width="140" height="46" rx="6"/>
+      <rect x="450" y="252" width="140" height="46" rx="6"/>
+      <rect x="450" y="314" width="140" height="46" rx="6"/>
+    </g>
+    <g fill="#dcfce7" stroke="#4ade80">
+      <rect x="665" y="128" width="185" height="46" rx="6"/>
+      <rect x="665" y="190" width="185" height="46" rx="6"/>
+      <rect x="665" y="252" width="185" height="46" rx="6"/>
+      <rect x="665" y="314" width="185" height="46" rx="6"/>
+    </g>
+    <g font-size="18">
+      <text x="345" y="157">K(Here)</text><text x="520" y="157">V(Here)</text><text x="757" y="157">0.1 × V(Here)</text>
+      <text x="345" y="219">K(will)</text><text x="520" y="219">V(will)</text><text x="757" y="219">0.2 × V(will)</text>
+      <text x="345" y="281">K(I)</text><text x="520" y="281">V(I)</text><text x="757" y="281">0.1 × V(I)</text>
+      <text x="345" y="343">K(lie)</text><text x="520" y="343">V(lie)</text><text x="757" y="343">0.6 × V(lie)</text>
+    </g>
+    <text x="470" y="389" font-size="16" fill="#475569">Query–key matches determine the weights shown at right.</text>
+    <rect x="275" y="406" width="565" height="58" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="557" y="431" font-size="19" font-weight="600">Add the four weighted values</text>
+    <text x="557" y="454" font-size="16">One 32-number mixture for “lie” in this head</text>
+    <text x="470" y="508" font-size="16">The values are blended; no single key–value pair is selected.</text>
+    <text x="470" y="537" font-size="15" fill="#475569">Weights are illustrative. Each token position and head has its own query.</text>
+  </g>
+</svg>

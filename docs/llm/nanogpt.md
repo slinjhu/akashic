@@ -135,30 +135,22 @@ hand. This is called **self-supervised learning**.
 
 The model assigns probabilities to possible next tokens. We compare those
 predictions with the correct answers, then adjust its weights to make those
-answers more likely. Next, we will inspect one such learning step.
+answers more likely. First, follow how a forward pass makes a prediction; then
+inspect how one learning step updates the weights.
 
-## 2. See one learning step before running thousands
+## 2. Forward pass: predict the next token
 
-### 2.1. Text chunks and batches
+Give the model `Here will I lie`. A **forward pass** uses its current weights
+to turn this prefix into scores for the next token. In our Shakespeare example,
+the continuation is ` tonight`. A model must learn to assign it a useful
+probability; random weights will not reliably predict it.
 
-Each training step needs text for the model to learn from. Rather than process
-the entire dataset at once, we take short, consecutive **text chunks**.
-Their length (`block_size`) limits how much context the model can use and keeps
-memory and computation manageable.
+GPT-2's tokenizer encodes this prompt as `[4342, 481, 314, 6486]`. We have one
+prompt containing four tokens, so the input tensor has shape `[1, 4]`. Follow
+those four positions through the network below. The model still supports up
+to 64 tokens; we are using a shorter input to see the process clearly.
 
-We group several chunks into a **batch**, process them together, and use their
-combined prediction errors to update the weights once. For the next step, we
-choose new random starting positions so the model sees varied parts of the
-dataset. Chunks can overlap; tokens left out of one batch remain available
-for later batches.
-
-The illustration uses batch size 3 and chunk size 4; the lab uses batch size 12
-and chunk size 64. Chunk size counts tokens, so a chunk can contain different
-numbers of words or characters.
-
-![Three four-token chunks selected from a longer passage in Richard III and stacked as the rows of a batch; the first two chunks overlap.](../assets/images/nanogpt-chunks-batch.svg)
-
-### 2.2. Embeddings: a learned table inside the model
+### 2.1. Embeddings: a learned table inside the model
 
 A token ID tells us which token we have, but gives the network no useful
 features to work with. An **embedding table** supplies a vector for each ID.
@@ -174,12 +166,11 @@ rest of the model. nanoGPT names the table `wte` (word token embedding) and
 performs the lookup with `self.transformer.wte(idx)` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
-### 2.3. Add information about position
+### 2.2. Add information about position
 
-In *Richard III*, Act 5, Scene 3, “Here will I lie tonight” uses **lie** to mean
-rest or sleep, while “I am a villain: yet I lie” uses it to mean say something
-untrue. Both lines occur in our training text; see the
-[scene](https://www.folgerdigitaltexts.org/R3/).
+“Here will I lie tonight” uses **lie** to mean rest or sleep, while “I am a
+villain: yet I lie” uses it to mean say something untrue. The model needs the
+surrounding text to distinguish these meanings.
 
 The token ` lie` starts with the same embedding in both passages, but the
 surrounding text gives it different meanings. Transformer blocks combine that
@@ -188,40 +179,289 @@ by itself identifies a piece of text without saying where it occurs.
 
 A second learned table, **`wpe`** (word position embedding), supplies that signal.
 In this lab, `nn.Embedding(64, 128)` provides one vector for each token position
-from 0 to 63 within a chunk.
+from 0 to 63 within a chunk. Our four-token prompt uses the first four rows.
 
-At each position, the network adds the token vector and the position vector
-element by element:
+At each position, the network adds each number in the 128-dimensional token
+vector to the number at the same index in the 128-dimensional position vector.
+The result is still one 128-dimensional vector. nanoGPT performs this addition
+for the whole batch with `tok_emb + pos_emb`.
 
-```python
-token_vector = wte[token_id]     # 128 numbers
-position_vector = wpe[position]  # 128 numbers
-combined = token_vector + position_vector  # Still 128 numbers
-```
+![Adding corresponding numbers in the token and position vectors produces one 128-dimensional vector.](../assets/images/nanogpt-position-addition.svg)
 
-This illustrates the lookup; nanoGPT performs it for the whole batch with
-`tok_emb + pos_emb`. In “Here will I lie tonight.”, ` lie` receives the
-position-3 vector and ` tonight` receives the position-4 vector. Positions restart
-at 0 for each chunk. Like token embeddings, position embeddings start randomly
+In the prompt “Here will I lie”, ` lie` receives the position-3 vector.
+If we append ` tonight`, it receives the position-4 vector on the next forward
+pass. Positions restart at 0 for each chunk. Like token embeddings, position embeddings start randomly
 and learn during training. See the `wpe` definition and `GPT.forward` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
-### 2.4. From chunks to predictions
+### 2.3. Build context with Transformer blocks
 
-We give it 12 text chunks, each containing 64 token IDs. The network turns
-each ID into a vector of 128 features and adds information about its position.
-Four **Transformer blocks** then update those features using the preceding text.
-Each block has four **attention heads**, which combine information from different
-positions, and a **feed-forward network**, which transforms each position's
-features. The output layer converts the final features into 50,257 scores per
-position, one for each possible next token.
+Token and position embeddings prepare the input; **Transformer blocks** make
+its representations depend on context by updating each token's vector using
+information from the current and earlier positions.
 
-![The lab's GPT network, from token IDs through embeddings and four Transformer blocks to next-token scores, with tensor shapes at each stage.](../assets/images/nanogpt-network.svg)
+For ` lie`, attention can use `Here`, ` will`, ` I`, and itself. A different
+prefix, such as “I am a villain: yet I,” supplies different information and can
+produce a different representation for the same token. The following subsections
+follow the operations inside one block.
 
-### 2.5. Run one learning step
+#### 2.3.1. Attention heads
 
-`model(x, y)` runs the inputs through this network and measures the prediction
-loss against `y`. The remaining code computes gradients and updates the weights
+An **attention head** is one calculation that mixes information from permitted
+token positions. For ` lie`, it computes how strongly to draw from `Here`,
+` will`, ` I`, and itself, then forms one mixture of their information.
+
+Our model uses four heads so it can form four different mixtures at once.
+Each head learns its own way of matching positions. One large head could also
+work, but would provide just one set of attention weights; four heads provide
+four sets, giving the model more ways to combine context. Their roles are
+learned rather than assigned.
+
+Next, Q, K, and V explain how a head decides what to mix and what information
+to pass along.
+
+#### 2.3.2. Queries, keys, and values
+
+To update ` lie`, the model needs to decide which earlier positions to draw
+from and what information to take from them. Think of looking up information:
+you have a **query**, compare it against **keys**, and retrieve the associated
+**values**. Attention makes this a soft lookup: it gives each position a weight
+and blends the values instead of choosing one exact match.
+
+For ` lie`, its query is compared with the keys at `Here`, ` will`, ` I`, and
+itself. Their values supply the information used to update its vector. Separating
+these roles lets the model learn how to match relevant positions and what
+information to pass along. All three come from the same input, which is why
+this is called **self-attention**.
+
+![For one attention head, the query from lie matches the keys for Here, will, I, and lie. Illustrative weights of 0.1, 0.2, 0.1, and 0.6 blend their associated value vectors into one updated mixture.](../assets/images/nanogpt-attention-lookup.svg)
+
+Start with the input to attention: the normalized tensor of shape
+`[1, 4, 128]`. A learned linear layer transforms each position's 128 features
+into three sets of 128 numbers:
+
+- A **query (Q)** represents what information this position is looking for.
+- A **key (K)** represents what a position offers for matching.
+- A **value (V)** represents the information to mix into the result.
+
+This is a **128 → 384** linear layer, `nn.Linear(128, 384, bias=False)`,
+with a weight tensor of shape `[384, 128]` in PyTorch. It transforms
+`[1, 4, 128]` into `[1, 4, 384]`; splitting the last dimension gives Q, K,
+and V, each with shape `[1, 4, 128]`.
+
+These are numerical vectors, not explicit questions or dictionary entries.
+nanoGPT creates them together, then separates them in `CausalSelfAttention`:
+
+```python
+q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+# self.c_attn(x): [1, 4, 384]
+# q, k, v: each [1, 4, 128]
+```
+
+Each tensor is then split into four heads and rearranged to
+`[1, 4, 4, 32]`: 1 prompt, 4 heads, 4 positions, and 32 features per head.
+Q, K, and V are computed anew from the input each time; the linear layer's
+weights are the parameters learned during training. See
+[`CausalSelfAttention.forward`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+
+**Q and K determine the attention weights**
+
+Follow one head at the ` lie` position. Its query has 32 numbers. A **dot
+product** between that query and another position's key gives one score.
+Comparing the query with all
+4 keys gives 4 scores, scaled by dividing by $\sqrt{32}$.
+
+At ` lie`, position 3, all four prompt positions are permitted. Earlier
+positions must have later positions masked out. **Softmax** then converts the
+scores into nonnegative attention weights that sum to 1. One head might produce
+`[0.1, 0.2, 0.1, 0.6]` for the ` lie` query. These are illustrative values,
+not measured weights from our model.
+
+Repeating this for every query position, head, and prompt produces an attention
+weight tensor of shape `[1, 4, 4, 4]`. The last two dimensions mean **query
+position × key position**. They describe relationships between positions,
+rather than features of a single token.
+
+**The weights combine V into the output**
+
+For that same query, multiply each position's 32-number value vector by its
+attention weight and add the results. The result is one 32-number vector
+containing a mixture of information from permitted positions. Q and K determine
+the mixture's weights; V supplies the information being mixed.
+
+| Tensor | Shape | Meaning |
+|---|---|---|
+| Q, K, and V, each | `[1, 4, 4, 32]` | One 32-number vector per position and head |
+| Attention weights | `[1, 4, 4, 4]` | How strongly each query draws from each key position |
+| Weighted values | `[1, 4, 4, 32]` | One mixture per query position and head |
+| Joined heads and output projection | `[1, 4, 128]` | An update matching the block's input shape |
+
+The four heads' results are joined and passed through another learned linear
+layer. The block adds this attention output to its input. **Attention** names
+the whole operation; **attention weights** name the particular tensor used to
+mix V.
+
+![Q and K produce attention weights of shape one by four by four by four; those weights mix V into thirty-two features per head, and the joined output has shape one by four by one hundred twenty-eight.](../assets/images/nanogpt-qkv.svg)
+
+The calculation is written compactly as:
+
+$$
+\operatorname{Attention}(Q,K,V)
+= \operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d}} + M\right)V.
+$$
+
+$d$ is the feature width of one attention head. The mask $M$ is zero at permitted
+positions and negative infinity at forbidden ones, giving future positions zero
+probability after softmax. This scaled dot-product construction is described in
+[Attention Is All You Need](https://arxiv.org/abs/1706.03762).
+
+For the first four tokens of “Here will I lie tonight.”, the allowed
+connections are:
+
+```text
+                      key position
+                   Here  _will  _I  _lie
+query at Here       ✓      ·     ·    ·
+query at _will      ✓      ✓     ·    ·
+query at _I         ✓      ✓     ✓    ·
+query at _lie       ✓      ✓     ✓    ✓
+```
+
+The `Here` position predicts ` will`, but cannot see it. The ` lie` position
+can see all four input tokens and predicts ` tonight`. This **causal mask** makes
+parallel training valid: all targets are available for scoring, while each
+prediction only sees its permitted prefix. Generation builds that prefix one
+token at a time. See PyTorch's
+[causal attention API](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
+
+The attention computation follows this flow:
+
+1. Learned transformations of each token's 128 features prepare the inputs for
+   four heads, each working with 32 features per position.
+2. Each head computes its own attention weights and mixes information across
+   permitted positions, producing 32 numbers per position.
+3. The four results are joined into 128 numbers per position.
+4. A learned output layer transforms those 128 numbers into an update, which
+   the block adds to its input.
+
+#### 2.3.3. Transform features and repeat the block
+
+After attention, a small feed-forward network, or **MLP**, transforms each
+position independently: expand width 128 to 512, apply GELU, then project to 128.
+Attention mixes positions; the MLP transforms features within each position.
+
+Both parts use **residual connections**, adding their output to their input.
+This preserves a path for existing information and gradients. Layer normalization
+normalizes each position's features before each part. One block computes:
+
+```text
+x = x + attention(layer_norm(x))
+x = x + mlp(layer_norm(x))
+```
+
+We repeat four blocks, each receiving the previous block's output. Throughout
+these blocks, the prompt tensor stays `[1, 4, 128]`; its values become more
+context-dependent. The same learned parameters within a block serve every
+position. nanoGPT defines this sequence in
+[`GPT.forward` and `Block`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+
+![Inside one Transformer block: attention mixes permitted token positions, a feed-forward network transforms features, and each stage adds its input. The tensor stays shape one by four by one hundred twenty-eight.](../assets/images/nanogpt-transformer-block.svg)
+
+### 2.4. Turn the final vector into next-token probabilities
+
+After the fourth block, a final normalization rescales the features. The
+**output layer** maps each 128-dimensional vector to 50,257 scores called
+**logits**, one per possible token. Its weights are shared with the token
+embedding table from section 2.1.
+
+To continue `Here will I lie`, we use the logits at the final position, ` lie`.
+**Softmax** converts those scores into probabilities that sum to 1. Selecting a
+token and decoding it gives the next piece of text. For example, ID `9975`
+decodes to ` tonight`; appending it produces `Here will I lie tonight`.
+Choosing the most probable token and sampling from the probabilities are two
+different selection strategies; section 5 uses sampling.
+
+![One four-token prompt passes through embeddings, four Transformer blocks, final normalization, and an output layer to produce next-token logits.](../assets/images/nanogpt-network.svg)
+
+| Stage | Shape for this prompt | Meaning |
+|---|---|---|
+| Input IDs | `[1, 4]` | Four token IDs in one prompt |
+| Token plus position embeddings | `[1, 4, 128]` | One vector per position |
+| Each Transformer block | `[1, 4, 128]` | Updated vectors with context |
+| Logits at all positions | `[1, 4, 50257]` | Scores for each position's next token |
+| Final-position probabilities | `[1, 50257]` | Distribution used to continue the prompt |
+
+When called without targets, nanoGPT only applies its output layer at the final
+position, returning logits of shape `[1, 1, 50257]`. During training, it returns
+logits at every position so all next-token predictions can contribute to loss.
+The forward pass itself does not update any weights.
+
+## 3. One learning step
+
+The forward pass produces predictions. A **learning step** compares them with
+correct next tokens, computes how the model's weights contributed to the error,
+and updates those weights. We now use batches from the training text so one
+update can learn from many predictions at once.
+
+### 3.1. Text chunks and batches
+
+Each training step needs text for the model to learn from. Rather than process
+the entire dataset at once, we take short, consecutive **text chunks**.
+Their length (`block_size`) limits how much context the model can use and keeps
+memory and computation manageable.
+
+We group several chunks into a **batch**, process them together, and use their
+combined prediction errors to update the weights once. For the next step, we
+choose new random starting positions so the model sees varied parts of the
+dataset. Chunks can overlap; tokens left out of one batch remain available
+for later batches.
+
+The illustration uses batch size 3 and chunk size 4; the lab uses batch size 12
+and chunk size 64. Chunk size counts tokens, so a chunk can contain different
+numbers of words or characters. In the code below, `B = 12` is the batch size
+and `T = 64` is the number of token positions per chunk. Inputs and targets
+each have shape `[B, T] = [12, 64]`.
+
+![Three four-token chunks selected from a longer passage in Richard III and stacked as the rows of a batch; the first two chunks overlap.](../assets/images/nanogpt-chunks-batch.svg)
+
+### 3.2. Why the loss teaches probabilities
+
+For one target token, cross-entropy loss is $-\ln p(\text{target})$. Assigning
+the right token probability 0.5 gives loss about 0.69; probability 0.01 gives
+about 4.61. Confident wrong predictions are expensive.
+
+For the whole batch:
+
+$$
+L = -\frac{1}{BT}\sum_{b=1}^{B}\sum_{t=1}^{T}
+\ln p_\theta(y_{b,t}\mid x_{b,1},\ldots,x_{b,t}).
+$$
+
+$\theta$ means all trainable parameters. Predicting every token uniformly
+would give $\ln 50257 \approx 10.82$. A random model will be near, rather than exactly
+at, that baseline. nanoGPT passes raw logits into
+[PyTorch cross-entropy](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html),
+which performs the necessary normalization internally. Do not apply softmax
+before passing logits to that function.
+
+`loss.backward()` computes derivatives of the loss with respect to parameters;
+it does not update them. `optimizer.step()` applies the update. Gradients
+accumulate unless cleared, which is why we call `zero_grad`. See the
+[autograd tutorial](https://docs.pytorch.org/tutorials/beginner/basics/autogradqs_tutorial.html).
+
+The simplest update would be $\theta \leftarrow \theta - \eta\nabla_\theta L$,
+where $\eta$ is the learning rate. nanoGPT uses
+[AdamW](https://docs.pytorch.org/docs/stable/generated/torch.optim.AdamW.html),
+which tracks gradient statistics to adapt updates and applies weight decay.
+Clipping limits the overall gradient norm before the update. These mechanisms
+make the optimization more controlled; the learning signal still comes from
+predicting the next token.
+
+### 3.3. Run one learning step
+
+`model(x, y)` performs the forward pass and measures prediction loss against
+the correct next tokens in `y`. Here `x` and `y` are both `[12, 64]`, so the
+logits are `[12, 64, 50257]`. The remaining code computes gradients and updates the weights
 once. Save it as `inspect_step.py`:
 
 ```python
@@ -280,135 +520,14 @@ adding to approximately 1, a nonzero gradient, and a nonzero parameter change.
 The last loss often falls, but one update is not guaranteed to help, and
 improvement on the same batch does not establish improvement on unseen text.
 
-### 2.6. What the dimensions mean
-
-One **batch** contains `B = 12` text chunks. Each has `T = 64` positions, and
-each position has a representation with `C = 128` learned features. The vocabulary
-size is `V = 50257`.
-
-| Stage | Shape | Meaning |
-|---|---|---|
-| Input and target IDs | `[B, T]` | One integer at each position |
-| Token embeddings plus position embeddings | `[B, T, C]` | One vector at each position |
-| Each Transformer block | `[B, T, C]` | Context-aware vectors, same dimensions |
-| Output logits during training | `[B, T, V]` | One score per possible next token |
-| Mean loss | Scalar | Average error across `B × T` predictions |
-
-The IDs stay integers. An **embedding** is a trainable table that looks up a
-vector for each ID. Position embeddings add information about where a token is
-in the chunk. Both tables learn along with the rest of the model.
-
-### 2.7. Why the loss teaches probabilities
-
-For one target token, cross-entropy loss is $-\ln p(\text{target})$. Assigning
-the right token probability 0.5 gives loss about 0.69; probability 0.01 gives
-about 4.61. Confident wrong predictions are expensive.
-
-For the whole batch:
-
-$$
-L = -\frac{1}{BT}\sum_{b=1}^{B}\sum_{t=1}^{T}
-\ln p_\theta(y_{b,t}\mid x_{b,1},\ldots,x_{b,t}).
-$$
-
-$\theta$ means all trainable parameters. Predicting every token uniformly
-would give $\ln 50257 \approx 10.82$. A random model will be near, rather than exactly
-at, that baseline. nanoGPT passes raw logits into
-[PyTorch cross-entropy](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html),
-which performs the necessary normalization internally. Do not apply softmax
-before passing logits to that function.
-
-`loss.backward()` computes derivatives of the loss with respect to parameters;
-it does not update them. `optimizer.step()` applies the update. Gradients
-accumulate unless cleared, which is why we call `zero_grad`. See the
-[autograd tutorial](https://docs.pytorch.org/tutorials/beginner/basics/autogradqs_tutorial.html).
-
-The simplest update would be $\theta \leftarrow \theta - \eta\nabla_\theta L$,
-where $\eta$ is the learning rate. nanoGPT uses
-[AdamW](https://docs.pytorch.org/docs/stable/generated/torch.optim.AdamW.html),
-which tracks gradient statistics to adapt updates and applies weight decay.
-Clipping limits the overall gradient norm before the update. These mechanisms
-make the optimization more controlled; the learning signal still comes from
-predicting the next token.
-
 **Checkpoint:** identify the exact line that measures error, the one that computes
 gradients, and the one that changes weights. The inspected script is a simplified
 step; nanoGPT's trainer also groups parameters for weight decay and schedules
 the learning rate.
 
-## 3. Give each prediction access to earlier tokens
+### 3.4. Check that future tokens stay hidden
 
-An embedding alone represents the current token. To interpret ` lie` using
-its surrounding text, the model needs context. **Self-attention** lets a
-position gather information from other positions in its own input chunk.
-
-### 3.1. Queries, keys, and values
-
-Each position's vector is projected into three vectors:
-
-- A **query** represents what information this position is looking for.
-- A **key** represents what a position offers for matching.
-- A **value** represents the information to mix into the result.
-
-These are learned numerical projections, not explicit questions or dictionary
-entries. For a query, dot products with keys produce relevance scores. Softmax
-normalizes them, then the model takes a weighted sum of values.
-
-$$
-\operatorname{Attention}(Q,K,V)
-= \operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d}} + M\right)V.
-$$
-
-$d$ is the feature width of one attention head. The mask $M$ is zero at permitted
-positions and negative infinity at forbidden ones, giving future positions zero
-probability after softmax. This scaled dot-product construction is described in
-[Attention Is All You Need](https://arxiv.org/abs/1706.03762).
-
-For the first four tokens of “Here will I lie tonight.”, the allowed
-connections are:
-
-```text
-                      key position
-                   Here  _will  _I  _lie
-query at Here       ✓      ·     ·    ·
-query at _will      ✓      ✓     ·    ·
-query at _I         ✓      ✓     ✓    ·
-query at _lie       ✓      ✓     ✓    ✓
-```
-
-The `Here` position predicts ` will`, but cannot see it. The ` lie` position
-can see all four input tokens and predicts ` tonight`. This **causal mask** makes
-parallel training valid: all targets are available for scoring, while each
-prediction only sees its permitted prefix. Generation builds that prefix one
-token at a time. See PyTorch's
-[causal attention API](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
-
-### 3.2. Build one block, then repeat it
-
-Our four heads each work with width `128 / 4 = 32`. Different learned projections
-allow different mixtures of context; a head is not assigned a particular grammar
-rule. Their outputs are concatenated and projected back to width 128.
-
-After attention, a small feed-forward network, or **MLP**, transforms each
-position independently: expand width 128 to 512, apply GELU, then project to 128.
-Attention mixes positions; the MLP transforms features within each position.
-
-Both parts use **residual connections**, adding their output to their input.
-This preserves a path for existing information and gradients. Layer normalization
-normalizes each position's features before each part. One block computes:
-
-```text
-x = x + attention(layer_norm(x))
-x = x + mlp(layer_norm(x))
-```
-
-We repeat four blocks, apply a final normalization, and project each position
-to 50,257 logits. The same model parameters serve every position. Read
-[`GPT.forward`, `Block`, and `CausalSelfAttention`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py)
-with the shape table beside you. nanoGPT also shares the token embedding weights
-with the output projection.
-
-**Try it:** in `inspect_step.py`, after the existing code, add this check:
+In `inspect_step.py`, after the existing code, add this check:
 
 ```python
 model.eval()
