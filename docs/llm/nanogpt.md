@@ -132,43 +132,27 @@ answers more likely. Next, we will inspect one such learning step.
 
 ## 2. See one learning step before running thousands
 
-The model contains trainable numbers called **parameters**. A forward pass uses
-them to produce scores called **logits**. Softmax turns those scores into a
-probability distribution. A loss measures how surprising the correct answers
-were, and gradients tell an optimizer how to change the parameters.
+### 2.1. Text chunks and batches
 
-```mermaid
-flowchart LR
-  X["Character IDs"] --> M["Model parameters"]
-  M --> P["Next-character scores"]
-  P --> L["Loss against correct next characters"]
-  L --> G["Backward: parameter gradients"]
-  G --> U["Optimizer update"]
-  U --> M
-```
+Each training step needs text for the model to learn from. Rather than process
+the entire dataset at once, we take short, consecutive **text chunks**.
+Their length (`block_size`) limits how much context the model can use and keeps memory and
+computation manageable.
 
-### 2.1. The neural network we will create
+We group several chunks into a **batch**, process them together, and use their
+combined prediction errors to update the weights once. For the next step, we
+choose new random starting positions so the model sees varied parts of the
+dataset. Chunks can overlap; characters left out of one batch remain available
+for later batches.
 
-The code below creates a small GPT neural network with random weights. Its
-structure is defined in nanoGPT's
-[`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py);
-`GPTConfig` chooses its size, and `GPT(...)` builds it.
+The illustration uses batch size 3 and chunk size 8; the lab uses batch size 12
+and chunk size 64.
 
-#### 2.1.1. Windows and batches
+![Three eight-character chunks selected from one paragraph and stacked as the three rows of a batch; the lab uses twelve rows of sixty-four characters.](../assets/images/nanogpt-chunks-batch.svg)
 
-A **window** limits how much text the model processes at once, keeping memory
-and computation manageable. Random starting positions give it varied examples
-from across the training text. Windows can overlap; text left out of one step
-remains available for later steps. A **batch** groups several windows so the
-computer can process them together and each weight update uses prediction
-errors from multiple examples. The SVG uses a small example with batch size 3
-and window size 8; the lab uses batch size 12 and window size 64.
+### 2.2. From chunks to predictions
 
-![Three eight-character windows selected from one paragraph and stacked as the three rows of a batch; the lab uses twelve rows of sixty-four characters.](../assets/images/nanogpt-windows-batch.svg)
-
-#### 2.1.2. From windows to predictions
-
-We give it 12 text windows, each containing 64 character IDs. The network turns
+We give it 12 text chunks, each containing 64 character IDs. The network turns
 each ID into a vector of 128 features and adds information about its position.
 Four **Transformer blocks** then update those features using the preceding text.
 Each block has four **attention heads**, which combine information from different
@@ -193,7 +177,7 @@ with open("data/shakespeare_char/meta.pkl", "rb") as f:
     meta = pickle.load(f)
 data = np.memmap("data/shakespeare_char/train.bin", dtype=np.uint16, mode="r")
 B, T, C = 12, 64, 128  # Batch size, sequence length, embedding width
-# Pick B random starting positions in the training text, one per window.
+# Pick B random starting positions in the training text, one per chunk.
 # Leave room for T input characters plus the next character needed for targets.
 starts = torch.randint(len(data) - T, (B,))  # [B] = [12]
 x = torch.stack([
@@ -238,9 +222,9 @@ adding to approximately 1, a nonzero gradient, and a nonzero parameter change.
 The last loss often falls, but one update is not guaranteed to help, and
 improvement on the same batch does not establish improvement on unseen text.
 
-### 2.2. What the dimensions mean
+### 2.3. What the dimensions mean
 
-One **batch** contains `B = 12` text windows. Each has `T = 64` positions, and
+One **batch** contains `B = 12` text chunks. Each has `T = 64` positions, and
 each position has a representation with `C = 128` learned features. The vocabulary
 size is `V = 65`.
 
@@ -254,9 +238,9 @@ size is `V = 65`.
 
 The IDs stay integers. An **embedding** is a trainable table that looks up a
 vector for each ID. Position embeddings add information about where a token is
-in the window. Both tables learn along with the rest of the model.
+in the chunk. Both tables learn along with the rest of the model.
 
-### 2.3. Why the loss teaches probabilities
+### 2.4. Why the loss teaches probabilities
 
 For one target character, cross-entropy loss is $-\ln p(\text{target})$. Assigning
 the right character probability 0.5 gives loss about 0.69; probability 0.01 gives
@@ -298,7 +282,7 @@ the learning rate.
 
 An embedding alone represents the current character. To distinguish the `O` in
 `ROMEO` from an `O` elsewhere, the model needs context. **Self-attention** lets a
-position gather information from other positions in its own input window.
+position gather information from other positions in its own input chunk.
 
 ### 3.1. Queries, keys, and values
 
@@ -322,7 +306,7 @@ positions and negative infinity at forbidden ones, giving future positions zero
 probability after softmax. This scaled dot-product construction is described in
 [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
 
-For the `ROMEO:` window, the allowed connections are:
+For the `ROMEO:` chunk, the allowed connections are:
 
 ```text
                     key position
@@ -387,7 +371,7 @@ nanoGPT returns only the last position's logits as an inference optimization.
 
 ## 4. Run a small training job
 
-Now repeat that update on randomly sampled windows. Save this as
+Now repeat that update on randomly sampled chunks. Save this as
 `config/train_lab.py`. This is a complete small lab configuration layered over
 the trainer's defaults; do not run bare `python train.py`, whose defaults target
 a much larger model and a different dataset.
@@ -465,7 +449,7 @@ python train.py config/train_lab.py --out_dir=out-smoke --max_iters=200
 
 The trainer prints `tokens per iteration will be: 768`, because
 `12 × 64 × 1 = 768` next-character targets contribute to one optimizer update.
-It samples windows with replacement; an iteration is not a full pass through
+It samples chunks with replacement; an iteration is not a full pass through
 the corpus. Around 2,000 updates expose the model to about 1.536 million token
 positions, with repeats. An **epoch** would instead mean one complete pass over
 the training set.
@@ -556,7 +540,7 @@ fixed unless the experiment explicitly changes them.
 python train.py config/train_lab.py --out_dir=out-context16 --block_size=16
 ```
 
-Predict what a 16-character window can still learn: local spelling may survive,
+Predict what a 16-character chunk can still learn: local spelling may survive,
 while longer structure is harder to use. There is a confound: keeping batch size
 12 also reduces targets per update from 768 to 192. To hold that count fixed,
 rerun with `--gradient_accumulation_steps=4` and a different output directory.

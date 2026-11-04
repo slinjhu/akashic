@@ -1,14 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="570" viewBox="0 0 800 570" role="img" aria-labelledby="title desc">
-  <title id="title">A window is one chunk; a batch groups several windows</title>
-  <desc id="desc">From the paragraph ROMEO: The garden is quiet. JULIET: I can hear you., select three windows of eight consecutive characters: ROMEO: T, garden i, and JULIET: followed by a space. Stack them as three rows to make a batch of shape three by eight. Characters are shown for readability; the network receives their integer IDs.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="510" viewBox="0 0 800 510" role="img" aria-labelledby="title desc">
+  <title id="title">A batch groups several text chunks</title>
+  <desc id="desc">From the paragraph ROMEO: The garden is quiet. JULIET: I can hear you., select three chunks of eight consecutive characters: ROMEO: T, garden i, and JULIET: followed by a space. Stack them as three rows to make a batch of shape three by eight.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
     </marker>
   </defs>
-  <rect width="800" height="570" rx="16" fill="#f8fafc"/>
+  <rect width="800" height="510" rx="16" fill="#f8fafc"/>
   <g font-family="system-ui, sans-serif" fill="#0f172a">
-    <text x="400" y="38" text-anchor="middle" font-size="23" font-weight="700">One window = one chunk of text</text>
+    <text x="400" y="38" text-anchor="middle" font-size="23" font-weight="700">A batch groups several text chunks</text>
     <text x="40" y="80" font-size="17" font-weight="600">Training text</text>
     <rect x="40" y="96" width="720" height="50" rx="8" fill="#e2e8f0"/>
     <rect x="55" y="104" width="98" height="32" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
@@ -18,11 +18,11 @@
     <path d="M400 155 V192" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
     <text x="400" y="222" text-anchor="middle" font-size="17">Select 3 starting positions; take 8 characters from each</text>
     <rect x="170" y="247" width="470" height="213" rx="12" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/>
-    <text x="405" y="277" text-anchor="middle" font-size="19" font-weight="600">Illustration: batch size 3, window size 8</text>
+    <text x="405" y="277" text-anchor="middle" font-size="19" font-weight="600">Illustration: batch size 3, chunk size 8</text>
     <g font-size="16" text-anchor="end" fill="#475569">
-      <text x="150" y="317">Window 1</text>
-      <text x="150" y="369">Window 2</text>
-      <text x="150" y="421">Window 3</text>
+      <text x="150" y="317">Chunk 1</text>
+      <text x="150" y="369">Chunk 2</text>
+      <text x="150" y="421">Chunk 3</text>
     </g>
     <g fill="#ffffff" stroke="#93c5fd">
       <rect x="200" y="290" width="410" height="40" rx="6" fill="#dbeafe" stroke="#2563eb"/>
@@ -34,7 +34,6 @@
       <text x="405" y="369">g  a  r  d  e  n  _  i</text>
       <text x="405" y="421">J  U  L  I  E  T  :  _</text>
     </g>
-    <text x="400" y="486" text-anchor="middle" font-size="15" fill="#475569">_ denotes a space. Characters are shown here; the input stores their IDs.</text>
-    <text x="400" y="532" text-anchor="middle" font-size="19" font-weight="600">Actual lab: batch size 12, window size 64 → [12, 64]</text>
+    <text x="400" y="486" text-anchor="middle" font-size="15" fill="#475569">_ denotes a space.</text>
   </g>
 </svg>

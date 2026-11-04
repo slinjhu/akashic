@@ -9,7 +9,7 @@
   <rect width="760" height="780" rx="16" fill="#f8fafc"/>
   <g font-family="system-ui, sans-serif" text-anchor="middle" fill="#0f172a">
     <text x="380" y="38" font-size="23" font-weight="700">The network created by GPT(GPTConfig(...))</text>
-    <text x="380" y="65" font-size="16" fill="#475569">12 text windows · 64 characters per window · 65 possible characters</text>
+    <text x="380" y="65" font-size="16" fill="#475569">12 text chunks · 64 characters per chunk · 65 possible characters</text>
     <g stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
       <path d="M380 146 V174"/>
       <path d="M380 266 V294"/>
