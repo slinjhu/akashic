@@ -296,3 +296,9 @@ usage conditions to varying degrees.
 **Evaluation validity:** benchmark scores describe performance on a particular
 set of tasks under a particular evaluation procedure. Overlap with training data,
 public exposure, and differences in prompting or tools affect interpretation.
+
+## Related notes
+
+For a small pretraining experiment you can run and inspect, follow the
+[nanoGPT hands-on guide](../llm/nanogpt.md), from character tokens to a trained
+model and generated text.
