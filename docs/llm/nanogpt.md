@@ -217,8 +217,40 @@ work, but would provide just one set of attention weights; four heads provide
 four sets, giving the model more ways to combine context. Their roles are
 learned rather than assigned.
 
-Next, Q, K, and V explain how a head decides what to mix and what information
-to pass along.
+Each head first computes three vectors for every token: a **query (Q)** and
+**key (K)** for matching positions, and a **value (V)** containing information
+to mix. They come from three learned **projections**: matrix multiplications
+that turn the token's current features into features suited to each role.
+
+Follow ` lie` across all four heads. Layer normalization takes the token’s existing
+128-feature vector and normalizes its values. Call the resulting row vector
+$x$. Multiplying it by three different matrices gives
+$Q = xW_Q$, $K = xW_K$, and $V = xW_V$. Each matrix has shape
+`[128, 128]`, so each result has 128 features covering all four heads.
+The lab uses `bias=False`, so these projections do not add a bias vector.
+
+The three matrices form one combined matrix $W = [W_Q\;W_K\;W_V]$ of shape
+`[128, 384]`. One multiplication computes $xW = [Q\;K\;V]$. Split this
+384-feature result into three 128-feature vectors, then split each into four
+32-feature head vectors. The matrix weights start randomly and learn through
+backpropagation how strongly each input feature contributes to each output
+feature. Q, K, and V are recomputed from the current input on each forward pass.
+
+![The normalized vector x multiplies one combined weight matrix W containing three 128-by-128 submatrices WQ, WK, and WV. The 384-feature result splits into Q, K, and V, each with 128 features, then each splits into four 32-feature head vectors.](../assets/images/nanogpt-qkv-projections.svg)
+
+All four heads receive the **full 128-feature input**. Each learns different
+projection weights to produce its own 32-feature Q, K, and V vectors. A
+**Transformer block contains all four heads**. Within it, each head applies
+its projection weights at every token position. Different heads use different
+portions of the combined matrix $W$; different Transformer blocks have separate
+matrices. At this stage, each position is
+projected independently. Mixing information across positions happens afterward.
+
+nanoGPT implements the combined projection as one `128 → 384` linear layer.
+The matrices above use the mathematical input-by-output convention; PyTorch
+stores linear weights transposed, as output-by-input. See
+[`CausalSelfAttention` in model.py](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+The next section follows how these vectors determine what each head mixes.
 
 #### 2.3.2. Queries, keys, and values
 
@@ -234,7 +266,7 @@ these roles lets the model learn how to match relevant positions and what
 information to pass along. All three come from the same input, which is why
 this is called **self-attention**.
 
-![For one attention head, the query from lie matches the keys for Here, will, I, and lie. Illustrative weights of 0.1, 0.2, 0.1, and 0.6 blend their associated value vectors into one updated mixture.](../assets/images/nanogpt-attention-lookup.svg)
+![The query from lie is dotted with each key and scaled by the square root of 32 to produce four scalar scores. Softmax normalizes the scores together into illustrative weights 0.1, 0.2, 0.1, and 0.6. Each weight multiplies its corresponding value vector, and the four weighted vectors are added into one 32-number head output.](../assets/images/nanogpt-attention-lookup.svg)
 
 Start with the input to attention: the normalized tensor of shape
 `[1, 4, 128]`. A learned linear layer transforms each position's 128 features
