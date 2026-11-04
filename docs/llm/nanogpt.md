@@ -156,7 +156,7 @@ The illustration uses batch size 3 and chunk size 4; the lab uses batch size 12
 and chunk size 64. Chunk size counts tokens, so a chunk can contain different
 numbers of words or characters.
 
-![Three overlapping four-token chunks selected from one tokenized sentence and stacked as the rows of a batch.](../assets/images/nanogpt-chunks-batch.svg)
+![Three four-token chunks selected from a longer passage in Richard III and stacked as the rows of a batch; the first two chunks overlap.](../assets/images/nanogpt-chunks-batch.svg)
 
 ### 2.2. Embeddings: a learned table inside the model
 
