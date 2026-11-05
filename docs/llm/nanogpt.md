@@ -444,6 +444,89 @@ position, returning logits of shape `[1, 1, 50257]`. During training, it returns
 logits at every position so all next-token predictions can contribute to loss.
 The forward pass itself does not update any weights.
 
+### 2.5. Count the model's parameters
+
+This lab model has **7,228,672 unique trainable parameters**, about **7.23
+million**. A parameter is one learned scalar, such as one entry in an embedding
+table or projection matrix. This count uses 50,257 tokens, a maximum context
+of 64 positions, width 128, four Transformer blocks, four heads per block,
+and `bias=False`.
+
+![Model architecture with parameter counts: token embeddings have 6,432,896 parameters, position embeddings 8,192, four Transformer blocks 787,456, and final normalization 128. The output projection shares the token embedding table, giving 7,228,672 unique parameters in total. An inset breaks down the 196,864 parameters in each block.](../assets/images/nanogpt-parameter-architecture.svg)
+
+Start with the two embedding tables. The **token table** has one row of 128
+learned numbers for every token ID. The **position table** has one row of 128
+learned numbers for each position from 0 to 63. A forward pass selects rows
+from these tables; the tables themselves are saved model parameters. Our
+four-token example uses four positions, but the model still contains all 64
+position rows.
+
+| Part of the model | Calculation | Unique parameters | Share of model |
+|---|---|---:|---:|
+| Token embeddings, `wte` | 50,257 rows × 128 features | 6,432,896 | 88.991% |
+| Position embeddings, `wpe` | 64 rows × 128 features | 8,192 | 0.113% |
+| Four Transformer blocks | 4 × 196,864, detailed below | 787,456 | 10.894% |
+| Final layer normalization, `ln_f` | 128 learned scale factors | 128 | 0.002% |
+| Output projection, `lm_head` | Reuses `wte` | 0 additional | 0% |
+| **Total** | **6,432,896 + 8,192 + 787,456 + 128** | **7,228,672** | **100%** |
+
+The token table accounts for about **89%** of the parameters. It also serves as
+the output projection: after final normalization, the model compares each
+position's vector with the vocabulary rows to produce logits. This **weight
+tying** uses the same learned numbers for input embeddings and output scores,
+so we count the table once.
+
+**Inside one Transformer block**, parameters appear in this order. Projection
+dimensions below use the mathematical input-by-output convention from the
+earlier sections; transposing storage in PyTorch does not change the count.
+
+| Step | Learned parameters | Count per block | Share of block |
+|---|---|---:|---:|
+| Normalize before attention | 128 scale factors in `ln_1` | 128 | 0.065% |
+| Project to Q, K, and V | Combined matrix: 128 × 384 | 49,152 | 24.967% |
+| Project the joined head outputs | Matrix: 128 × 128 | 16,384 | 8.322% |
+| Normalize before the MLP | 128 scale factors in `ln_2` | 128 | 0.065% |
+| Expand MLP features | Matrix: 128 × 512 | 65,536 | 33.290% |
+| Project MLP features back | Matrix: 512 × 128 | 65,536 | 33.290% |
+| **One block total** | **Two scale vectors and four matrices** | **196,864** | **100%** |
+
+The QKV count already covers **all four heads**. Equivalently, each head uses
+three `128 × 32` projections: `4 × 3 × 128 × 32 = 49,152`. Splitting the
+projection outputs into heads adds no parameters. Each Transformer block has
+its own matrices, which is why the block total is multiplied by four.
+
+With `bias=False`, layer normalization still learns one scale factor per
+feature, but has no learned offset. Linear layers also omit biases. The mean
+and variance used by normalization are computed from the current input.
+
+Several steps have **no learned parameters**: adding token and position
+embeddings, computing query–key dot products, scaling scores, applying the
+causal mask and softmax, mixing values, joining heads, GELU, and residual
+addition. Q, K, V, attention weights, and intermediate feature vectors are
+**activations** computed on each forward pass. They are not extra model
+parameters. Increasing the batch size or using more of the available context
+changes the activations and computation, but leaves this model's parameter
+count unchanged.
+
+You can verify the total from the nanoGPT checkout:
+
+```python
+from model import GPT, GPTConfig
+
+model = GPT(GPTConfig(
+    vocab_size=50257, block_size=64, n_embd=128,
+    n_layer=4, n_head=4, bias=False, dropout=0.0,
+))
+print(sum(p.numel() for p in model.parameters()))  # 7,228,672
+print(model.lm_head.weight is model.transformer.wte.weight)  # True
+```
+
+nanoGPT's constructor prints `7.22M` because its default reporting method
+excludes the **8,192 positional embedding parameters**. The total above includes
+every unique trainable parameter. See the table definitions, weight tying,
+`LayerNorm`, and `get_num_params` in
+[`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
+
 ## 3. One learning step
 
 The forward pass produces predictions. A **learning step** compares them with
