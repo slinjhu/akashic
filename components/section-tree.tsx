@@ -4,12 +4,15 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function SectionTree({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
+  const initialAnchorHandled = useRef(false);
   const [hasSections, setHasSections] = useState(false);
 
   useEffect(() => {
-    const container = root.current!;
-    setHasSections(!!container.querySelector("details.note-section"));
+    setHasSections(!!root.current?.querySelector("details.note-section"));
+  }, [children]);
 
+  useEffect(() => {
+    const container = root.current!;
     function reveal(hash: string, scroll: boolean) {
       let id: string;
       try { id = decodeURIComponent(hash.slice(1)); } catch { return; }
@@ -31,14 +34,19 @@ export function SectionTree({ children }: { children: ReactNode }) {
         reveal(url.hash, true);
       }
     }
-    onHashChange();
+    // Source edits (including review toggles) are not anchor navigation.
+    // Handle the initial URL once, then scroll only for links or hash changes.
+    if (!initialAnchorHandled.current) {
+      initialAnchorHandled.current = true;
+      onHashChange();
+    }
     window.addEventListener("hashchange", onHashChange);
     document.addEventListener("click", onClick, true);
     return () => {
       window.removeEventListener("hashchange", onHashChange);
       document.removeEventListener("click", onClick, true);
     };
-  }, [children]);
+  }, []);
 
   function setAll(open: boolean) {
     root.current?.querySelectorAll<HTMLDetailsElement>("details.note-section").forEach(section => { section.open = open; });
