@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { notes, assetRevision, allTags } from "@/lib/content";
 import { NoteMarkdown } from "@/components/markdown";
+import { TableOfContents } from "@/components/table-of-contents";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 export const dynamicParams = false;
@@ -34,6 +35,6 @@ export default async function NotePage({ params }: Props) {
       {home && <section className="library-cards" aria-label="Explore notes"><div className="section-heading"><h2>Explore the collection</h2><Link href="/search">View all →</Link></div><div className="card-grid">{notes.filter(item => !["/", "/tags"].includes(item.url) && !item.file.endsWith("/index.md")).map(item => <Link className="note-card" href={item.url} key={item.url}><span className="eyebrow">{item.tags.join(" / ") || "Note"}</span><h3>{item.title}</h3><span className="card-link">Open note ↗</span></Link>)}</div></section>}
       {note.url === "/tags" && <div className="tag-index">{allTags.map(tag => <section key={tag} id={`tag:${tag}`}><h2><Link href={`/search?tag=${encodeURIComponent(tag)}`}>{tag}</Link><span className="tag-count">{notes.filter(item => item.tags.includes(tag)).length}</span></h2><ul>{notes.filter(item => item.tags.includes(tag)).map(item => <li key={item.url}><Link href={item.url}>{item.title}</Link></li>)}</ul></section>)}</div>}
     </article>
-    {toc.length > 0 && <aside className="toc" aria-label="On this page"><p className="eyebrow">On this page</p><ul>{toc.map(heading => <li key={heading.id} style={{ paddingLeft: (heading.depth - 2) * 12 }}><a href={`#${heading.id}`}>{heading.text}</a></li>)}</ul><a className="back-top" href="#main-content">Back to top ↑</a></aside>}
+    {toc.length > 0 && <TableOfContents key={note.url} headings={toc} />}
   </div>;
 }
