@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { SectionReviewButton } from "./section-reviews";
 
 export function SectionSummary({ id, children }: { id?: string; children: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
@@ -31,6 +32,7 @@ export function SectionSummary({ id, children }: { id?: string; children: ReactN
       }}>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
     </button>
+    {id && <SectionReviewButton id={id} />}
     {children}
     {id && <a className="section-anchor" href={`#${id}`} aria-label="Link to section" aria-describedby={id} title="Link to section">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><path d="m10 13 4-4 M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0 M16 8l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" /></svg>

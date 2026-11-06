@@ -57,10 +57,28 @@ Update those numbers when reorganizing a note. Heading links are generated from
 the heading text, so changing a heading or its number also changes its anchor.
 
 Headings below the page title form a collapsible tree in the rendered note.
-Click a heading or focus it and press Enter or Space to fold its content and
-nested sections. Sections start expanded; **Expand all** and **Collapse all**
+Click the arrow icon to fold its content and nested sections; clicking the
+heading text does not toggle it. Sections start expanded; **Expand all** and **Collapse all**
 control the whole note. Reopening a parent preserves its children's fold states.
 Table-of-contents links open the destination section and its parents automatically.
+The table of contents has its own arrow buttons for folding branches; its text
+links navigate to sections. The link icon beside a section heading updates the
+page URL so a refresh returns to that section.
+
+Each section also has a review status before its number: ⏳ Pending or ✅ Reviewed.
+When running `npm run dev` or the local build preview (`npm start`), click the emoji
+to switch status and save it directly in the source Markdown. New sections default
+to Pending. The status is stored beneath the heading:
+
+```markdown
+## 1. Primer
+<!-- review: reviewed -->
+```
+
+The comment stays with the section when it is renamed or moved, without changing
+its title or anchor. Set it to `pending` to reset the status manually. Published
+static pages display the saved statuses but cannot edit local files. Rebuild and
+publish to update those pages after reviewing locally.
 
 Open the gear button at the top right for settings. The card contains switches
 for the left navigation and right table of contents, plus an appearance selector. Their visibility is saved in this browser and

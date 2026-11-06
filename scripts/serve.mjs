@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { createReviewHandler } from "./review-api.mjs";
 
 // A local preview of the exported files, including GitHub Pages' project path.
 const { basePath } = JSON.parse(await readFile(".generated/export.json", "utf8").catch(() => {
@@ -15,8 +16,11 @@ const types = {
   ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf",
   ".pdf": "application/pdf", ".mp4": "video/mp4", ".webm": "video/webm",
 };
+const reviewHandler = createReviewHandler("docs");
 const server = createServer(async (req, res) => {
   try {
+    const requestPath = new URL(req.url, "http://localhost").pathname.replace(/\/$/, "");
+    if (requestPath === `${basePath}/api/section-review`) return await reviewHandler(req, res);
     if (req.method !== "GET" && req.method !== "HEAD") {
       res.writeHead(405, { Allow: "GET, HEAD" }); res.end(); return;
     }

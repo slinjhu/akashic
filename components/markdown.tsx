@@ -14,9 +14,11 @@ import { Diagram } from "./mermaid";
 import rehypeSections from "@/lib/rehype-sections.mjs";
 import { SectionTree } from "./section-tree";
 import { SectionSummary } from "./section-summary";
+import { SectionReviews } from "./section-reviews";
+import { sectionReviews } from "@/lib/section-reviews.mjs";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
-  return <SectionTree key={file}><Markdown
+  return <SectionReviews key={file} file={file} initial={sectionReviews(body)}><SectionTree><Markdown
     remarkPlugins={[remarkGfm, remarkMath]}
     rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }], rehypeSections]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
@@ -43,5 +45,5 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
         return <CodeBlock text={text} language={language}>{children as ReactNode}</CodeBlock>;
       },
     }}
-  >{body}</Markdown></SectionTree>;
+  >{body}</Markdown></SectionTree></SectionReviews>;
 }
