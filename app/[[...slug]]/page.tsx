@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { notes, assetRevision, allTags } from "@/lib/content";
 import { NoteMarkdown } from "@/components/markdown";
 import { TableOfContents } from "@/components/table-of-contents";
+import { SectionReviews } from "@/components/section-reviews";
+import { sectionReviews } from "@/lib/section-reviews.mjs";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 export const dynamicParams = false;
@@ -25,7 +27,7 @@ export default async function NotePage({ params }: Props) {
   if (!note) notFound();
   const toc = note.headings.filter(heading => heading.depth > 1 && heading.depth <= 4);
   const home = note.url === "/";
-  return <div className={`reading-layout ${home ? "home-page" : ""}`}>
+  return <SectionReviews key={note.file} file={note.file} initial={sectionReviews(note.body)}><div className={`reading-layout ${home ? "home-page" : ""}`}>
     <article className="note">
       <div className="breadcrumbs"><Link href="/">Library</Link><span>/</span><span>{home ? "Overview" : note.file.split("/").slice(0, -1).join(" / ") || note.title}</span></div>
       {!note.hideTags && note.tags.length > 0 && <div className="tags page-tags" aria-label="Page tags">{note.tags.map(tag => <Link className="tag" key={tag} href={`/search?tag=${encodeURIComponent(tag)}`}>{tag}</Link>)}</div>}
@@ -36,5 +38,5 @@ export default async function NotePage({ params }: Props) {
       {note.url === "/tags" && <div className="tag-index">{allTags.map(tag => <section key={tag} id={`tag:${tag}`}><h2><Link href={`/search?tag=${encodeURIComponent(tag)}`}>{tag}</Link><span className="tag-count">{notes.filter(item => item.tags.includes(tag)).length}</span></h2><ul>{notes.filter(item => item.tags.includes(tag)).map(item => <li key={item.url}><Link href={item.url}>{item.title}</Link></li>)}</ul></section>)}</div>}
     </article>
     {toc.length > 0 && <TableOfContents key={note.url} headings={toc} />}
-  </div>;
+  </div></SectionReviews>;
 }

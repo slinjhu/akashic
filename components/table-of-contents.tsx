@@ -1,6 +1,7 @@
 "use client";
 
 import { PanelResizeHandle } from "./resizable-panels";
+import { SectionReviewStatus } from "./section-reviews";
 import { useId, useState } from "react";
 
 type Heading = { id: string; text: string; depth: number };
@@ -19,7 +20,8 @@ function HeadingBranch({ node }: { node: HeadingNode }) {
         onClick={() => setExpanded(value => !value)}>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
       </button> : <span className="toc-spacer" aria-hidden="true" />}
-      <a href={`#${node.id}`}>{node.text}</a>
+      <SectionReviewStatus id={node.id} />
+      <a href={`#${node.id}`} title={node.text}>{node.text}</a>
     </div>
     {hasChildren && <ul id={childrenId} hidden={!expanded}>
       {node.children.map(child => <HeadingBranch key={child.id} node={child} />)}
