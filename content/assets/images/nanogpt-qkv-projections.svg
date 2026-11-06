@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="760" viewBox="0 0 960 760" role="img" aria-labelledby="title desc">
+<title id="title">One combined projection computes Q, K, and V for all four heads</title>
+<desc id="desc">For the token lie, normalize the existing 128-feature vector to obtain x. Multiply x by W, a 128 by 384 matrix made of three side-by-side 128 by 128 submatrices WQ, WK, and WV. Split the 384-feature result into Q, K, and V, each with 128 features. Split each into four 32-feature head vectors. W is randomly initialized and learned during training. PyTorch stores its transpose, with shape 384 by 128.</desc>
+<defs>
+<style>.math { font-family: STIX Two Math, Cambria Math, Times New Roman, serif; font-style: italic; font-weight: 400; }</style>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#64748b"/></marker>
+</defs>
+<rect width="960" height="760" rx="16" fill="#f8fafc"/>
+<g font-family="system-ui, sans-serif" fill="#0f172a" text-anchor="middle">
+<text x="480" y="36" font-size="24" font-weight="700">One projection, then split into Q, K, and V</text>
+<text x="480" y="65" font-size="17" fill="#475569">Follow the token &quot;lie&quot; · all four heads</text>
+<rect x="230" y="87" width="500" height="68" rx="8" fill="#e2e8f0" stroke="#94a3b8"/>
+<text x="480" y="116" font-size="20"><tspan class="math" font-size="24">x</tspan> = LayerNorm(current token vector)</text>
+<text x="480" y="142" font-size="17">[1, 128]</text>
+<path d="M480 155 V184 H100 V242" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="100" y="281" class="math" font-size="32">x</text>
+<text x="100" y="311" font-size="16">[1, 128]</text>
+<text x="185" y="282" font-size="30">×</text>
+<text x="565" y="211" font-size="18"><tspan class="math" font-size="24">W</tspan> · [128, 384] · randomly initialized, then learned</text>
+<rect x="265" y="232" width="200" height="100" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="365" y="274" class="math" font-size="30">W<tspan baseline-shift="sub" font-size="20">Q</tspan></text>
+<text x="365" y="309" font-size="17">[128, 128]</text>
+<rect x="465" y="232" width="200" height="100" fill="#ede9fe" stroke="#a78bfa"/>
+<text x="565" y="274" class="math" font-size="30">W<tspan baseline-shift="sub" font-size="20">K</tspan></text>
+<text x="565" y="309" font-size="17">[128, 128]</text>
+<rect x="665" y="232" width="200" height="100" fill="#fef3c7" stroke="#fbbf24"/>
+<text x="765" y="274" class="math" font-size="30">W<tspan baseline-shift="sub" font-size="20">V</tspan></text>
+<text x="765" y="309" font-size="17">[128, 128]</text>
+<path d="M255 227 H245 V337 H255 M875 227 H885 V337 H875" fill="none" stroke="#0f172a" stroke-width="2"/>
+<path d="M565 337 V369" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="480" y="398" font-size="20">Split the result <tspan class="math" font-size="25">xW = [Q K V]</tspan> · [1, 384]</text>
+<rect x="30" y="423" width="300" height="65" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="180" y="451" class="math" font-size="26">Q = xW<tspan baseline-shift="sub" font-size="17">Q</tspan></text>
+<text x="180" y="477" font-size="17">[1, 128]</text>
+<path d="M180 488 V514 M180 554 V579" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="330" y="423" width="300" height="65" fill="#ede9fe" stroke="#a78bfa"/>
+<text x="480" y="451" class="math" font-size="26">K = xW<tspan baseline-shift="sub" font-size="17">K</tspan></text>
+<text x="480" y="477" font-size="17">[1, 128]</text>
+<path d="M480 488 V514 M480 554 V579" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="630" y="423" width="300" height="65" fill="#fef3c7" stroke="#fbbf24"/>
+<text x="780" y="451" class="math" font-size="26">V = xW<tspan baseline-shift="sub" font-size="17">V</tspan></text>
+<text x="780" y="477" font-size="17">[1, 128]</text>
+<path d="M780 488 V514 M780 554 V579" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="480" y="541" font-size="20" font-weight="600">Split each vector into four heads · 32 features per head</text>
+<rect x="30" y="582" width="75" height="55" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="67.5" y="616" class="math" font-size="24">Q<tspan baseline-shift="sub" font-size="16">1</tspan></text>
+<rect x="105" y="582" width="75" height="55" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="142.5" y="616" class="math" font-size="24">Q<tspan baseline-shift="sub" font-size="16">2</tspan></text>
+<rect x="180" y="582" width="75" height="55" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="217.5" y="616" class="math" font-size="24">Q<tspan baseline-shift="sub" font-size="16">3</tspan></text>
+<rect x="255" y="582" width="75" height="55" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="292.5" y="616" class="math" font-size="24">Q<tspan baseline-shift="sub" font-size="16">4</tspan></text>
+<rect x="330" y="582" width="75" height="55" fill="#ede9fe" stroke="#a78bfa"/>
+<text x="367.5" y="616" class="math" font-size="24">K<tspan baseline-shift="sub" font-size="16">1</tspan></text>
+<rect x="405" y="582" width="75" height="55" fill="#ede9fe" stroke="#a78bfa"/>
+<text x="442.5" y="616" class="math" font-size="24">K<tspan baseline-shift="sub" font-size="16">2</tspan></text>
+<rect x="480" y="582" width="75" height="55" fill="#ede9fe" stroke="#a78bfa"/>
+<text x="517.5" y="616" class="math" font-size="24">K<tspan baseline-shift="sub" font-size="16">3</tspan></text>
+<rect x="555" y="582" width="75" height="55" fill="#ede9fe" stroke="#a78bfa"/>
+<text x="592.5" y="616" class="math" font-size="24">K<tspan baseline-shift="sub" font-size="16">4</tspan></text>
+<rect x="630" y="582" width="75" height="55" fill="#fef3c7" stroke="#fbbf24"/>
+<text x="667.5" y="616" class="math" font-size="24">V<tspan baseline-shift="sub" font-size="16">1</tspan></text>
+<rect x="705" y="582" width="75" height="55" fill="#fef3c7" stroke="#fbbf24"/>
+<text x="742.5" y="616" class="math" font-size="24">V<tspan baseline-shift="sub" font-size="16">2</tspan></text>
+<rect x="780" y="582" width="75" height="55" fill="#fef3c7" stroke="#fbbf24"/>
+<text x="817.5" y="616" class="math" font-size="24">V<tspan baseline-shift="sub" font-size="16">3</tspan></text>
+<rect x="855" y="582" width="75" height="55" fill="#fef3c7" stroke="#fbbf24"/>
+<text x="892.5" y="616" class="math" font-size="24">V<tspan baseline-shift="sub" font-size="16">4</tspan></text>
+<text x="480" y="671" font-size="17">Head 1 uses Q₁, K₁, V₁; head 2 uses Q₂, K₂, V₂; and so on.</text>
+<text x="480" y="704" font-size="17">Every head’s projection uses the full input. Only the outputs are split.</text>
+<text x="480" y="738" font-size="16" fill="#475569">Shown: xW convention, bias=False. PyTorch stores W transposed as [384, 128].</text>
+</g>
+</svg>

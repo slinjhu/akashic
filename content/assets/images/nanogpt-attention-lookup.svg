@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="760" viewBox="0 0 1000 760" role="img" aria-labelledby="title desc">
+  <title id="title">Attention computation: scores, softmax, and a weighted sum</title>
+  <desc id="desc">For one head at lie, dot the same 32-number query with each key and divide by the square root of 32 to get four scalar scores. Softmax normalizes all four scores together into illustrative weights 0.1, 0.2, 0.1, and 0.6. Multiply each 32-number value vector by its corresponding scalar weight, then add the four vectors to produce a 32-number head output. All four positions are permitted by the causal mask.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#64748b"/></marker>
+  </defs>
+  <rect width="1000" height="760" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a" text-anchor="middle">
+
+<text x="500" y="36" font-size="25" font-weight="700" fill="#0f172a">Here will I lie: compute one attention head at “lie”</text>
+<text x="500" y="65" font-size="17" font-weight="400" fill="#475569">Q = Q(lie) is reused in all four dot products. Each Q, K, and V has 32 numbers.</text>
+<text x="500" y="106" font-size="20" font-weight="700" fill="#0f172a">1. Match Q with each key → four scalar scores</text>
+<rect x="35" y="124" width="210" height="70" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+<g aria-label="Q dot K(Here) divided by the square root of 32">
+  <text x="164" y="151" font-size="19" text-anchor="end">Q · K(Here) /</text>
+  <path d="M170 144 l4 -3 l5 11 l6 -21 h27" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="199" y="151" font-size="19">32</text>
+</g>
+<text x="140" y="178" font-size="16" font-weight="400" fill="#475569">= s1</text>
+<path d="M140 194 V228" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="275" y="124" width="210" height="70" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+<g aria-label="Q dot K(will) divided by the square root of 32">
+  <text x="404" y="151" font-size="19" text-anchor="end">Q · K(will) /</text>
+  <path d="M410 144 l4 -3 l5 11 l6 -21 h27" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="439" y="151" font-size="19">32</text>
+</g>
+<text x="380" y="178" font-size="16" font-weight="400" fill="#475569">= s2</text>
+<path d="M380 194 V228" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="515" y="124" width="210" height="70" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+<g aria-label="Q dot K(I) divided by the square root of 32">
+  <text x="644" y="151" font-size="19" text-anchor="end">Q · K(I) /</text>
+  <path d="M650 144 l4 -3 l5 11 l6 -21 h27" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="679" y="151" font-size="19">32</text>
+</g>
+<text x="620" y="178" font-size="16" font-weight="400" fill="#475569">= s3</text>
+<path d="M620 194 V228" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="755" y="124" width="210" height="70" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+<g aria-label="Q dot K(lie) divided by the square root of 32">
+  <text x="884" y="151" font-size="19" text-anchor="end">Q · K(lie) /</text>
+  <path d="M890 144 l4 -3 l5 11 l6 -21 h27" fill="none" stroke="#0f172a" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="919" y="151" font-size="19">32</text>
+</g>
+<text x="860" y="178" font-size="16" font-weight="400" fill="#475569">= s4</text>
+<path d="M860 194 V228" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="230" width="930" height="84" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="500" y="259" font-size="20" font-weight="700" fill="#0f172a">2. Softmax over all four scores together</text>
+<text x="500" y="289" font-size="20" font-weight="400" fill="#0f172a">wᵢ = exp(sᵢ) / [exp(s₁) + exp(s₂) + exp(s₃) + exp(s₄)]</text>
+<path d="M140 314 V341" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="343" width="210" height="48" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="140" y="374" font-size="21" font-weight="600" fill="#0f172a">w1 = 0.1</text>
+<path d="M380 314 V341" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="275" y="343" width="210" height="48" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="380" y="374" font-size="21" font-weight="600" fill="#0f172a">w2 = 0.2</text>
+<path d="M620 314 V341" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="515" y="343" width="210" height="48" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="620" y="374" font-size="21" font-weight="600" fill="#0f172a">w3 = 0.1</text>
+<path d="M860 314 V341" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="755" y="343" width="210" height="48" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+<text x="860" y="374" font-size="21" font-weight="600" fill="#0f172a">w4 = 0.6</text>
+<text x="500" y="443" font-size="20" font-weight="700">3. Weight × value → four 32-number vectors</text>
+<path d="M140 391 V489" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="491" width="210" height="62" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+<text x="140" y="530" font-size="20" font-weight="600" fill="#0f172a">0.1 × V(Here)</text>
+<path d="M140 553 V607" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M380 391 V425 M380 449 V489" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="275" y="491" width="210" height="62" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+<text x="380" y="530" font-size="20" font-weight="600" fill="#0f172a">0.2 × V(will)</text>
+<path d="M380 553 V607" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M620 391 V425 M620 449 V489" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="515" y="491" width="210" height="62" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+<text x="620" y="530" font-size="20" font-weight="600" fill="#0f172a">0.1 × V(I)</text>
+<path d="M620 553 V607" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M860 391 V489" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="755" y="491" width="210" height="62" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+<text x="860" y="530" font-size="20" font-weight="600" fill="#0f172a">0.6 × V(lie)</text>
+<path d="M860 553 V607" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="609" width="930" height="83" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+<text x="500" y="639" font-size="21" font-weight="700" fill="#0f172a">4. Add the four weighted vectors</text>
+<text x="500" y="670" font-size="21" font-weight="400" fill="#0f172a">output = 0.1V(Here) + 0.2V(will) + 0.1V(I) + 0.6V(lie)</text>
+<text x="500" y="731" font-size="19" font-weight="600" fill="#0f172a">Result: one 32-number output. Illustrative weights sum to 1.</text>
+</g>
+</svg>

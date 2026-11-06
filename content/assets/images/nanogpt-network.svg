@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="780" viewBox="0 0 760 780" role="img" aria-labelledby="title desc">
+  <title id="title">The neural network used in the nanoGPT lab</title>
+  <desc id="desc">Token IDs become 128-feature vectors with position information, pass through four Transformer blocks and final normalization, then produce 50,257 next-token scores per position. Each block uses four attention heads to combine information from earlier positions and a feed-forward network to transform each position's features.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="760" height="780" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" text-anchor="middle" fill="#0f172a">
+    <text x="380" y="38" font-size="23" font-weight="700">The network created by GPT(GPTConfig(...))</text>
+    <text x="380" y="65" font-size="16" fill="#475569">Prompt: Here will I lie · 4 tokens · 50,257 possible tokens</text>
+    <g stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M380 146 V174"/>
+      <path d="M380 266 V294"/>
+      <path d="M380 474 V502"/>
+      <path d="M380 580 V608"/>
+    </g>
+    <rect x="110" y="94" width="540" height="52" rx="10" fill="#e2e8f0" stroke="#94a3b8"/>
+    <text x="380" y="127" font-size="18">Input token IDs · [1, 4]</text>
+    <rect x="110" y="176" width="540" height="90" rx="10" fill="#dbeafe" stroke="#60a5fa"/>
+    <text x="380" y="205" font-size="19" font-weight="600">Token embeddings + position embeddings</text>
+    <text x="380" y="230" font-size="16">128 features per token, plus position information</text>
+    <text x="380" y="252" font-size="16">[1, 4, 128]</text>
+    <rect x="110" y="296" width="540" height="178" rx="10" fill="#ede9fe" stroke="#a78bfa"/>
+    <text x="380" y="325" font-size="20" font-weight="600">4 Transformer blocks</text>
+    <text x="380" y="355" font-size="17">In each block:</text>
+    <text x="380" y="382" font-size="16">4 attention heads combine information from earlier positions</text>
+    <text x="380" y="408" font-size="16">A feed-forward network transforms each position's features</text>
+    <text x="380" y="434" font-size="15" fill="#475569">Normalization and skip connections support these operations</text>
+    <text x="380" y="459" font-size="16">[1, 4, 128] throughout</text>
+    <rect x="110" y="504" width="540" height="76" rx="10" fill="#dbeafe" stroke="#60a5fa"/>
+    <text x="380" y="535" font-size="19" font-weight="600">Final normalization</text>
+    <text x="380" y="561" font-size="16">Rescale each position's features · [1, 4, 128]</text>
+    <rect x="110" y="610" width="540" height="96" rx="10" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="380" y="641" font-size="19" font-weight="600">Output layer: 128 features → 50,257 scores</text>
+    <text x="380" y="667" font-size="16">One score for every possible next token at each position</text>
+    <text x="380" y="692" font-size="16">Logits · [1, 4, 50257]</text>
+    <text x="380" y="745" font-size="16" fill="#475569">Use the last position’s scores to predict the next token.</text>
+  </g>
+</svg>

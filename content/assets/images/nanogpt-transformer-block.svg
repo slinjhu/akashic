@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="690" viewBox="0 0 800 690" role="img" aria-labelledby="title desc">
+  <title id="title">One Transformer block mixes context, then transforms features</title>
+  <desc id="desc">Input token vectors pass through normalization and four attention heads. At lie, attention can combine information from Here, will, I, and lie. The original input is added. Normalization and a feed-forward network then transform each position's features, and that stage's input is added again. The output has the same shape as the input: 1 by 4 by 128. Four such blocks are applied in sequence.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="800" height="690" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a" text-anchor="middle">
+    <text x="400" y="38" font-size="23" font-weight="700">One Transformer block</text>
+    <text x="400" y="66" font-size="16" fill="#475569">Update the tensor while keeping shape [1, 4, 128]</text>
+    <rect x="190" y="94" width="420" height="66" rx="8" fill="#e2e8f0" stroke="#94a3b8"/>
+    <text x="400" y="120" font-size="18" font-weight="600">Input: one vector per token position</text>
+    <text x="400" y="145" font-size="17" font-family="monospace">Here   will   I   lie   …</text>
+    <g fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M400 160 V200"/>
+      <path d="M400 290 V321"/>
+      <path d="M400 359 V394"/>
+      <path d="M400 484 V515"/>
+      <path d="M400 553 V585"/>
+      <path d="M400 180 H125 V340 H381"/>
+      <path d="M400 375 H675 V534 H419"/>
+    </g>
+    <text x="125" y="266" font-size="15" fill="#475569">Keep input</text>
+    <text x="675" y="454" font-size="15" fill="#475569">Keep input</text>
+    <rect x="190" y="200" width="420" height="90" rx="8" fill="#dbeafe" stroke="#60a5fa"/>
+    <text x="400" y="227" font-size="18" font-weight="600">Normalize → attention (4 heads)</text>
+    <text x="400" y="253" font-size="16">Mix information across permitted positions</text>
+    <text x="400" y="276" font-size="16">For “lie”: draw from “Here”, “will”, “I”, “lie”</text>
+    <circle cx="400" cy="340" r="19" fill="#ffffff" stroke="#94a3b8"/>
+    <text x="400" y="347" font-size="24">+</text>
+    <rect x="190" y="394" width="420" height="90" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+    <text x="400" y="421" font-size="18" font-weight="600">Normalize → feed-forward network</text>
+    <text x="400" y="447" font-size="16">Transform features at each position separately</text>
+    <text x="400" y="470" font-size="16">128 features → 512 → 128</text>
+    <circle cx="400" cy="534" r="19" fill="#ffffff" stroke="#94a3b8"/>
+    <text x="400" y="541" font-size="24">+</text>
+    <rect x="190" y="585" width="420" height="55" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="400" y="618" font-size="18" font-weight="600">Updated token vectors → next block</text>
+    <text x="400" y="671" font-size="16" fill="#475569">The lab applies 4 blocks in sequence. “+” adds the saved input.</text>
+  </g>
+</svg>
