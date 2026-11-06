@@ -1,14 +1,15 @@
 "use client";
 
 import { PanelResizeHandle } from "./resizable-panels";
-import { SectionReviewStatus } from "./section-reviews";
+import { SectionReviewStatus, useSectionReviewed } from "./section-reviews";
 import { useId, useState } from "react";
 
 type Heading = { id: string; text: string; depth: number };
 type HeadingNode = Heading & { children: HeadingNode[] };
 
 function HeadingBranch({ node }: { node: HeadingNode }) {
-  const [expanded, setExpanded] = useState(true);
+  const reviewed = useSectionReviewed(node.id);
+  const [expanded, setExpanded] = useState(() => !reviewed);
   const childrenId = useId();
   const hasChildren = node.children.length > 0;
 

@@ -14,6 +14,7 @@ import { Diagram } from "./mermaid";
 import rehypeSections from "@/lib/rehype-sections.mjs";
 import { SectionTree } from "./section-tree";
 import { SectionSummary } from "./section-summary";
+import { SectionDisclosure } from "./section-disclosure";
 import { withoutReviewEmoji } from "@/lib/section-reviews.mjs";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
@@ -22,6 +23,14 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
     rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }], rehypeSections]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{
+      details: ({ node, children, className }) => {
+        const summary = node?.children.find(child => child.type === "element" && child.tagName === "summary");
+        const heading = summary?.type === "element" ? summary.children.find(child => child.type === "element" && /^h[2-6]$/.test(child.tagName)) : undefined;
+        const id = heading?.type === "element" ? heading.properties.id : undefined;
+        const depth = node?.properties["data-depth"];
+        return <SectionDisclosure sectionId={typeof id === "string" ? id : undefined} className={className}
+          depth={typeof depth === "number" || typeof depth === "string" ? depth : undefined}>{children}</SectionDisclosure>;
+      },
       summary: ({ node, children }) => {
         const heading = node?.children.find(child => child.type === "element" && /^h[2-6]$/.test(child.tagName));
         const id = heading?.type === "element" ? heading.properties.id : undefined;

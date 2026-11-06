@@ -58,7 +58,8 @@ the heading text, so changing a heading or its number also changes its anchor.
 
 Headings below the page title form a collapsible tree in the rendered note.
 Click the arrow icon to fold its content and nested sections; clicking the
-heading text does not toggle it. Sections start expanded; **Expand all** and **Collapse all**
+heading text does not toggle it. Reviewed sections start collapsed and pending
+sections start expanded, in both the note and the table of contents. **Expand all** and **Collapse all**
 control the whole note. Reopening a parent preserves its children's fold states.
 Table-of-contents links open the destination section and its parents automatically.
 The table of contents has its own arrow buttons for folding branches; its text

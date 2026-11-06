@@ -53,6 +53,11 @@ export function SectionReviews({ file, initial, children }: { file: string; init
   </ReviewContext.Provider>;
 }
 
+export function useSectionReviewed(id?: string) {
+  const context = useContext(ReviewContext);
+  return id !== undefined && context?.reviews[id] === true;
+}
+
 export function SectionReviewStatus({ id }: { id: string }) {
   const context = useContext(ReviewContext);
   const reviewed = context?.reviews[id] === true;
