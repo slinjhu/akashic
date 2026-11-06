@@ -42,7 +42,6 @@ export function Navigation({ entries, tags }: { entries: Entry[]; tags: { tag: s
       {isTags ? <ul className="sidebar-tags">{tags.map(({ tag, count }) => <li key={tag}>
         <a href={`#tag:${encodeURIComponent(tag)}`} onClick={() => setOpen(false)}><span>{tag}</span><span className="sidebar-tag-count">{count}</span></a>
       </li>)}</ul> : <ul className="nav-tree">{branches(tree)}</ul>}
-      {!isTags && <div className="sidebar-footer">Keep learning.<br/><span>Make it your own.</span></div>}
       </div><PanelResizeHandle side="left" controls="library-nav" label="Resize left navigation" />
     </nav>
   </>;

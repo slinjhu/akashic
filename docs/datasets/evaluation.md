@@ -80,9 +80,6 @@ does not prove that the model's explanation or internal reasoning is correct.
 
 ### 1.2. World knowledge & factuality
 
-Start with what the model knows. Then separate **recognizing** the right fact
-from **recalling** it without choices, and from **resisting a plausible falsehood**.
-
 #### ✅ 1.2.1. MMLU — broad knowledge across subjects
 
 **Motivation:** narrow language tasks did not reveal whether a model could use
