@@ -47,7 +47,7 @@ during or after pretraining**. It does not mean training on these test answers.
 The [LLM datasets overview](llm.md) explains the distinction between training
 corpora and held-out evaluation data.
 
-The 21 benchmarks below follow the supplied grouping. These are not exclusive
+The 21 benchmarks below are grouped by the capabilities they assess. These are not exclusive
 stage assignments: SimpleQA, GPQA, MATH-500, and LiveCodeBench, for example, also
 appear in evaluations of post-trained models. A base model's ability to complete
 text and an assistant's ability to follow a request can produce different
@@ -366,12 +366,12 @@ Compounds that are capable of accepting electrons, such as o 2 or f2, are called
 
 Answer: B.
 
-### 1.3. Commonsense reasoning
+### 1.3. Commonsense & reasoning
 
-Knowing textbook facts is not enough to predict what happens in everyday life.
-These tasks move toward plausible actions, physical effects, and references in
-sentences. ARC-Easy stays in this grouping to match the supplied suite, although
-its questions are school science rather than purely everyday commonsense.
+These benchmarks range from understanding everyday situations to combining
+scientific facts, tracking changes, and solving multistep problems. Some
+questions mainly test knowledge; others require inference. Their scores describe
+performance on specific tasks rather than a single universal reasoning ability.
 
 #### 1.3.1. HellaSwag — choosing a plausible continuation
 
@@ -520,13 +520,7 @@ Which statement best explains why photosynthesis is the foundation of most food 
 
 Answer: A.
 
-### 1.4. Reasoning
-
-Now ask whether the model can combine facts or track several constraints.
-These benchmarks provide evidence of success on particular reasoning tasks;
-they do not isolate a single, universal “reasoning ability.”
-
-#### 1.4.1. ARC-Challenge — science questions that defeated simple retrieval
+#### 1.3.5. ARC-Challenge — science questions that defeated simple retrieval
 
 **Motivation:** test science questions that require more than simple retrieval
 or word associations. The Challenge partition of the AI2 Reasoning Challenge
@@ -569,7 +563,7 @@ The end result in the process of photosynthesis is the production of sugar and o
 
 Answer: C.
 
-#### 1.4.2. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
+#### 1.3.6. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
 
 **Motivation:** focus on reasoning tasks where the models assessed in the
 original BIG-Bench work had not surpassed average human-rater performance,
@@ -624,7 +618,7 @@ not ( True ) and ( True ) is
 
 Answer: False.
 
-#### 1.4.3. AGIEval — reasoning in human exam formats
+#### 1.3.7. AGIEval — reasoning in human exam formats
 
 **Motivation:** evaluate knowledge, reading, and reasoning using problems
 designed to assess people, including admission exams, professional qualification
@@ -678,7 +672,7 @@ Factor $r^2+10r+25$.
 
 Answer: $(r+5)^2$.
 
-#### 1.4.4. MuSR — combining clues across a narrative
+#### 1.3.8. MuSR — combining clues across a narrative
 
 **Motivation:** test whether models can combine distributed clues and
 commonsense assumptions across natural-language narratives. MuSR uses
@@ -744,13 +738,13 @@ Question: Given the story, how would you uniquely allocate each person to make s
 
 Answer: B.
 
-### 1.5. Mathematics
+### 1.4. Mathematics
 
 Mathematical tasks make the final answer easier to check, while raising a new
 question: can the model translate words into operations and keep the steps
 consistent?
 
-#### 1.5.1. GSM8K — multistep arithmetic from word problems
+#### 1.4.1. GSM8K — multistep arithmetic from word problems
 
 **Motivation:** study multistep reasoning on word problems whose mathematics
 is elementary. The challenge is translating the story into a consistent
@@ -783,7 +777,7 @@ A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bol
 
 Answer: 3.
 
-#### 1.5.2. MATH-500 — competition-style mathematical problems
+#### 1.4.2. MATH-500 — competition-style mathematical problems
 
 **Motivation:** provide a compact evaluation of competition-style mathematics
 for repeated experiments. The subset was used in *Let's Verify Step by Step*
@@ -838,12 +832,12 @@ in terms of $p$ and $q.$
 
 Answer: $p - q$.
 
-### 1.6. Reading comprehension & language modeling
+### 1.5. Reading comprehension & language modeling
 
 So far, many answers depended on stored knowledge. These tasks make information
 in the supplied text central to the answer.
 
-#### 1.6.1. BoolQ — answering yes/no questions using a passage
+#### 1.5.1. BoolQ — answering yes/no questions using a passage
 
 **Motivation:** test reading comprehension with naturally occurring yes/no
 questions. Despite their short answers, these questions can require inference
@@ -880,7 +874,7 @@ Question: is barq's root beer a pepsi product
 
 Answer: No.
 
-#### 1.6.2. LAMBADA (OpenAI variant) — predicting a word from broader context
+#### 1.5.2. LAMBADA (OpenAI variant) — predicting a word from broader context
 
 **Motivation:** test whether a model uses broader narrative context rather
 than only nearby words. LAMBADA selects passages whose final word people can
@@ -914,7 +908,7 @@ Shane gripped her arm and started leading her to the dock.
 
 Answer: Shane.
 
-### 1.7. Code
+### 1.6. Code
 
 Code adds an executable check: a plausible-looking answer can fail when run.
 **pass@k** estimates the probability that at least one of $k$ sampled solutions
@@ -924,7 +918,7 @@ passed. The HumanEval evaluation defines and implements this approach.
 [Paper](https://arxiv.org/abs/2107.03374),
 [Evaluation code](https://github.com/openai/human-eval).
 
-#### 1.7.1. HumanEval — implementing small functions from specifications
+#### 1.6.1. HumanEval — implementing small functions from specifications
 
 **Motivation:** evaluate whether generated code works instead of whether it
 resembles a reference program, since different implementations can solve the
@@ -991,7 +985,7 @@ Answer (dataset reference completion):
     return [x for x in strings if substring in x]
 ```
 
-#### 1.7.2. LiveCodeBench v6 — contest programming with dated problems
+#### 1.6.2. LiveCodeBench v6 — contest programming with dated problems
 
 **Motivation:** reduce contamination risk from repeatedly evaluating on old
 public coding problems by collecting new programming-contest tasks over time.
@@ -1064,7 +1058,7 @@ Example input: `l = 10, r = 20`.
 
 Expected output: `2`.
 
-### 1.8. Reading a scorecard without losing the meaning
+### 1.7. Reading a scorecard without losing the meaning
 
 Return to our plant question. Giving the model the supporting paragraph,
 providing five examples, or letting it search the web can each change the score.
