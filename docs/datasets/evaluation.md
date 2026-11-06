@@ -148,8 +148,9 @@ Answer: D.
 #### 1.2.3. TriviaQA — retrieving a fact from evidence or memory
 
 **Motivation:** evaluate factual question answering using naturally written
-trivia and independently collected evidence. Supplying the evidence tests
-reading and retrieval; withholding it tests closed-book knowledge recall.
+trivia and independently collected evidence. Reading supplied evidence tests
+comprehension; finding the documents also tests retrieval. Withholding evidence
+tests closed-book knowledge recall.
 [Original project](https://nlp.cs.washington.edu/triviaqa/).
 
 **Size:** the unfiltered configuration has 11,313 validation questions and
@@ -166,9 +167,18 @@ the reference answer is covered, then average across questions. It uses the
 best match among accepted aliases. Higher is better for both.
 [Scoring code](https://github.com/mandarjoshi90/triviaqa/blob/master/evaluation/triviaqa_evaluation.py).
 
-**Sample** (illustrative, closed-book):
+**Sample 1: Closed-book** (illustrative):
 
-Which planet is famous for the Great Red Spot?
+Question: Which planet is famous for the Great Red Spot?
+
+Answer: Jupiter.
+
+**Sample 2: With evidence** (illustrative):
+
+Question: Which planet is famous for the Great Red Spot?
+
+Evidence excerpt: “...Jupiter's Great Red Spot is a giant storm in its
+atmosphere...” (Remaining document omitted.)
 
 Answer: Jupiter.
 
