@@ -11,10 +11,14 @@ tags:
 Suppose we pretrain a language model on books, articles, and code. It learns to
 continue text, but what has it learned to do? Start with a small test:
 
-> Which gas do plants absorb during photosynthesis?
-> A. Oxygen · B. Carbon dioxide · C. Helium · D. Hydrogen
->
-> Expected answer: **B**.
+Which gas do plants absorb during photosynthesis?
+
+- A. Oxygen
+- B. Carbon dioxide
+- C. Helium
+- D. Hydrogen
+
+Expected answer: B.
 
 Give the model many held-out questions and count the correct answers. This is
 **accuracy**: 80 correct answers out of 100 questions gives 80% accuracy.
@@ -111,116 +115,165 @@ Answer: A.
 #### 1.2.2. MMLU-Pro — harder knowledge application
 
 **Motivation:** make MMLU-style evaluation harder and less sensitive to prompt
-wording. MMLU-Pro curates more than 12,000 questions across 14 domains, emphasizes
-reasoning, and expands the answer set from four to up to ten options.
-**Measures:** multiple-choice accuracy on more demanding academic problems.
-It is a separate benchmark, not an interchangeable replacement score for MMLU.
-[Project and data](https://github.com/TIGER-AI-Lab/MMLU-Pro).
+wording by emphasizing reasoning and using more plausible wrong answers.
+[Project](https://github.com/TIGER-AI-Lab/MMLU-Pro).
 
-> **Illustrative sample:** A bag has 3 red and 2 blue beads. Draw two without
-> replacement. What is the probability both are red?
-> A. 0 · B. 1/10 · C. 1/5 · D. 3/10 · E. 2/5 · F. 1/2 · G. 3/5 ·
-> H. 7/10 · I. 4/5 · J. 1
->
-> **Answer: D.** Multiply $3/5$ by $2/4$ to get $3/10$.
+**Size:** 12,032 test questions across 14 domains, with up to ten choices per
+question. The separate validation split contains 70 examples.
+[Dataset splits](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro).
 
-The extra choices reduce guessing success; the reasoning requirement matters
-more than the number of choices alone.
+**Metric:** one headline **accuracy (%)** score: correct answers ÷ total test
+questions × 100. Every question counts equally, with no partial credit;
+category-level accuracies can also be reported. Higher is better.
+[Scoring code](https://github.com/TIGER-AI-Lab/MMLU-Pro/blob/main/evaluate_from_local.py).
+
+**Sample** (illustrative):
+
+A bag has 3 red and 2 blue beads. Draw two without replacement.
+What is the probability both are red?
+
+- A. 0
+- B. 1/10
+- C. 1/5
+- D. 3/10
+- E. 2/5
+- F. 1/2
+- G. 3/5
+- H. 7/10
+- I. 4/5
+- J. 1
+
+Answer: D.
 
 #### 1.2.3. TriviaQA — retrieving a fact from evidence or memory
 
-**Motivation:** build question answering around naturally written trivia and
-independently collected evidence, rather than questions written to match a
-particular passage. The original dataset includes question–answer–evidence
-triples. **Measures:** answering factual questions; with evidence it tests reading
-and retrieval, while a **closed-book** setup supplies only the question and tests
-knowledge recall. The original evaluation uses exact match and token-overlap F1,
-accounting for accepted answer aliases.
-[Original project](https://nlp.cs.washington.edu/triviaqa/),
-[Scoring implementation](https://github.com/mandarjoshi90/triviaqa/blob/master/evaluation/triviaqa_evaluation.py).
+**Motivation:** evaluate factual question answering using naturally written
+trivia and independently collected evidence. Supplying the evidence tests
+reading and retrieval; withholding it tests closed-book knowledge recall.
+[Original project](https://nlp.cs.washington.edu/triviaqa/).
 
-> **Illustrative closed-book sample:** Which planet is famous for the Great Red Spot?
->
-> **Answer: Jupiter.** There are no answer choices to recognize.
+**Size:** the unfiltered configuration has 11,313 validation questions and
+10,832 test questions. Public closed-book evaluations commonly use validation;
+the reading-comprehension and verified subsets have different sizes, so the
+configuration and split must accompany the score.
+[Dataset splits](https://huggingface.co/datasets/mandarjoshi/trivia_qa#data-splits).
 
-Always check whether documents were provided. Evidence-assisted and closed-book
-TriviaQA scores answer different questions about the model.
+**Metric:** commonly one headline **exact match (%)** score: the percentage of
+answers matching an accepted reference after normalizing capitalization,
+punctuation, and articles. The original evaluator also reports **token F1**:
+for each answer, balance how many predicted words are correct with how much of
+the reference answer is covered, then average across questions. It uses the
+best match among accepted aliases. Higher is better for both.
+[Scoring code](https://github.com/mandarjoshi90/triviaqa/blob/master/evaluation/triviaqa_evaluation.py).
+
+**Sample** (illustrative, closed-book):
+
+Which planet is famous for the Great Red Spot?
+
+Answer: Jupiter.
 
 #### 1.2.4. SimpleQA — short answers that expose factual errors
 
 **Motivation:** make factuality easier to grade by asking for one short,
 verifiable fact, while selecting questions that challenge strong models.
-The original SimpleQA contains 4,326 questions. “Simple” describes answer format,
-not difficulty. **Measures:** short-form factual correctness, with responses
-classified as correct, incorrect, or not attempted by a reference-based model
-grader. Keeping abstentions separate helps distinguish guessing from declining
-to answer. It does not measure all the factual claims in a long essay.
+“Simple” describes the answer format, not the difficulty.
 [Original release](https://openai.com/index/introducing-simpleqa/).
 
-> **Illustrative sample:** In what year was Neptune discovered?
->
-> **Answer: 1846.** A different year is incorrect; “I don't know” is not attempted.
+**Size:** 4,326 questions in the original evaluation set.
+[Dataset description](https://openai.com/index/introducing-simpleqa/).
 
-This familiar example is much easier than many actual SimpleQA questions.
+**Metric:** a common headline is **correct (%)**: answers graded correct ÷ all
+questions × 100. A reference-based model grader labels each response correct,
+incorrect, or not attempted. Reports can also show the latter two percentages
+and **accuracy among attempted answers**: correct ÷ (correct + incorrect).
+This distinguishes factual success from abstention; higher correctness is better.
+[Grading procedure](https://openai.com/index/introducing-simpleqa/).
+
+**Sample** (illustrative):
+
+In what year was Neptune discovered?
+
+Answer: 1846.
 
 #### 1.2.5. TruthfulQA — resisting learned misconceptions
 
-**Motivation:** predicting human text can reproduce human misconceptions.
-TruthfulQA deliberately asks questions that tempt a model into a plausible but
-false answer. **Measures:** truthfulness on those traps, not just breadth of
-knowledge. The original 817-question benchmark has generation and multiple-choice
-evaluations. Generation distinguishes truthfulness from informativeness;
-an evasive answer can avoid falsehood without being useful.
-[Dataset and scoring](https://github.com/sylinrl/TruthfulQA).
+**Motivation:** test whether a model resists common misconceptions instead of
+reproducing plausible falsehoods learned from human text.
+[Original project](https://github.com/sylinrl/TruthfulQA).
 
-> **Illustrative sample:** Why can lightning never strike the same place twice?
->
-> **Answer:** The premise is false: lightning can strike the same place repeatedly.
-> An explanation of why it “cannot” would repeat the misconception.
+**Size:** 817 questions across 38 categories, used in both generation and
+multiple-choice evaluations.
+[Dataset description](https://github.com/sylinrl/TruthfulQA).
 
-For historical results, **MC1** selects the best true answer; **MC2** measures
-normalized probability mass assigned to true answers. The maintainers introduced
-a two-option version in 2025. Record the variant rather than comparing all
-“TruthfulQA” numbers as if they used one metric.
-[Variant documentation](https://github.com/sylinrl/TruthfulQA#tasks).
+**Metric:** there is **no single interchangeable TruthfulQA score**. In
+multiple-choice evaluations, **MC1** is the percentage choosing the correct
+answer; **MC2** averages the share of answer probability assigned to true
+options. Generation evaluations report the percentage judged truthful and can
+also report informativeness or the percentage satisfying both. Higher is better.
+A newer two-option version uses choice accuracy, so name the version and metric.
+[Scoring variants](https://github.com/sylinrl/TruthfulQA#tasks).
+
+**Sample** (illustrative, generation):
+
+Why can lightning never strike the same place twice?
+
+Answer: The premise is false: lightning can strike the same place repeatedly.
 
 #### 1.2.6. GPQA Diamond — expert knowledge combined with reasoning
 
-**Motivation:** construct questions that remain difficult for skilled non-experts
-even with web access, supporting research on evaluating answers beyond an
-ordinary evaluator's expertise. GPQA covers biology, chemistry, and physics.
-**Diamond** is a 198-question subset selected for stronger expert agreement and
-non-expert difficulty. **Measures:** four-choice accuracy on specialized science
-questions. “Google-proof” describes the collection experiment, not a guarantee
-against solving questions with search.
-[Paper and subset definition](https://arxiv.org/html/2311.12022v1).
+**Motivation:** test specialized scientific knowledge and reasoning using
+questions that challenged skilled non-experts even with web access. This also
+helps study how people can evaluate answers beyond their own expertise.
+[Paper](https://arxiv.org/html/2311.12022v1).
 
-> **Simplified illustrative physics sample:** Combine two spin-1/2 systems.
-> How many states belong to the total-spin-1 subspace?
-> A. 1 · B. 2 · C. 3 · D. 4
->
-> **Answer: C.** A spin-1 multiplet has $2S+1=3$ states; the remaining state
-> belongs to the spin-0 singlet.
+**Size:** 198 four-choice questions in biology, chemistry, and physics.
+Diamond is the subset selected for stronger expert agreement and non-expert
+difficulty, rather than the full GPQA collection.
+[Subset definition](https://arxiv.org/html/2311.12022v1#S2.SS3).
 
-This shows the need for domain knowledge, but is substantially easier than a
-typical GPQA problem. GPQA accuracy is not a measure of scientific discovery.
+**Metric:** one headline **accuracy (%)** score: correct choices ÷ 198 × 100.
+Each question counts equally, with no partial credit. Higher is better.
+[Evaluation code](https://github.com/idavidrein/gpqa).
+
+**Sample** (illustrative, simplified):
+
+Combine two spin-1/2 systems. How many states belong to the total-spin-1 subspace?
+
+- A. 1
+- B. 2
+- C. 3
+- D. 4
+
+Answer: C.
 
 #### 1.2.7. SciQ — basic science questions at scale
 
-**Motivation:** collect science multiple-choice questions efficiently, using
-text passages and machine-suggested distractors to help human question writers.
-**Measures:** science question answering across subjects such as biology,
-chemistry, and physics. It contains 13,679 four-choice questions, usually with a
-supporting paragraph. Accuracy with that paragraph tests a different capability
-from accuracy without it.
-[Paper](https://arxiv.org/abs/1707.06209),
-[Released dataset](https://huggingface.co/datasets/allenai/sciq).
+**Motivation:** collect science questions efficiently by helping human writers
+with source passages and machine-suggested wrong answers. This supports
+research on science question answering.
+[Paper](https://arxiv.org/abs/1707.06209).
 
-> **Illustrative sample:** Which gas is released during oxygenic photosynthesis?
-> A. Helium · B. Oxygen · C. Methane · D. Hydrogen
->
-> **Answer: B.** If a supplied passage states this fact, the task also tests
-> finding and using that evidence.
+**Size:** 1,000 test questions, each with four choices. These are part of a
+13,679-question collection with separate training and validation splits;
+most questions also have a supporting paragraph.
+[Dataset splits](https://huggingface.co/datasets/allenai/sciq).
+
+**Metric:** one headline **accuracy (%)** score: correct choices ÷ test
+questions × 100, with no partial credit. Higher is better. Specify whether the
+supporting paragraph is supplied, since that changes what information the
+model can use.
+[Dataset and task](https://huggingface.co/datasets/allenai/sciq).
+
+**Sample** (illustrative, without supporting passage):
+
+Which gas is released during oxygenic photosynthesis?
+
+- A. Helium
+- B. Oxygen
+- C. Methane
+- D. Hydrogen
+
+Answer: B.
 
 ### 1.3. Commonsense reasoning
 
@@ -231,68 +284,117 @@ its questions are school science rather than purely everyday commonsense.
 
 #### 1.3.1. HellaSwag — choosing a plausible continuation
 
-**Motivation:** fluent text can still describe an absurd sequence of events.
-HellaSwag uses adversarial filtering to select machine-generated wrong endings
-that were difficult for models to reject. **Measures:** four-choice accuracy
-for completing descriptions of activities and procedures. It tests recognition
-of plausible continuations, rather than free-form story generation.
+**Motivation:** test whether a model recognizes plausible event sequences,
+even when wrong continuations are fluent. Adversarial filtering selects
+machine-generated endings that models found difficult to reject.
 [Original project](https://rowanzellers.com/hellaswag/).
 
-> **Illustrative sample:** Maya fills a watering can, carries it to the plant,
-> and tilts it over the soil. Next, she…
-> A. pours water onto the soil.
-> B. folds the water into a dry envelope.
-> C. pulls the roots out to refill the can.
-> D. turns the soil into a glass window.
->
-> **Answer: A.** The real benchmark's distractors are less obviously wrong.
+**Size:** 10,042 labeled validation examples, commonly used for public model
+evaluation. The separate test set has 10,003 examples. Each provides four
+possible endings to an activity description.
+[Dataset splits](https://huggingface.co/datasets/Rowan/hellaswag#data-splits).
+
+**Metric:** one headline **accuracy (%)** for the chosen scoring setup:
+correct endings ÷ evaluated examples × 100. Harnesses may report both raw
+accuracy and **length-normalized accuracy (`acc_norm`)**. The latter adjusts
+answer likelihoods for ending length before choosing an ending; the final
+score still counts correct choices. Higher is better for both.
+[Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hellaswag/hellaswag.yaml).
+
+**Sample** (illustrative):
+
+Maya fills a watering can, carries it to the plant, and tilts it over the soil.
+Next, she…
+
+- A. pours water onto the soil.
+- B. folds the water into a dry envelope.
+- C. pulls the roots out to refill the can.
+- D. turns the soil into a glass window.
+
+Answer: A.
 
 #### 1.3.2. PIQA — practical physical knowledge
 
-**Motivation:** test whether models understand how objects and materials behave
-when used to achieve a goal. **Measures:** accuracy choosing between two
-proposed solutions to a physical task. The answer depends on practical
-properties such as absorbency, friction, and support, even though the input
-is entirely text.
+**Motivation:** test practical knowledge of how objects and materials behave
+when used to achieve a goal, such as understanding absorbency, friction, or
+support from a text description.
 [Original project](https://yonatanbisk.com/piqa/).
 
-> **Illustrative sample:** Goal: remove spilled water from a countertop.
-> A. Wipe it with an absorbent towel.
-> B. Wipe it with a sheet of wire mesh.
->
-> **Answer: A.** Absorbency is the useful property.
+**Size:** 1,838 labeled validation questions, commonly used for public
+evaluation; the separate test set has 3,084. Each question offers two solutions
+to a physical task.
+[Dataset splits](https://huggingface.co/datasets/ybisk/piqa).
 
-PIQA evaluates descriptions of physical action; it does not test a robot
-performing the action.
+**Metric:** one headline **accuracy (%)**: correct solution choices ÷ evaluated
+questions × 100. Higher is better. Some harnesses additionally report
+length-normalized accuracy, which adjusts candidate likelihoods for length
+before selecting the answer.
+[Original scoring](https://yonatanbisk.com/piqa/),
+[Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/piqa/piqa.yaml).
+
+**Sample** (illustrative):
+
+Goal: remove spilled water from a countertop.
+
+- A. Wipe it with an absorbent towel.
+- B. Wipe it with a sheet of wire mesh.
+
+Answer: A.
 
 #### 1.3.3. WinoGrande — resolving references with commonsense
 
-**Motivation:** scale up Winograd-style problems while reducing shortcuts from
-word associations. WinoGrande uses crowdsourcing and adversarial filtering.
-**Measures:** accuracy choosing which of two entities fills a blank, often
-requiring commonsense about who did what or why.
+**Motivation:** test commonsense reference resolution while reducing shortcuts
+from word associations. The model must use the relationship between entities
+to decide which one fills a blank.
 [Paper](https://arxiv.org/abs/1907.10641).
 
-> **Illustrative sample:** The seedling could not fit inside the jar because
-> the ___ was too narrow.
-> A. seedling · B. jar
->
-> **Answer: B.** Change “too narrow” to “too tall,” and **A** becomes the
-> natural answer. The relationship matters, not just the nearby nouns.
+**Size:** 1,267 labeled validation questions, commonly used for public
+evaluation; the separate test set has 1,767. Each question has two choices.
+[Dataset splits](https://huggingface.co/datasets/allenai/winogrande).
+
+**Metric:** one headline **accuracy (%)**: correctly filled blanks ÷ evaluated
+questions × 100. Each question counts equally, with no partial credit;
+higher is better.
+[Benchmark description](https://arxiv.org/abs/1907.10641).
+
+**Sample** (illustrative):
+
+The seedling could not fit inside the jar because the ___ was too narrow.
+
+- A. seedling
+- B. jar
+
+Answer: B.
 
 #### 1.3.4. ARC-Easy — a school-science baseline
 
-**Motivation:** provide the easier partition of the AI2 Reasoning Challenge,
-so researchers can compare accessible science questions with ones that defeated
-simple baseline systems. **Measures:** multiple-choice science accuracy.
-“Easy” is defined relative to the original baseline-based partition, not a
-universal difficulty rating.
+**Motivation:** provide a school-science baseline alongside ARC-Challenge.
+“Easy” identifies questions outside the partition that defeated both original
+retrieval and word-co-occurrence baselines, rather than a universal difficulty
+rating.
 [ARC paper](https://arxiv.org/abs/1803.05457).
 
-> **Illustrative sample:** What supplies the energy for photosynthesis?
-> A. Sunlight · B. Soil particles · C. Sound · D. Gravity
->
-> **Answer: A.** This can be answered with one familiar science fact.
+**Size:** 2,376 multiple-choice test questions, excluding the training and
+validation splits.
+[Dataset splits](https://huggingface.co/datasets/allenai/ai2_arc).
+
+**Metric:** one headline **accuracy (%)** for the stated scoring setup:
+correct choices ÷ test questions × 100. The harness reports raw accuracy and
+length-normalized accuracy; the latter adjusts candidate likelihoods for answer
+length before selecting a choice. Both count correct answers without partial
+credit, and higher is better.
+[Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/arc/arc_easy.yaml).
+
+**Sample** (illustrative):
+
+What supplies the energy for photosynthesis?
+
+- A. Sunlight
+- B. Soil particles
+- C. Sound
+- D. Gravity
+
+Answer: A.
 
 ### 1.4. Reasoning
 
@@ -302,82 +404,120 @@ they do not isolate a single, universal “reasoning ability.”
 
 #### 1.4.1. ARC-Challenge — science questions that defeated simple retrieval
 
-**Motivation:** identify school-science questions that require more than the
-original retrieval and word-co-occurrence baselines could provide. Questions
-answered incorrectly by both baselines formed the Challenge partition.
-**Measures:** multiple-choice science accuracy, often involving causal inference
-or combining knowledge. Easy and Challenge are partitions of the same ARC
-collection. Here ARC means **AI2 Reasoning Challenge**.
+**Motivation:** test science questions that require more than simple retrieval
+or word associations. The Challenge partition of the AI2 Reasoning Challenge
+contains questions answered incorrectly by both original baselines.
 [Original paper](https://arxiv.org/abs/1803.05457).
 
-> **Illustrative sample:** Two identical seedlings receive equal water and are
-> kept at the same temperature. One receives light; the other stays dark.
-> Why will the dark-grown plant eventually struggle to grow?
-> A. It cannot make sugars through photosynthesis.
-> B. Darkness removes all minerals from its soil.
-> C. Darkness stops gravity.
-> D. Water becomes unavailable whenever light is absent.
->
-> **Answer: A.** Connect the changed condition to the process that supplies sugars.
+**Size:** 1,172 multiple-choice test questions, excluding the training and
+validation splits.
+[Dataset splits](https://huggingface.co/datasets/allenai/ai2_arc).
+
+**Metric:** one headline **accuracy (%)** for the stated scoring setup:
+correct choices ÷ test questions × 100, with no partial credit. As with
+ARC-Easy, reports may use raw or length-normalized answer likelihoods to select
+the choice. Specify which accuracy is reported; higher is better.
+[Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/arc/arc_challenge.yaml).
+
+**Sample** (illustrative):
+
+Two identical seedlings receive equal water and are kept at the same temperature.
+One receives light; the other stays dark. Why will the dark-grown plant eventually
+struggle to grow?
+
+- A. It cannot make sugars through photosynthesis.
+- B. Darkness removes all minerals from its soil.
+- C. Darkness stops gravity.
+- D. Water becomes unavailable whenever light is absent.
+
+Answer: A.
 
 #### 1.4.2. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
 
-**Motivation:** focus on 23 BIG-Bench tasks where the models evaluated in the
-original work had not surpassed average human-rater performance. Tasks include
-logical deduction, tracking shuffled objects, and other symbolic or linguistic
-problems. **Measures:** task-specific answer accuracy or exact match, aggregated
-across tasks. The original work compares direct answers with chain-of-thought
-prompting, so the prompting setup is part of the result.
-[Project and task files](https://github.com/suzgunmirac/BIG-Bench-Hard).
+**Motivation:** focus on reasoning tasks where the models assessed in the
+original BIG-Bench work had not surpassed average human-rater performance,
+including logical deduction and tracking objects through successive changes.
+[Original project](https://github.com/suzgunmirac/BIG-Bench-Hard).
 
-> **Illustrative object-tracking sample:** Maya holds a seed packet, Leo a pot,
-> and Noor a spade. Maya swaps objects with Leo, then Leo swaps with Noor.
-> Who now holds the seeds?
->
-> **Answer: Noor.** The seeds move Maya → Leo → Noor.
+**Size:** 6,511 evaluation examples across 23 task families, represented by
+27 subtasks because two families have three variants each.
+[Paper and evaluation set](https://arxiv.org/html/2210.09261v1).
 
-“BBH” is a suite, so its average can conceal large differences between tasks.
+**Metric:** each task receives an **exact-match accuracy (%)**: answers matching
+the expected answer ÷ task questions × 100. A scorecard can report one overall
+average of task scores, alongside the individual results; specify whether
+subtasks are equally weighted or weighted by question count. Higher is better.
+Direct-answer and chain-of-thought runs are separate evaluation settings.
+[Evaluation procedure](https://arxiv.org/html/2210.09261v1).
+
+**Sample** (illustrative, object tracking):
+
+Maya holds a seed packet, Leo a pot, and Noor a spade. Maya swaps objects with
+Leo, then Leo swaps with Noor. Who now holds the seeds?
+
+Answer: Noor.
 
 #### 1.4.3. AGIEval — reasoning in human exam formats
 
-**Motivation:** evaluate models on problems designed to assess people, including
-admission exams, professional qualification exams, and mathematics competitions.
-**Measures:** exam problem solving across English and Chinese tasks, combining
-reading, knowledge, logic, and mathematics. It includes multiple-choice and
-free-response tasks; report the language subset, version, and aggregation.
+**Motivation:** evaluate knowledge, reading, and reasoning using problems
+designed to assess people, including admission exams, professional qualification
+exams, and mathematics competitions.
 [Official project](https://github.com/ruixiangcui/AGIEval).
 
-> **Illustrative logic-exam sample:** Every greenhouse in a park is locked at
-> night. Some park buildings are greenhouses. Which conclusion must follow?
-> A. Every park building is locked at night.
-> B. Some park buildings are locked at night.
-> C. No park building is locked at night.
-> D. Every locked building is a greenhouse.
->
-> **Answer: B.** The conclusion applies to the buildings known to be greenhouses.
+**Size:** the v1.1 release contains 7,272 records across 21 task configurations,
+counted from its released JSONL files. This includes SAT-English both with and
+without its passages, so those records are not all distinct questions.
+English-only or multiple-choice-only evaluations use smaller subsets.
+[Released evaluation files](https://github.com/ruixiangcui/AGIEval/tree/main/data/v1_1).
 
-The name does not mean that passing these exams establishes general intelligence.
+**Metric:** each task gets **accuracy (%)**: correct final answers ÷ task
+questions × 100. The official evaluator also produces one overall score by
+averaging task accuracies equally, plus separate English and Chinese
+multiple-choice averages. Higher is better; name the evaluated subset so the
+headline number has a clear meaning.
+[Scoring code](https://github.com/ruixiangcui/AGIEval/blob/main/post_process_and_evaluation.py).
+
+**Sample** (illustrative, logic exam):
+
+Every greenhouse in a park is locked at night. Some park buildings are
+greenhouses. Which conclusion must follow?
+
+- A. Every park building is locked at night.
+- B. Some park buildings are locked at night.
+- C. No park building is locked at night.
+- D. Every locked building is a greenhouse.
+
+Answer: B.
 
 #### 1.4.4. MuSR — combining clues across a narrative
 
-**Motivation:** move beyond short symbolic puzzles to multistep reasoning in
-natural-language stories. MuSR combines structured generation with language
-models to create narratives, including murder mysteries, object placements,
-and team allocation. **Measures:** selecting the correct answer after combining
-distributed clues and commonsense assumptions. “Soft reasoning” includes
-inferences that are less explicit than formal logical rules.
-[Paper](https://arxiv.org/abs/2310.16049),
-[Project and datasets](https://github.com/Zayne-sprague/MuSR).
+**Motivation:** test whether models can combine distributed clues and
+commonsense assumptions across natural-language narratives. MuSR uses
+structured generation and language models to create problems requiring
+multiple reasoning steps.
+[Paper](https://arxiv.org/abs/2310.16049).
 
-> **Shortened illustrative sample:** Maya leaves the seeds in the shed. Rain
-> starts leaking through its roof, so Leo carries everything from the shed
-> into the greenhouse. Later, Noor takes only the empty pots from the greenhouse
-> to the porch. Where are the seeds?
-> A. Shed · B. Greenhouse · C. Porch
->
-> **Answer: B.** They moved with the shed's contents and were not part of Noor's move.
+**Size:** 756 evaluation narratives: 250 murder mysteries, 256 object-placement
+problems, and 250 team-allocation problems.
+[Dataset statistics](https://arxiv.org/html/2310.16049v2).
 
-Real narratives are much longer and demand more inference than this example.
+**Metric:** **accuracy (%)** for each domain: correct answer choices ÷ domain
+questions × 100. The original paper reports the three domain scores separately.
+A scorecard may summarize them with one average; state whether that is an equal
+average of domains or a pooled accuracy over all questions. Higher is better.
+[Evaluation results](https://arxiv.org/html/2310.16049v2).
+
+**Sample** (illustrative, shortened):
+
+Maya leaves the seeds in the shed. Rain starts leaking through its roof, so Leo
+carries everything from the shed into the greenhouse. Later, Noor takes only
+the empty pots from the greenhouse to the porch. Where are the seeds?
+
+- A. Shed
+- B. Greenhouse
+- C. Porch
+
+Answer: B.
 
 ### 1.5. Mathematics
 
@@ -387,39 +527,50 @@ consistent?
 
 #### 1.5.1. GSM8K — multistep arithmetic from word problems
 
-**Motivation:** study reasoning failures on problems whose mathematics is
-elementary but whose solution requires several steps. GSM8K supplies
-human-written grade-school problems and worked solutions, usually requiring
-two to eight steps. **Measures:** final numeric answer correctness, commonly
-using exact match after extracting and normalizing the answer.
+**Motivation:** study multistep reasoning on word problems whose mathematics
+is elementary. The challenge is translating the story into a consistent
+sequence of calculations.
 [Original dataset](https://github.com/openai/grade-school-math).
 
-> **Illustrative sample:** Maya buys 4 packets containing 6 seeds each.
-> She plants 9 seeds and gives Leo 5. How many seeds remain?
->
-> **Answer: 10.** Start with $4\times6=24$, then compute $24-9-5=10$.
+**Size:** 1,319 test problems, separate from 7,473 training problems. Problems
+have worked solutions and generally require two to eight steps.
+[Dataset splits](https://huggingface.co/datasets/openai/gsm8k).
 
-A correct final number does not establish that every written step is valid.
-Calculator access, multiple attempts, and answer voting change the setup.
+**Metric:** one headline **final-answer accuracy (%)**: correct numeric answers ÷
+test problems × 100. The evaluator extracts the final answer and compares it
+with the reference; intermediate steps receive no partial credit. Higher is
+better. Report calculator access or multiple-attempt voting if used.
+[Answer checking](https://github.com/openai/grade-school-math).
+
+**Sample** (illustrative):
+
+Maya buys 4 packets containing 6 seeds each. She plants 9 seeds and gives Leo 5.
+How many seeds remain?
+
+Answer: 10.
 
 #### 1.5.2. MATH-500 — competition-style mathematical problems
 
-**Motivation:** use a smaller evaluation subset of MATH for repeated evaluation
-of more demanding mathematical problem solving. MATH-500 is the 500-problem
-subset used in *Let's Verify Step by Step*, spanning subjects and difficulty
-levels from the MATH benchmark. **Measures:** final-answer correctness, often
-with normalization or mathematical-equivalence checks. It is not the full MATH
-test set, and its score does not automatically certify a valid proof.
-[Dataset card](https://huggingface.co/datasets/HuggingFaceH4/MATH-500),
+**Motivation:** provide a compact evaluation of competition-style mathematics
+for repeated experiments. The subset was used in *Let's Verify Step by Step*
+to study mathematical reasoning and verification.
 [Source split](https://github.com/openai/prm800k#math-splits).
 
-> **Illustrative sample:** Positive real numbers $x,y$ satisfy $x+y=10$ and
-> $xy=21$. Find $x^2+y^2$.
->
-> **Answer: 58.** Use $x^2+y^2=(x+y)^2-2xy=100-42$.
+**Size:** 500 test problems drawn from MATH, covering seven subjects and five
+difficulty levels. This is a subset of the full MATH test set.
+[Dataset](https://huggingface.co/datasets/HuggingFaceH4/MATH-500).
 
-Compared with the GSM8K example, this requires choosing an algebraic identity.
-Many actual MATH-500 problems require substantially more work.
+**Metric:** one headline **final-answer accuracy (%)**: accepted final answers ÷
+500 × 100. Evaluators normalize answers or check mathematical equivalence so
+that equivalent expressions can count as correct. Higher is better; the score
+does not separately grade every step of a proof.
+[Evaluation context](https://github.com/openai/prm800k).
+
+**Sample** (illustrative):
+
+Positive real numbers $x,y$ satisfy $x+y=10$ and $xy=21$. Find $x^2+y^2$.
+
+Answer: 58.
 
 ### 1.6. Reading comprehension & language modeling
 
@@ -428,43 +579,54 @@ in the supplied text central to the answer.
 
 #### 1.6.1. BoolQ — answering yes/no questions using a passage
 
-**Motivation:** naturally occurring yes/no questions can require inference even
-though their answers are only one word. **Measures:** binary answer accuracy
-given a question and supporting passage. The original work emphasizes questions
-collected in an unconstrained setting, rather than questions generated from a
-preselected passage.
+**Motivation:** test reading comprehension with naturally occurring yes/no
+questions. Despite their short answers, these questions can require inference
+rather than locating a matching phrase in the passage.
 [Paper](https://arxiv.org/abs/1905.10044).
 
-> **Illustrative passage:** This greenhouse opens every day except Monday.
-> On public holidays it follows the normal weekly schedule.
->
-> **Question:** Is it open on a Monday that is a public holiday?
->
-> **Answer: No.** The holiday does not override the Monday closure.
+**Size:** 3,270 labeled validation examples in the public BoolQ release,
+commonly used for model evaluation. Its 9,427 training examples are separate.
+Each example pairs a question with a passage.
+[Dataset splits](https://huggingface.co/datasets/google/boolq).
 
-Two possible answers do not make the task trivial. Also, a majority-label
-baseline can exceed 50% if yes and no are not equally common.
+**Metric:** one headline **accuracy (%)**: correct yes/no answers ÷ evaluated
+questions × 100. Every question counts equally, with no partial credit;
+higher is better.
+[Evaluation description](https://arxiv.org/abs/1905.10044).
+
+**Sample** (illustrative):
+
+Passage: This greenhouse opens every day except Monday. On public holidays it
+follows the normal weekly schedule.
+
+Question: Is it open on a Monday that is a public holiday?
+
+Answer: No.
 
 #### 1.6.2. LAMBADA (OpenAI variant) — predicting a word from broader context
 
-**Motivation:** ordinary next-word prediction can reward local word patterns.
-LAMBADA selects narrative passages whose last word humans can predict from the
-whole passage but not from the final sentence alone. **Measures:** use of
-broader discourse to predict that final word.
+**Motivation:** test whether a model uses broader narrative context rather
+than only nearby words. LAMBADA selects passages whose final word people can
+predict from the whole passage but not from its last sentence alone.
 [Original paper](https://arxiv.org/abs/1606.06031).
 
-> **Illustrative sample:** Maya named her new greenhouse Fernhaven. She painted
-> the name on its door and invited Leo to visit. When he arrived, he read the
-> sign aloud: “Welcome to ___”
->
-> **Target: Fernhaven.** The last sentence alone does not supply the name.
+**Size:** 5,153 test passages in the default English OpenAI variant, with one
+final word to predict per passage.
+[Dataset splits](https://huggingface.co/datasets/EleutherAI/lambada_openai).
 
-The harness distinguishes `lambada_openai` from `lambada_standard`; use the
-specified version. Its OpenAI-variant configuration scores the final word using
-log likelihood, reporting accuracy and perplexity. A word can contain multiple
-tokens. Higher accuracy and lower target-word perplexity are better; neither
-is a full-document perplexity score.
-[Task configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/lambada/lambada_openai.yaml).
+**Metric:** the headline **final-word accuracy (%)** is correctly predicted
+target words ÷ passages × 100; higher is better. The harness also reports
+**target-word perplexity**, calculated by averaging negative log probabilities
+of the correct target words and exponentiating. Lower perplexity means the
+model assigns them more probability. This is not full-document perplexity.
+[Scoring configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/lambada/lambada_openai.yaml).
+
+**Sample** (illustrative):
+
+Maya named her new greenhouse Fernhaven. She painted the name on its door and
+invited Leo to visit. When he arrived, he read the sign aloud: “Welcome to ___”
+
+Answer: Fernhaven.
 
 ### 1.7. Code
 
@@ -478,13 +640,25 @@ passed. The HumanEval evaluation defines and implements this approach.
 
 #### 1.7.1. HumanEval — implementing small functions from specifications
 
-**Motivation:** evaluate functional correctness instead of textual similarity
-to a reference program, since many different programs can solve the same task.
-**Measures:** generating Python function implementations from signatures and
-docstrings, checked by unit tests and summarized with pass@k.
+**Motivation:** evaluate whether generated code works instead of whether it
+resembles a reference program, since different implementations can solve the
+same task.
 [Original release](https://github.com/openai/human-eval).
 
-**Illustrative prompt:**
+**Size:** 164 Python programming problems, each with a function signature,
+a docstring specification, and tests.
+[Dataset](https://huggingface.co/datasets/openai/openai_humaneval).
+
+**Metric:** typically one headline **pass@1 (%)** score. A completion succeeds
+only if it passes all tests for its problem. With one attempt per problem,
+compute successful problems ÷ 164 × 100; with multiple samples, average each
+problem's fraction of successful attempts. Reports may also include pass@10 or
+pass@100, which estimate success with more chances. Higher is better.
+[Scoring code](https://github.com/openai/human-eval).
+
+**Sample** (illustrative):
+
+Prompt:
 
 ```python
 def seeds_left(packets: int, per_packet: int, planted: int) -> int:
@@ -493,13 +667,13 @@ def seeds_left(packets: int, per_packet: int, planted: int) -> int:
     """
 ```
 
-**One correct completion:**
+Answer (one valid completion):
 
 ```python
     return packets * per_packet - planted
 ```
 
-**Illustrative checks:**
+Example checks:
 
 ```python
 assert seeds_left(4, 6, 9) == 15
@@ -507,34 +681,34 @@ assert seeds_left(0, 6, 0) == 0
 assert seeds_left(2, 5, 10) == 0
 ```
 
-Passing a finite test suite is evidence of correctness on those checks, not
-a proof for all inputs or a measure of maintaining an entire software project.
-
 #### 1.7.2. LiveCodeBench v6 — contest programming with dated problems
 
-**Motivation:** reduce contamination risk from repeatedly testing on old public
-problems by continually collecting new programming-contest tasks. The project
-also includes other coding scenarios; here the focus is code generation.
-**Measures:** execution-based correctness on algorithmic problems, commonly
-reported as pass@1. Constraints make efficiency and edge cases relevant.
+**Motivation:** reduce contamination risk from repeatedly evaluating on old
+public coding problems by collecting new programming-contest tasks over time.
+Here the focus is the project's code-generation scenario.
 [Official project](https://github.com/LiveCodeBench/LiveCodeBench).
 
-The cumulative **`release_v6` contains 1,055 problems from May 2023 through
-April 2025**. A reported “v6” score may further filter dates: record both the
-release and evaluated time window. Newly collected problems reduce contamination
-risk only relative to a model's actual training data and cutoff.
+**Size:** the cumulative `release_v6` contains 1,055 problems released from
+May 2023 through April 2025. Date-filtered evaluations use fewer problems;
+report the selected window alongside the release.
 [Release definitions](https://github.com/LiveCodeBench/LiveCodeBench#dataset-versions).
 
-> **Illustrative sample:** Given $n$ daily seed sales and an integer $k$, find
-> the largest total over any $k$ consecutive days. Assume
-> $1\leq k\leq n\leq200{,}000$.
->
-> **Input:** $n=5$, $k=3$, sales = `[2, 1, 4, 3, 2]`.
->
-> **Output: 9.** Window totals are 7, 8, and 9.
+**Metric:** typically one headline **pass@1 (%)** score. For each problem,
+compute the fraction of sampled programs that pass all tests within the
+execution limits, then average those fractions across problems and multiply
+by 100. With one sample each, this is simply the percentage of problems solved.
+Higher is better; the evaluator can also report pass@5 for five chances.
+[Evaluation procedure](https://github.com/LiveCodeBench/LiveCodeBench#evaluation).
 
-A suitable solution updates a rolling sum in $O(n)$ time. Recomputing every
-window takes $O(nk)$ and may fail large tests despite passing this tiny example.
+**Sample** (illustrative):
+
+Given $n$ daily seed sales and an integer $k$, write a program that finds the
+largest total over any $k$ consecutive days. Assume
+$1\leq k\leq n\leq200{,}000$.
+
+Example input: $n=5$, $k=3$, sales = `[2, 1, 4, 3, 2]`.
+
+Expected output: 9.
 
 ### 1.8. Reading a scorecard without losing the meaning
 
