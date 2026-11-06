@@ -546,14 +546,14 @@ biography. The remaining claims are omitted.
 [Official data archive](https://drive.google.com/file/d/155exEdKs7R21gZF4G-x54-XN3qswBcPo/view),
 `data/labeled/ChatGPT.jsonl`, row 1.
 
-### 1.3. Commonsense & reasoning
+### ✅ 1.3. Commonsense & reasoning
 
 These benchmarks range from understanding everyday situations to combining
 scientific facts, tracking changes, and solving multistep problems. Some
 questions mainly test knowledge; others require inference. Their scores describe
 performance on specific tasks rather than a single universal reasoning ability.
 
-#### 1.3.1. HellaSwag — choosing a plausible continuation
+#### ✅ 1.3.1. HellaSwag — choosing a plausible continuation
 
 **Motivation:** test whether a model recognizes plausible event sequences,
 even when wrong continuations are fluent. Adversarial filtering selects
@@ -585,7 +585,7 @@ A lady walks to a barbell. She bends down and grabs the pole. the lady
 
 Answer: D.
 
-#### 1.3.2. PIQA — practical physical knowledge
+#### ✅ 1.3.2. PIQA — practical physical knowledge
 
 **Motivation:** test practical knowledge of how objects and materials behave
 when used to achieve a goal, such as understanding absorbency, friction, or
@@ -615,7 +615,7 @@ Make outdoor pillow.
 
 Answer: B.
 
-#### 1.3.3. WinoGrande — resolving references with commonsense
+#### ✅ 1.3.3. WinoGrande — resolving references with commonsense
 
 **Motivation:** test commonsense reference resolution while reducing shortcuts
 from word associations. The model must use the relationship between entities
@@ -653,7 +653,7 @@ Sarah was a much better surgeon than Maria so _ always got the harder cases.
 
 Answer: A.
 
-#### 1.3.4. ARC-Easy — a school-science baseline
+#### ✅ 1.3.4. ARC-Easy — a school-science baseline
 
 **Motivation:** ARC (AI2 Reasoning Challenge) is a collection of multiple-choice,
 grade-school science questions created by the Allen Institute for AI to test
@@ -700,7 +700,7 @@ Which statement best explains why photosynthesis is the foundation of most food 
 
 Answer: A.
 
-#### 1.3.5. ARC-Challenge — science questions that defeated simple retrieval
+#### ✅ 1.3.5. ARC-Challenge — science questions that defeated simple retrieval
 
 **Motivation:** test science questions that require more than simple retrieval
 or word associations. The Challenge partition of the AI2 Reasoning Challenge
@@ -743,7 +743,7 @@ The end result in the process of photosynthesis is the production of sugar and o
 
 Answer: C.
 
-#### 1.3.6. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
+#### ✅ 1.3.6. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
 
 **Motivation:** focus on reasoning tasks where the models assessed in the
 original BIG-Bench work had not surpassed average human-rater performance,
@@ -798,7 +798,7 @@ not ( True ) and ( True ) is
 
 Answer: False.
 
-#### 1.3.7. AGIEval — reasoning in human exam formats
+#### ✅ 1.3.7. AGIEval — reasoning in human exam formats
 
 **Motivation:** evaluate knowledge, reading, and reasoning using problems
 designed to assess people, including admission exams, professional qualification
@@ -852,7 +852,7 @@ Factor $r^2+10r+25$.
 
 Answer: $(r+5)^2$.
 
-#### 1.3.8. MuSR — combining clues across a narrative
+#### ✅ 1.3.8. MuSR — combining clues across a narrative
 
 **Motivation:** test whether models can combine distributed clues and
 commonsense assumptions across natural-language narratives. MuSR uses
