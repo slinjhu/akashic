@@ -1,6 +1,6 @@
 ---
 title: Common evaluation datasets
-description: Why LLM benchmarks exist, what their scores measure, and worked examples, covering 21 text pretraining and six text post-training benchmarks.
+description: Why LLM benchmarks exist, what their scores measure, and worked examples, covering text and multimodal pretraining and post-training.
 tags:
   - LLM
   - Datasets
@@ -1382,14 +1382,836 @@ that the model can answer from general knowledge.
 
 ## 3. Multimodal pretraining
 
-*Planned section.* This will cover evaluations of capabilities learned across
-text and other modalities, such as associating images with text and extracting
-information from visual inputs.
+A text model can name a bicycle. A multimodal model must also recognize one in a
+photo, read its price tag, or locate it when several bicycles are present.
+These evaluations test how well a model connects language with visual evidence.
+
+The 25 entries below include dataset subsets, such as
+RefCOCO testB and CV-Bench 2D, rather than 25 independent collections. The stage
+labels describe where the evaluations are useful; many also evaluate post-trained
+assistants. Image-question pairs, referring expressions, and video questions are
+different units, so each Size section names what is counted.
+
+### 3.1. General VQA
+
+**Visual question answering (VQA)** means answering a question using an image or video.
+
+#### 3.1.1. MMBench — broad visual understanding
+
+**Motivation:** test a range of visual abilities, from recognizing attributes to reasoning about relationships, while reducing lucky guesses and preferences for particular answer positions.
+
+**Size:** the original release has 2,974 distinct questions: 1,190 development and 1,784 test questions, with English and Chinese versions. Circular evaluation produces extra prompt rows; those are not additional questions. Keep the version and language with the score.
+
+**Metric:** one overall accuracy, with ability-level breakdowns; higher is better. In the original **circular evaluation**, the choices rotate through different positions and a question passes only when every rotation is answered correctly. An answer extractor maps generated text to an option before scoring.
+
+[Original project and evaluation protocol](https://github.com/open-compass/MMBench)
+
+**Sample 1: emotion** (from the dataset):
+
+![MMBench sample 544](evaluation-assets/mmbench-544.jpg)
+
+Identify the emotion expressed in this image.
+
+- A. happiness
+- B. sadness
+- C. anger
+- D. love
+
+Answer: A.
+
+[Released sample 544](https://github.com/open-compass/MMBench/blob/main/samples/README.md)
+
+**Sample 2: comparing visual properties** (from the dataset):
+
+![MMBench brightness comparison, sample 768](evaluation-assets/mmbench-768.jpg)
+
+Which image is the brightest one?
+
+- A. upper left
+- B. upper right
+- C. down left
+- D. down right
+
+Answer: C.
+
+[Released sample 768](https://github.com/open-compass/MMBench/blob/main/samples/README.md)
+
+#### 3.1.2. RealWorldQA — understanding everyday scenes
+
+**Motivation:** test practical visual understanding of real scenes, especially object sizes, positions, and spatial relationships that matter when interacting with the world.
+
+**Size:** 765 evaluation image-question pairs in the test split.
+
+**Metric:** one accuracy: correctly answered questions divided by 765, with higher being better. Compare the extracted answer with the reference; preserve the prompt and answer-extraction rules when comparing runs.
+
+[Official dataset](https://huggingface.co/datasets/xai-org/RealworldQA)
+
+**Sample** (from the dataset):
+
+![RealWorldQA test image, row 1](evaluation-assets/real-0-1.jpg)
+
+Which of the 3 objects is the smallest?
+
+- A. The object on the right is the smallest object.
+- B. The object on the left is the smallest object.
+- C. The object in the middle is the smallest object.
+
+Please answer directly with only the letter of the correct option and nothing else.
+
+Answer: C.
+
+[Test row 1](https://huggingface.co/datasets/xai-org/RealworldQA/viewer/default/test?row=0)
+
+#### 3.1.3. SEED-Bench — image and video comprehension
+
+**Motivation:** test both what appears in a scene and what happens over time. Its tasks cover image properties such as counting and video properties such as recognizing actions.
+
+**Size:** the released SEED-Bench v1 evaluation file has 17,990 questions: 14,233 image questions and 3,757 video questions. Image-only scores use the former subset; SEED-Bench-2 and later releases have different sizes.
+
+**Metric:** multiple-choice accuracy, reported overall and by task or modality; higher is better. Each question has four choices and one recorded answer. A single score should say whether it covers images only or the full image-and-video set.
+
+[Original project](https://github.com/AILab-CVC/SEED-Bench), [v1 question file](https://huggingface.co/datasets/AILab-CVC/SEED-Bench/blob/main/SEED-Bench.json)
+
+**Sample 1: image counting** (from the dataset):
+
+![SEED-Bench image for question 101669](evaluation-assets/seed-1.jpg)
+
+How many towels are in the image?
+
+- A. One
+- B. Two
+- C. Three
+- D. Four
+
+Answer: A.
+
+[Question 101669](https://huggingface.co/datasets/lmms-lab-encoder/SEED-Bench/viewer/default/test?row=0)
+
+**Sample 2: video action recognition** (from the dataset):
+
+Video input: [released clip 45899.webm in the v1 video archive](https://huggingface.co/datasets/AILab-CVC/SEED-Bench/tree/main).
+
+Please recognize the action that occurs in this video.
+
+- A. pretending to scoop something up with something
+- B. pretending to put something into something
+- C. pretending to take something from somewhere
+- D. pretending to put something next to something
+
+Answer: C.
+
+[Question v1](https://huggingface.co/datasets/AILab-CVC/SEED-Bench/blob/main/SEED-Bench.json)
+
+#### 3.1.4. V* — finding small details in large images
+
+**Motivation:** test whether a model can search a high-resolution image for a small, relevant detail instead of relying on a coarse description of the whole scene.
+
+**Size:** 191 test questions: 115 direct-attribute questions and 76 spatial-relationship questions. This is V* Bench, not the similarly named V-STaR video benchmark.
+
+**Metric:** one multiple-choice accuracy, with the two task scores also available; higher is better. Count a question as correct when the selected option matches its label. Report any cropping or visual-search tools used, because they change how much detail the model can inspect.
+
+[Original project](https://github.com/penghao-wu/vstar), [Dataset](https://huggingface.co/datasets/craigwu/vstar_bench)
+
+**Sample** (from the dataset):
+
+![V* high-resolution image for question 0](evaluation-assets/vstar-19.jpg)
+
+What is the material of the glove?
+
+- (A) rubber
+- (B) cotton
+- (C) kevlar
+- (D) leather
+
+Answer with the option's letter from the given choices directly.
+
+Answer: A.
+
+[Question 0](https://huggingface.co/datasets/craigwu/vstar_bench/viewer/default/test?row=0)
+
+### 3.2. Captioning
+
+A caption describes the visual input without a specific question directing attention to one detail.
+
+#### 3.2.1. DetailCaps — describing images in detail
+
+**Motivation:** test whether long captions cover meaningful visual details accurately. Short reference captions can miss much of an image, making them poor targets for judging a detailed description.
+
+**Size:** DetailCaps-4870 contains 4,870 evaluation images and 14,610 reference captions, three per image. The separate DetailCaps-100 set contains 100 images.
+
+**Metric:** the usual headline is the mean **CAPTURE** score, with higher being better. The evaluator extracts objects, attributes, and relationships from generated and reference captions, matches equivalent elements, and combines precision and recall. This rewards coverage while penalizing unsupported details; it is not exact sentence matching.
+
+[Dataset and CAPTURE metric](https://github.com/foundation-multimodal-models/CAPTURE)
+
+**Sample** (from the dataset):
+
+![DetailCaps COCO image 211042](evaluation-assets/detail-1.jpg)
+
+Task: produce a detailed caption of this image.
+
+Reference-caption excerpt (GPT-4V annotation): The image shows a domestic cat standing on its hind legs, with its front paws on an open toilet seat. The cat is facing away from the camera, looking into the toilet bowl. The toilet is white and has an open lid, with the toilet tank directly behind it, against the wall. To the left of the toilet, there is a small, white waste bin and a larger container that appears to be a cleaning supply caddy with various items inside.
+
+[Image coco2017/val/000000211042.jpg and full references](https://huggingface.co/datasets/foundation-multimodal-models/DetailCaps-4870/viewer/default/test?row=0)
+
+#### 3.2.2. CAPability — correct and complete captions
+
+**Motivation:** separate two failures: saying something false about an image or video, and omitting something important. The benchmark checks specific visual dimensions, including color, text, camera motion, and events.
+
+**Size:** the released evaluation tables contain 11,631 dimension-specific records across 13 configurations: nine static-image dimensions and four video dimensions. Static and dynamic object count share one conceptual dimension, giving 12 dimensions in the paper. These are annotation records, not a claim of 11,631 distinct source scenes.
+
+**Metric:** the paper reports **precision** (correct descriptions divided by all mentioned annotations) and **Hit** (correct descriptions divided by all annotations), averaged across dimensions; higher is better. A model judge decides whether each annotated element is correct, wrong, or missing. The released code additionally reports F1, combining precision and Hit, so name the metric when quoting one number.
+
+[Paper, §3.2](https://arxiv.org/html/2502.14914v3#S3.SS2), [Released tables](https://huggingface.co/datasets/lntzm/CAPability), [Scoring code](https://github.com/ali-vilab/CAPability/blob/main/evaluation/eval.py)
+
+**Sample 1: image color** (from the dataset):
+
+Input: `object_color/object_color_0.jpg` in the released [object-color image archive](https://huggingface.co/datasets/lntzm/CAPability/blob/main/data/object_color.zip).
+
+Task: describe the image in detail.
+
+Recorded annotation: `{"hair": "golden"}`.
+
+The color check distinguishes mentioning golden hair, describing its color incorrectly, and omitting its color.
+
+[Record object_color_0](https://huggingface.co/datasets/lntzm/CAPability/viewer/object_color/test?row=0)
+
+**Sample 2: video action** (from the dataset):
+
+Input: `event/event_1.mp4` in the released [event video archive](https://huggingface.co/datasets/lntzm/CAPability/blob/main/data/event.zip).
+
+Task: describe the video in detail.
+
+Recorded action annotation: rushes forward.
+
+[Action split, row 1](https://huggingface.co/datasets/lntzm/CAPability/viewer/action/test?row=0)
+
+### 3.3. Egocentric understanding
+
+**Egocentric** means interpreting the scene from the camera wearer's viewpoint.
+
+#### 3.3.1. EgoThink — reasoning from the first-person viewpoint
+
+**Motivation:** test whether a model can connect what the camera sees with what “I” am doing, can reach, or should do next. Recognizing an object alone does not establish this first-person understanding.
+
+**Size:** 700 evaluation image-question pairs, covering six capabilities and 12 detailed dimensions. Images are selected from egocentric videos; this benchmark presents still images, unlike VidEgoThink.
+
+**Metric:** a model judge compares the response with the human reference and assigns 0, 0.5, or 1 for incorrect, partially correct, or correct. Average these ratings, often displayed on a 0–100 scale; higher is better. Dimension scores accompany the aggregate, and the judge should be reported.
+
+[Original paper and grading prompt](https://arxiv.org/html/2311.15596v2#A4), [Dataset](https://huggingface.co/datasets/EgoThink/EgoThink)
+
+**Sample 1: current activity** (from the dataset):
+
+![EgoThink Activity test image, row 1](evaluation-assets/ego-2-1.jpg)
+
+What am I doing?
+
+Answer: tightening the screws.
+
+[Activity test row 1](https://huggingface.co/datasets/EgoThink/EgoThink/viewer/Activity/test?row=0)
+
+**Sample 2: navigation** (from the dataset):
+
+![EgoThink Planning_navigation test image, row 1](evaluation-assets/ego-3-1.jpg)
+
+How to go to the ATM?
+
+Answer: Go forward to the end, after that turn left and continue to the end, then turn right to face the ATM.
+
+[Planning_navigation test row 1](https://huggingface.co/datasets/EgoThink/EgoThink/viewer/Planning_navigation/test?row=0)
+
+### 3.4. Document, chart & OCR
+
+**Optical character recognition (OCR)** reads text from pixels. These benchmarks then ask whether the model can use that text, its layout, or a chart's visual structure.
+
+#### 3.4.1. OCRBench — reading text in varied visual settings
+
+**Motivation:** test text recognition beyond clean printed pages: scene text, handwriting, document questions, information extraction, and mathematical expressions.
+
+**Size:** 1,000 evaluation items in the original OCRBench test set. OCRBench v2 is a different, larger benchmark.
+
+**Metric:** the original headline is a **total score out of 1,000**: each item earns one point if it passes its task-specific text-matching rule. Many tasks accept a normalized reference string contained in the response; formulas use specialized normalization. Higher is better. Some reports divide by 1,000 to show a percentage.
+
+[Original project](https://github.com/Yuliang-Liu/MultimodalOCR/tree/main/OCRBench), [Original test set](https://huggingface.co/datasets/echo840/OCRBench)
+
+**Sample** (from the dataset):
+
+![OCRBench IIIT5K word image](evaluation-assets/ocr-4-1.jpg)
+
+what is written in the image?
+
+Answer: CENTRE.
+
+[Test row 1](https://huggingface.co/datasets/echo840/OCRBench/viewer/default/test?row=0)
+
+#### 3.4.2. TextVQA — using text found in photographs
+
+**Motivation:** test questions whose answers depend on reading signs, labels, screens, or other text inside a natural image, then connecting that text to the question.
+
+**Size:** 45,336 questions overall: 34,602 training, 5,000 validation, and 5,734 test questions. Public local evaluation commonly uses the 5,000-question validation set; official test answers are withheld.
+
+**Metric:** one mean **VQA accuracy**, based on agreement with ten human answers per question. For each of the ten leave-one-out groups, award min(matches / 3, 1), then average those values and average across questions. Thus partial agreement can receive partial credit. Higher is better; this is not ordinary exact-match accuracy against one reference.
+
+[Original dataset](https://huggingface.co/datasets/facebook/textvqa), [Official VQA scoring implementation](https://github.com/facebookresearch/mmf/blob/main/mmf/utils/m4c_evaluators.py)
+
+**Sample** (from the dataset):
+
+![TextVQA camera-brand image, question 34602](evaluation-assets/text-27-1.jpg)
+
+what is the brand of this camera?
+
+Recorded human answers include “dakota” (5 annotators) and “dakota digital” (3 annotators). Two other annotations differ.
+
+[Validation question 34602](https://huggingface.co/datasets/Multimodal-Fatima/TextVQA_validation/viewer/default/validation?row=0)
+
+#### 3.4.3. CharXiv (RQ) — reasoning about scientific charts
+
+**Motivation:** test reasoning over real research figures, whose legends, subplots, and visual conventions are more varied than simple generated charts. RQ means the reasoning-question track.
+
+**Size:** 2,333 charts, each with one reasoning question: 1,000 validation and 1,333 test questions. The four descriptive questions per chart belong to a separate track and are not part of the RQ count.
+
+**Metric:** one reasoning accuracy: a judge compares each generated answer with the reference, assigns correct or incorrect, and the benchmark averages the results. Higher is better. Use the public validation split for local grading; test references are withheld.
+
+[Official project and grading code](https://github.com/princeton-nlp/CharXiv)
+
+**Sample** (from the dataset):
+
+![CharXiv validation chart 0 with two accuracy plots](evaluation-assets/charxiv-5-1.jpg)
+
+Which model shows a greater decline in accuracy from Session 1 to Session 9 in the 5-way full-shot scenario?
+
+Answer: Joint-CNN.
+
+[Validation chart 0](https://huggingface.co/datasets/princeton-nlp/CharXiv/viewer/default/validation?row=0)
+
+#### 3.4.4. DocVQA — answering questions about a document page
+
+**Motivation:** test whether a model can find the relevant information on a scanned page, using text and layout rather than treating the document as a photograph to describe.
+
+**Size:** the original single-page dataset has 50,000 questions: 39,463 training, 5,349 validation, and 5,188 test. These are questions, not page counts; several can refer to the same page.
+
+**Metric:** one **ANLS** score (Average Normalized Levenshtein Similarity). Compare the answer with accepted references using normalized character-edit distance: small spelling differences receive partial credit, but a distance of 0.5 or more earns zero. Take the best accepted match per question and average across questions. Higher is better, up to 1 or 100%.
+
+[Original dataset](https://www.docvqa.org/datasets/docvqa), [DocVQA paper and metric](https://arxiv.org/abs/2007.00398)
+
+**Sample** (from the dataset):
+
+![DocVQA document page pybv0228, page 81](evaluation-assets/doc-25-1.jpg)
+
+What is the ‘actual’ value per 1000, during the year 1975?
+
+Answer: 0.28.
+
+[Validation question 49153](https://huggingface.co/datasets/lmms-lab-encoder/DocVQA/viewer/DocVQA/validation?row=0)
+
+#### 3.4.5. ChartQA — reading and calculating from charts
+
+**Motivation:** test both retrieving a plotted value and combining values, for example by comparing categories or performing arithmetic.
+
+**Size:** 32,719 questions overall, with 2,500 test questions: 1,250 human-written and 1,250 automatically generated. The training and validation splits have 28,299 and 1,920 questions.
+
+**Metric:** one **relaxed accuracy**, also reported separately for human and generated questions. Text answers must match after normalization; numerical predictions can be within 5% of the reference. Average item scores, or equivalently average the two equally sized test subsets. Higher is better.
+
+[Original dataset and evaluation code](https://github.com/vis-nlp/ChartQA)
+
+**Sample** (from the dataset):
+
+![ChartQA test bar chart, row 1](evaluation-assets/chartqa-6-1.png)
+
+How many food item is shown in the bar graph?
+
+Answer: 14.
+
+[Test row 1](https://huggingface.co/datasets/HuggingFaceM4/ChartQA/viewer/default/test?row=0)
+
+#### 3.4.6. InfoVQA — connecting information across infographics
+
+**Motivation:** test understanding of infographics that mix text, diagrams, icons, and statistics. The answer may require finding and combining information spread around the graphic.
+
+**Size:** InfographicVQA, often shortened to InfoVQA, has 30,000 questions: 23,911 training, 2,801 validation, and 3,288 test questions, over 5,485 infographics.
+
+**Metric:** one mean **ANLS**, using the same edit-distance rule as DocVQA: best accepted reference match per question, then average. Higher is better. This tolerates minor transcription errors without treating substantially different answers as correct.
+
+[Original dataset](https://www.docvqa.org/datasets/infographicvqa), [Dataset paper](https://arxiv.org/abs/2104.12756)
+
+**Sample** (from the dataset):
+
+![InfographicVQA social-media infographic from Constant Contact](evaluation-assets/doc-26-1.jpg)
+
+Which social platform has heavy female audience?
+
+Answer: pinterest.
+
+[Validation question 98313](https://huggingface.co/datasets/lmms-lab-encoder/DocVQA/viewer/InfographicVQA/validation?row=0)
+
+### 3.5. Referring & grounding
+
+**Grounding** connects a phrase to a location in an image. In the RefCOCO
+family, the usual task is to return a bounding box for the referred object.
+**Intersection over Union (IoU)** is the area shared by the predicted and
+reference boxes divided by the area covered by either box. A typical evaluation
+counts a prediction as correct when IoU exceeds 0.5.
+
+The sizes below count referring expressions, not unique objects: several
+expressions can describe the same object. “RefCOCOB” and “RefCOCO+B” are interpreted
+here as the testB subsets, which contain non-person targets; testA contains people.
+
+#### 3.5.1. RefCOCO — locating the object described by a phrase
+
+**Motivation:** test whether language identifies a particular object among nearby alternatives. Short expressions may use appearance or location, such as which person is on the left.
+
+**Size:** the UNC evaluation splits contain 10,834 validation expressions, 5,657 testA expressions, and 5,095 testB expressions. The training split is separate.
+
+**Metric:** one **grounding accuracy** per split: the fraction of expression–image queries whose predicted box passes the IoU threshold. Higher is better. A segmentation version predicts masks and uses different metrics, so label it separately.
+
+[Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
+
+**Sample** (from the dataset):
+
+![COCO image 581282 for referring-expression evaluation](evaluation-assets/ref-a.jpg)
+
+Expression: person bottom left
+
+Reference box in pixels, `[x, y, width, height]`: `[3.24, 159.31, 156.4, 312.81]`.
+
+[Reference 47, expression 136](https://huggingface.co/datasets/jxu124/refcoco/viewer/default/test?row=0)
+
+#### 3.5.2. RefCOCO+ — grounding without simple location words
+
+**Motivation:** test appearance-based identification more strongly. Annotators were asked to avoid location words, encouraging descriptions of color, clothing, and other visible properties.
+
+**Size:** 10,758 validation expressions, 5,726 testA expressions, and 4,889 testB expressions under the UNC split.
+
+**Metric:** one grounding accuracy per split, using box IoU > 0.5. Average the binary outcomes across expressions; higher is better.
+
+[Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
+
+**Sample** (from the dataset):
+
+![COCO image 581282 for referring-expression evaluation](evaluation-assets/ref-a.jpg)
+
+Expression: black shirt person holding umbrella
+
+Reference box in pixels, `[x, y, width, height]`: `[3.24, 159.31, 156.4, 312.81]`.
+
+[Reference 45, expression 129](https://huggingface.co/datasets/jxu124/refcocoplus/viewer/default/test?row=0)
+
+#### 3.5.3. RefCOCO+B — RefCOCO+ on non-person targets
+
+**Motivation:** isolate how well the model grounds appearance-based descriptions of objects other than people. This is RefCOCO+ testB, not a separate collection.
+
+**Size:** 4,889 referring expressions in testB, describing 1,798 target objects.
+
+**Metric:** one testB grounding accuracy: the percentage of expressions whose predicted boxes have IoU > 0.5 with the reference. Higher is better.
+
+[Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
+
+**Sample** (from the dataset):
+
+![COCO image 581563 for referring-expression evaluation](evaluation-assets/ref-b.jpg)
+
+Expression: black car
+
+Reference box in pixels, `[x, y, width, height]`: `[0.0, 373.89, 137.59, 126.11]`.
+
+[Reference 25, expression 70](https://huggingface.co/datasets/jxu124/refcocoplus/viewer/default/testB?row=0)
+
+#### 3.5.4. RefCOCOB — RefCOCO on non-person targets
+
+**Motivation:** isolate non-person grounding with RefCOCO's unrestricted expressions, including spatial descriptions. It complements the people-focused testA score.
+
+**Size:** 5,095 referring expressions in RefCOCO testB, describing 1,810 target objects.
+
+**Metric:** one testB grounding accuracy at box IoU > 0.5, with higher being better. Its scoring rule matches RefCOCO; the evaluated targets differ.
+
+[Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
+
+**Sample** (from the dataset):
+
+![COCO image 581563 for referring-expression evaluation](evaluation-assets/ref-b.jpg)
+
+Expression: black van in front of cab
+
+Reference box in pixels, `[x, y, width, height]`: `[0.0, 373.89, 137.59, 126.11]`.
+
+[Reference 25, expression 73](https://huggingface.co/datasets/jxu124/refcoco/viewer/default/testB?row=0)
+
+#### 3.5.5. RefCOCOg — grounding longer descriptions
+
+**Motivation:** test descriptions that tend to be longer and more detailed than RefCOCO's short phrases, often combining attributes and relationships.
+
+**Size:** the UMD split has 4,896 validation and 9,602 test expressions. The Google split is different, so retain the split name with the score.
+
+**Metric:** one grounding accuracy per split at box IoU > 0.5. Each expression receives a binary result, then results are averaged; higher is better.
+
+[Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
+
+**Sample** (from the dataset):
+
+![COCO image 419645 for referring-expression evaluation](evaluation-assets/refg-long.jpg)
+
+Expression: There is red colored truck in between the other trucks
+
+Reference box in pixels, `[x, y, width, height]`: `[93.95, 83.29, 504.61, 290.57]`.
+
+[Reference 1, expression 10](https://huggingface.co/datasets/jxu124/refcocog/viewer/default/test?row=1)
+
+#### 3.5.6. PixMo-Points — pointing to the requested objects
+
+**Motivation:** test whether a model can return the locations of every object matching a description. Points offer a simpler output than full boxes or masks and naturally support several matching objects.
+
+**Size:** **PixMo-Points-Eval has 436 test records**, each an image paired with a target label and reference points/masks. This is the evaluation subset; the much larger PixMo-Points collection provides training data.
+
+**Metric:** the headline is mean **pointing F1**, with precision and recall also reported. Match predicted points to reference objects one-to-one; a match is correct when the point falls inside the object's mask. Extra points reduce precision, missed objects reduce recall, and F1 combines both. Higher is better.
+
+[Official evaluation dataset](https://huggingface.co/datasets/allenai/pixmo-points-eval), [Molmo evaluator](https://github.com/allenai/molmo/blob/main/olmo/eval/evaluators.py)
+
+**Sample** (from the dataset):
+
+![PixMo-Points-Eval game image with three annotated black bombs](evaluation-assets/pixmo-candidate-1.jpg)
+
+Target label: black bomb
+
+Reference: three points, one inside each annotated black bomb. The supplied masks define the acceptable regions; the model need not reproduce the exact reference coordinates.
+
+[Test row 2](https://huggingface.co/datasets/allenai/pixmo-points-eval/viewer/default/test?row=1)
+
+### 3.6. Spatial reasoning
+
+These tasks distinguish a position on the flat image from a position in the depicted three-dimensional scene.
+
+#### 3.6.1. 3DSRBench — reasoning about three-dimensional relationships
+
+**Motivation:** test height, depth, orientation, and relationships among several objects. A thing appearing higher in the image is not necessarily higher in the real scene.
+
+**Size:** 2,772 original questions: 2,100 on natural COCO images and 672 on synthetic scenes viewed from common and uncommon viewpoints. The released natural-image evaluation expands questions into extra variants, so its 5,157-row table is not 5,157 independent original questions.
+
+**Metric:** one overall accuracy plus category scores; higher is better. The official protocol combines circular choice rotations with **FlipEval**: a question must remain correct when its image is horizontally flipped and its answer adjusted as needed. These consistency checks make the result stricter than ordinary one-pass accuracy.
+
+[Original paper, evaluation protocol](https://arxiv.org/html/2412.07825v2#S3.SS4), [Release and scoring script](https://huggingface.co/datasets/ccvl/3DSRBench)
+
+**Sample** (from the dataset):
+
+![3DSRBench COCO image 557944](evaluation-assets/sr-7.jpg)
+
+Consider the real-world 3D locations of the objects. Which object has a higher location?
+
+- A. baseball glove
+- B. red hat of the person in red in the back
+
+Answer: B.
+
+[Record VIN6MS3J](https://huggingface.co/datasets/ccvl/3DSRBench/viewer/benchmark/test?row=0)
+
+#### 3.6.2. CV-Bench 2D — counting and locating objects in the image
+
+**Motivation:** test basic visual skills using questions derived from established computer-vision annotations: counting objects and identifying their two-dimensional spatial relationships.
+
+**Size:** 1,438 test questions in the 2D subset of CV-Bench, drawn from ADE20K and COCO.
+
+**Metric:** one 2D accuracy: compute accuracy separately for ADE20K and COCO, then average those two scores equally. Higher is better. This source-balanced average need not equal the fraction correct across all 1,438 questions.
+
+[Official dataset and aggregation formula](https://huggingface.co/datasets/nyu-visionx/CV-Bench)
+
+**Sample** (from the dataset):
+
+![CV-Bench 2D test image, index 0](evaluation-assets/cv-8-1.jpg)
+
+How many organs are in the image?
+
+- A. 3
+- B. 2
+- C. 1
+- D. 0
+
+Answer: (C).
+
+[2D index 0](https://huggingface.co/datasets/nyu-visionx/CV-Bench/viewer/2D/test?row=0)
+
+#### 3.6.3. CV-Bench 3D — comparing depth and distance
+
+**Motivation:** test whether the model can distinguish closeness to the camera from closeness to another object. Colored boxes identify which objects to compare.
+
+**Size:** 1,200 test questions from Omni3D, covering depth ordering and relative distance.
+
+**Metric:** one 3D multiple-choice accuracy, averaged across the subset; higher is better. When reporting a combined CV-Bench score, the official calculation averages the 2D and 3D scores equally.
+
+[Official dataset and aggregation formula](https://huggingface.co/datasets/nyu-visionx/CV-Bench)
+
+**Sample** (from the dataset):
+
+![CV-Bench depth comparison with red and blue bounding boxes](evaluation-assets/cv-9-1.jpg)
+
+Which object is closer to the camera taking this photo, the table (highlighted by a red box) or the bookcase (highlighted by a blue box)?
+
+- A. table
+- B. bookcase
+
+Answer: (A).
+
+[3D index 1438](https://huggingface.co/datasets/nyu-visionx/CV-Bench/viewer/3D/test?row=0)
+
+#### 3.6.4. MMSI-Bench — reconstructing space across images
+
+**Motivation:** test spatial understanding that requires relating multiple views: camera movement, object positions, room connections, and multi-step spatial deductions.
+
+**Size:** 1,000 human-designed multiple-choice questions across 11 task types. Fundamental tasks use two images; multi-step tasks can use more.
+
+**Metric:** the original evaluation reports overall and task-level answer accuracy, with higher being better. Extract the option and compare it with the recorded answer. A later circular-evaluation protocol also requires correctness across reordered options; label that variant because its score is stricter.
+
+[Original project and protocol notes](https://github.com/InternRobotics/MMSI-Bench)
+
+**Sample** (from the dataset):
+
+![MMSI-Bench question 0, first view](evaluation-assets/mmsi-10-1.jpg)
+
+![MMSI-Bench question 0, second view](evaluation-assets/mmsi-10-2.jpg)
+
+The images are taken continuously from a first-person perspective. In which direction are you moving?
+
+- A. Left while moving backward
+- B. Forward to the left
+- C. Forward to the right
+- D. Right while moving backward
+
+Answer: C.
+
+[Question 0](https://huggingface.co/datasets/RunsenXu/MMSI-Bench/viewer/default/test?row=0)
+
+### 3.7. Multi-image understanding
+
+The model must compare or combine the supplied images, rather than answer from one image in isolation.
+
+#### 3.7.1. BLINK — visual comparisons that people make quickly
+
+**Motivation:** test perception skills that are easy for humans but difficult to solve through verbal descriptions alone, such as matching visual style, judging depth, and finding correspondences.
+
+**Size:** 3,807 multiple-choice questions across 14 tasks: 1,901 validation and 1,906 test questions in the released data. Some tasks use one image; others use several.
+
+**Metric:** accuracy for each task, with the headline averaging task accuracies equally; higher is better. A model selects an option and receives a binary correct/incorrect result. Keep validation and test scores separate.
+
+[Original project](https://github.com/zeyofu/BLINK_Benchmark), [Released splits](https://huggingface.co/datasets/BLINK-Benchmark/BLINK)
+
+**Sample 1: visual style** (from the dataset):
+
+| Reference image | Second image | Third image |
+|---|---|---|
+| ![BLINK art-style reference painting](evaluation-assets/blink-12-1.jpg) | ![BLINK art-style second painting](evaluation-assets/blink-12-2.jpg) | ![BLINK art-style third painting](evaluation-assets/blink-12-3.jpg) |
+
+Which image shares the same style as the reference image?
+
+- A. the second image
+- B. the third image
+
+Answer: (A).
+
+[val_Art_Style_1](https://huggingface.co/datasets/BLINK-Benchmark/BLINK/viewer/Art_Style/val?row=0)
+
+**Sample 2: relative depth** (from the dataset):
+
+![BLINK depth image with points A and B](evaluation-assets/blink-11-1.jpg)
+
+Which point is closer to the camera?
+
+- A. A is closer
+- B. B is closer
+
+Answer: (B).
+
+[val_Relative_Depth_1](https://huggingface.co/datasets/BLINK-Benchmark/BLINK/viewer/Relative_Depth/val?row=0)
+
+#### 3.7.2. MuirBench — robust reasoning over image sets
+
+**Motivation:** test tasks such as matching maps, ordering events, and comparing diagrams across several images. Each answerable instance has a closely related unanswerable counterpart, testing whether the model notices when the evidence no longer supports an answer.
+
+**Size:** 2,600 test questions arranged as 1,300 answerable/unanswerable pairs, with 11,264 image occurrences across 12 task types.
+
+**Metric:** one multiple-choice accuracy, with task and answerability breakdowns; higher is better. “None of the choices provided” can be the correct answer. The usual headline counts questions individually; it does not require both members of a pair to pass.
+
+[Original paper](https://arxiv.org/abs/2406.09411), [Dataset](https://huggingface.co/datasets/MUIRBENCH/MUIRBENCH)
+
+**Sample 1: answerable map matching** (from the dataset):
+
+| Reference | B | C | D |
+|---|---|---|---|
+| ![MuirBench map 1](evaluation-assets/muir-13-1.jpg) | ![MuirBench map 2](evaluation-assets/muir-13-2.jpg) | ![MuirBench map 3](evaluation-assets/muir-13-3.jpg) | ![MuirBench map 4](evaluation-assets/muir-13-4.jpg) |
+
+Identify the map image that shows overlapping geographic areas similar to the reference image.
+
+- A. None of the choices provided
+- B. Map B above
+- C. Map C above
+- D. Map D above
+
+Answer: C.
+
+[Record 0; image placeholders displayed as labeled maps](https://huggingface.co/datasets/MUIRBENCH/MUIRBENCH/viewer/default/test?row=0)
+
+**Sample 2: its unanswerable counterpart** (from the dataset):
+
+| Reference | A | B | D |
+|---|---|---|---|
+| ![MuirBench map 1](evaluation-assets/muir-unanswerable-1.jpg) | ![MuirBench map 2](evaluation-assets/muir-unanswerable-2.jpg) | ![MuirBench map 3](evaluation-assets/muir-unanswerable-3.jpg) | ![MuirBench map 4](evaluation-assets/muir-unanswerable-4.jpg) |
+
+Identify the map image that shows overlapping geographic areas similar to the reference image.
+
+- A. Map A above
+- B. Map B above
+- C. None of the choices provided
+- D. Map D above
+
+Answer: C.
+
+[Record 1; image placeholders displayed as labeled maps](https://huggingface.co/datasets/MUIRBENCH/MUIRBENCH/viewer/default/test?row=1)
 
 ## 4. Multimodal posttraining
 
-*Planned section.* This will cover following multimodal instructions and solving
-tasks that combine visual, audio, or video understanding with assistant behavior.
+Once a model can interpret visual input, can it follow a precise request about
+it and use it to solve a difficult problem? These five benchmarks focus on
+assistant behavior and reasoning after post-training. They can also diagnose
+earlier checkpoints; they do not prescribe a training method.
+
+### 4.1. Visual instruction following
+
+#### 4.1.1. MM-IFEval — following instructions tied to images
+
+**Motivation:** test both how a response is composed and whether the model applies instructions to the right visual information. A correctly formatted answer can still fail if the model reads the wrong values from an image.
+
+**Size:** 400 main evaluation questions: 300 compose-level and 100 perception-level. The released table has 687 rows because it also includes 287 auxiliary prompts used for comparative judging; those are not extra test questions.
+
+**Metric:** one average score, with compose-level and perception-level breakdowns; higher is better. Compose-level responses receive the fraction of constraints passed, using code for mechanical checks and model judges for semantic ones. Perception-level responses are checked against reference answers. The overall score averages the main-question scores, so it can award partial credit.
+
+[Original paper](https://arxiv.org/abs/2504.07957), [Evaluation code](https://github.com/SYuan03/MM-IFEngine/tree/main/eval_mmifeval), [Released records](https://huggingface.co/datasets/mm-eval/MM-IFEval)
+
+**Sample 1: composition constraints** (from the dataset):
+
+![MM-IFEval C-Level_0 spot-the-difference image](evaluation-assets/mmif-14-1.jpg)
+
+You are provided with an image which contains two pictures side by side. Your task is to identify the differences between the two pictures. Separate the differences with a semicolon. Please write between 50 and 70 words in total. Do not use any commas in the response. Use \*\*bold\*\* for the first difference mentioned and \*italic\* for the last difference mentioned. If the difference is the cars, don't mention their color. Each difference must be followed by a brief explanation of why it stands out or how it changes the scene.
+
+[C-Level_0](https://huggingface.co/datasets/mm-eval/MM-IFEval/viewer/default/test?row=0)
+
+**Sample 2: perception with a numeric constraint** (from the dataset):
+
+![MM-IFEval P-Level_0 Shanghai weather chart](evaluation-assets/mmif-perception.jpg)
+
+Based on the information in the figure, please calculate the average maximum temperature in Shanghai from this Saturday to next Wednesday, and keep three decimal places.
+
+Answer: `8.200`.
+
+[P-Level_0](https://huggingface.co/datasets/mm-eval/MM-IFEval/viewer/default/test?row=587)
+
+#### 4.1.2. MIA-Bench — obeying layered visual requests
+
+**Motivation:** test whether the assistant can satisfy several requirements at once, such as describing the pictured activity in exactly two sentences while including a metaphor.
+
+**Size:** 400 evaluation image-prompt pairs. The project's additional instruction-training data is separate from this benchmark.
+
+**Metric:** one average weighted judge score, plus component breakdowns; higher is better. A model judge evaluates the instruction components using their recorded weights, which sum to 10 for each prompt. Average the resulting 0–10 totals; some harnesses normalize to 0–1 or 0–100. This is partial-credit scoring, not an all-or-nothing pass rate.
+
+[Original project and judge notebook](https://github.com/apple-aiml-research/ml-mia-bench)
+
+**Sample** (from the dataset):
+
+![MIA-Bench COCO image 397133](evaluation-assets/mia-0.jpg)
+
+Explain the activity taking place in the image using exactly two sentences, including one metaphor.
+
+Recorded rubric: describe the activity (4 points), use exactly two sentences (3), and include a metaphor (3).
+
+[First released record](https://github.com/apple-aiml-research/ml-mia-bench/blob/main/instruction_benchmark_all.json)
+
+#### 4.1.3. VisIT-Bench — useful responses to varied visual instructions
+
+**Motivation:** test realistic requests such as explaining a pictured phenomenon or suggesting what to do with an object. The response must be useful for the request, beyond simply recognizing what is visible.
+
+**Size:** 592 original image-instruction examples across 70 instruction categories: 574 single-image and 18 multi-image examples. The standard single-image evaluation uses 574.
+
+**Metric:** the leaderboard reports **win rate against a reference response** and **Elo**, rather than one exact-match accuracy. A GPT-4 judge compares response pairs using an instruction-specific image description, with response order swapped to reduce position bias. Win rate summarizes preferences against a fixed reference; Elo summarizes comparisons across the evaluated models. Higher is better, but Elo depends on the comparison pool.
+
+[Official project and scoring explanation](https://github.com/mlfoundations/VisIT-Bench)
+
+**Sample** (from the dataset):
+
+![VisIT-Bench star field, test row 2](evaluation-assets/visit-stars-1.jpg)
+
+What are the bright little specks and what causes them to be bright?
+
+Released GPT-4 response excerpt, marked correct by human annotators: The bright little specks in the image are stars, which are luminous celestial bodies made of hot gases, primarily hydrogen and helium.
+
+[Single-image test row 2; full response and annotations](https://huggingface.co/datasets/mlfoundations/VisIT-Bench/viewer/default/test?row=1)
+
+### 4.2. Multimodal STEM & reasoning
+
+#### 4.2.1. MMMU-Pro — academic reasoning that needs the image
+
+**Motivation:** make academic multimodal questions harder to answer through text-only shortcuts or guessing. It filters the original MMMU, expands the answer choices, and adds a version where the question itself must be read from an image.
+
+**Size:** 1,730 underlying test questions, released in standard four-option, standard ten-option, and vision-only configurations. These configurations reuse questions; adding their row counts would count the same problems repeatedly.
+
+**Metric:** one multiple-choice accuracy per configuration: correct selected options divided by questions. Higher is better. Keep the configuration and prompting setup with the score; ten-option and vision-only results are not interchangeable.
+
+[Original paper](https://arxiv.org/abs/2409.02813), [Official dataset](https://huggingface.co/datasets/MMMU/MMMU_Pro)
+
+**Sample 1: standard ten-option question** (from the dataset):
+
+Visual input: the Roman/Han population graph shown in the vision-version image below. In the standard configuration the question and options are provided as text.
+
+Which of the following best explains the overall trend shown in the image?
+
+- A. Political instability leading to population decline
+- B. The spread of pathogens across the Silk Road
+- C. Development of new trade routes
+- D. Climate change affecting the Silk Road
+- E. Migrations to areas of Central Asia for resettlement
+- F. Technological advancements in transportation
+- G. Invasions by Mongol tribes
+- H. Large-scale famine due to crop failures
+- I. Economic prosperity and population growth
+- J. Rise of religious conflicts along the Silk Road
+
+Answer: B.
+
+[test_History_1, standard (10 options)](https://huggingface.co/datasets/MMMU/MMMU_Pro/viewer/standard%20(10%20options)/test?row=0)
+
+**Sample 2: the same problem in vision-only form** (from the dataset):
+
+![MMMU-Pro vision-only screenshot containing test_History_1 and ten answer choices](evaluation-assets/mmmu-17-1.png)
+
+The question and choices are embedded in this released screenshot.
+
+Answer: B.
+
+[test_History_1, vision](https://huggingface.co/datasets/MMMU/MMMU_Pro/viewer/vision/test?row=0)
+
+#### 4.2.2. MATH-Vision — competition mathematics with visual input
+
+**Motivation:** test mathematical reasoning where diagrams, arrangements, or other visual information are part of the problem. The collection spans more topics and difficulty levels than basic visual arithmetic.
+
+**Size:** 3,040 test problems across 16 mathematical subjects and five difficulty levels. A 304-problem testmini subset supports smaller evaluations; it is part of the full set, not an additional test.
+
+**Metric:** one mean answer accuracy, with subject and difficulty breakdowns; higher is better. Extract the final option or mathematical answer and compare with the reference using the released answer-equivalence checks. The final answer is scored, not the quality of the explanation.
+
+[Original project and evaluator](https://github.com/mathllm/MATH-V), [Official dataset](https://huggingface.co/datasets/MathLLMs/MathVision)
+
+**Sample 1: an open numeric answer** (from the dataset):
+
+![MATH-Vision problem 1](evaluation-assets/mathvision-18-1.jpg)
+
+Which number should be written in place of the question mark?
+
+Answer: 60.
+
+[Problem 1](https://huggingface.co/datasets/MathLLMs/MathVision/viewer/default/test?row=0)
+
+**Sample 2: multiple choice** (from the dataset):
+
+![MATH-Vision problem 2](evaluation-assets/mathvision-mcq-1.jpg)
+
+Which bike is most expensive?
+
+Answer: A.
+
+[Problem 2](https://huggingface.co/datasets/MathLLMs/MathVision/viewer/default/test?row=1)
 
 ## Related notes
 
