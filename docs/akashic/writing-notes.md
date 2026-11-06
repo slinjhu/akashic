@@ -68,15 +68,15 @@ page URL so a refresh returns to that section.
 Each section also has a review status before its number: ⏳ Pending or ✅ Reviewed.
 When running `npm run dev` or the local build preview (`npm start`), click the emoji
 to switch status and save it directly in the source Markdown. New sections default
-to Pending. The status is stored beneath the heading:
+to Pending. The status is stored directly in the heading:
 
 ```markdown
-## 1. Primer
-<!-- review: reviewed -->
+## ✅ 1. Primer
 ```
 
-The comment stays with the section when it is renamed or moved, without changing
-its title or anchor. Set it to `pending` to reset the status manually. Published
+The emoji stays with the section when it is renamed or moved. Change it to ⏳
+to reset the status manually; a heading without either emoji is Pending.
+Akashic excludes the status emoji when generating anchors and table-of-contents labels. Published
 static pages display the saved statuses but cannot edit local files. Rebuild and
 publish to update those pages after reviewing locally.
 

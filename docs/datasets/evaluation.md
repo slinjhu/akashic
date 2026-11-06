@@ -1396,9 +1396,9 @@ different units, so each Size section names what is counted.
 
 **Visual question answering (VQA)** means answering a question using an image or video.
 
-#### 3.1.1. MMBench — broad visual understanding
+#### ✅ 3.1.1. MMBench — broad visual understanding
 
-**Motivation:** test a range of visual abilities, from recognizing attributes to reasoning about relationships, while reducing lucky guesses and preferences for particular answer positions.
+**Motivation:** MMBench means *Multimodal Benchmark*: “MM” refers to combining images and text. It tests a range of visual abilities, from recognizing attributes to reasoning about relationships, while reducing lucky guesses and preferences for particular answer positions.
 
 **Size:** the original release has 2,974 distinct questions: 1,190 development and 1,784 test questions, with English and Chinese versions. Circular evaluation produces extra prompt rows; those are not additional questions. Keep the version and language with the score.
 

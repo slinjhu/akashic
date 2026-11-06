@@ -9,6 +9,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { toString } from "mdast-util-to-string";
 import GithubSlugger from "github-slugger";
+import { withoutReviewEmoji } from "../lib/section-reviews.mjs";
 import { noteUrl } from "../lib/paths.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,7 +26,7 @@ export function parseNote(source, file) {
   if (data.tags !== undefined && (!Array.isArray(data.tags) || data.tags.some(tag => typeof tag !== "string"))) {
     throw new Error(`${file}: tags must be an array of strings`);
   }
-  const tree = parser.parse(content);
+  const tree = parser.parse(withoutReviewEmoji(content));
   const firstHeading = tree.children.find(node => node.type === "heading" && node.depth === 1);
   const title = data.title || (firstHeading && toString(firstHeading)) || path.basename(file, ".md");
   const slugger = new GithubSlugger();

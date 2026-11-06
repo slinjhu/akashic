@@ -15,7 +15,7 @@ import rehypeSections from "@/lib/rehype-sections.mjs";
 import { SectionTree } from "./section-tree";
 import { SectionSummary } from "./section-summary";
 import { SectionReviews } from "./section-reviews";
-import { sectionReviews } from "@/lib/section-reviews.mjs";
+import { sectionReviews, withoutReviewEmoji } from "@/lib/section-reviews.mjs";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
   return <SectionReviews key={file} file={file} initial={sectionReviews(body)}><SectionTree><Markdown
@@ -45,5 +45,5 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
         return <CodeBlock text={text} language={language}>{children as ReactNode}</CodeBlock>;
       },
     }}
-  >{body}</Markdown></SectionTree></SectionReviews>;
+  >{withoutReviewEmoji(body)}</Markdown></SectionTree></SectionReviews>;
 }

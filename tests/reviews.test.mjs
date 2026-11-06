@@ -4,18 +4,19 @@ import { mkdtemp, mkdir, readFile, writeFile, symlink, rm } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
-import { sectionReviews, setSectionReview } from "../lib/section-reviews.mjs";
+import { sectionReviews, setSectionReview, withoutReviewEmoji } from "../lib/section-reviews.mjs";
 import { createReviewHandler } from "../scripts/review-api.mjs";
 import { parseNote } from "../scripts/content.mjs";
 
-test("review comments preserve headings, anchors, front matter, and unrelated text", () => {
+test("review emojis preserve anchors, front matter, and unrelated text", () => {
   const source = '---\ntitle: Example\n---\n# Title\n\n## Same *name*\n\nText\n\n## Same *name*\n\n```md\n## Ignore\n```\n\nSetext\n------\n';
   const changed = setSectionReview(source, "same-name-1", true);
   assert.deepEqual(sectionReviews(changed), { "same-name": false, "same-name-1": true, setext: false });
   assert.deepEqual(parseNote(source, "test.md").headings, parseNote(changed, "test.md").headings);
-  assert.equal(changed.replace('\n<!-- review: reviewed -->', ''), source);
+  assert.equal(changed.replace('## ✅ Same', '## Same'), source);
   const pending = setSectionReview(changed, "same-name-1", false);
-  assert.equal((pending.match(/<!-- review:/g) || []).length, 1);
+  assert.equal((pending.match(/⏳/g) || []).length, 1);
+  assert.equal(withoutReviewEmoji(changed), source);
   assert.equal(sectionReviews(pending)["same-name-1"], false);
   assert.equal(sectionReviews(setSectionReview(source, "setext", true)).setext, true);
   assert.throws(() => setSectionReview(source, "ignore", true), /Section not found/);
@@ -25,8 +26,16 @@ test("review comments preserve headings, anchors, front matter, and unrelated te
 test("review editing retains Windows newlines and ignores markers inside code", () => {
   const source = '## A\r\n\r\n```md\r\n<!-- review: reviewed -->\r\n```\r\n';
   const result = setSectionReview(source, "a", true);
-  assert.ok(result.startsWith('## A\r\n<!-- review: reviewed -->\r\n'));
+  assert.ok(result.startsWith('## ✅ A\r\n'));
   assert.equal(sectionReviews(source).a, false);
+});
+
+test("old comments migrate to an emoji without changing the anchor", () => {
+  const old = "## First\n<!-- review: reviewed -->\n\nText\n";
+  assert.equal(sectionReviews(old).first, true);
+  assert.equal(setSectionReview(old, "first", true), "## ✅ First\n\nText\n");
+  assert.equal(setSectionReview("## ✅ First\n", "first", false), "## ⏳ First\n");
+  assert.equal(setSectionReview("## ⏳ First\n", "first", true), "## ✅ First\n");
 });
 
 test("local review API persists concurrent updates and rejects unsafe requests", async t => {
