@@ -34,10 +34,10 @@ That is why we need several benchmarks. A single score cannot distinguish
 remembering facts, following a narrative, doing arithmetic, and writing working
 code. This page develops those distinctions through concrete examples.
 
-**About the samples:** all examples below are original, illustrative examples,
-not quoted dataset records. They show the task format and expected answer;
-many are deliberately easier and shorter than the actual benchmark. Each entry
-links to original research or released data for real examples.
+**About the samples:** examples labeled “illustrative” are invented to show
+the task format and may be easier than the actual benchmark. Examples labeled
+“from the dataset” reproduce released questions and choices, with their record
+IDs, answer keys, and source links.
 
 ## 1. Text pretraining
 
@@ -437,10 +437,12 @@ Answer: B.
 
 #### 1.3.4. ARC-Easy — a school-science baseline
 
-**Motivation:** provide a school-science baseline alongside ARC-Challenge.
-“Easy” identifies questions outside the partition that defeated both original
-retrieval and word-co-occurrence baselines, rather than a universal difficulty
-rating.
+**Motivation:** ARC (AI2 Reasoning Challenge) is a collection of multiple-choice,
+grade-school science questions created by the Allen Institute for AI to test
+scientific knowledge and reasoning. Questions that both original baseline
+systems—one retrieving relevant text, the other using word associations—got
+wrong form ARC-Challenge. The remaining questions form ARC-Easy, providing
+a simpler comparison set.
 [ARC paper](https://arxiv.org/abs/1803.05457).
 
 **Size:** 2,376 multiple-choice test questions, excluding the training and
@@ -454,14 +456,29 @@ length before selecting a choice. Both count correct answers without partial
 credit, and higher is better.
 [Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/arc/arc_easy.yaml).
 
-**Sample** (illustrative):
+**Sample 1: Factual recall** (from the dataset):
 
-What supplies the energy for photosynthesis?
+ARC-Easy test record `MCAS_2001_5_19`.
 
-- A. Sunlight
-- B. Soil particles
-- C. Sound
-- D. Gravity
+Plants use sunlight to make
+
+- A. soil.
+- B. minerals.
+- C. food.
+- D. water.
+
+Answer: C.
+
+**Sample 2: Connecting scientific ideas** (from the dataset):
+
+ARC-Easy test record `Mercury_417466`.
+
+Which statement best explains why photosynthesis is the foundation of most food webs?
+
+- A. Sunlight is the source of energy for nearly all ecosystems.
+- B. Most ecosystems are found on land instead of in water.
+- C. Carbon dioxide is more available than other gases.
+- D. The producers in all ecosystems are plants.
 
 Answer: A.
 
