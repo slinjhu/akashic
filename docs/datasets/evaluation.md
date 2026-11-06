@@ -149,7 +149,7 @@ Managers are entrusted to run the company in the best interest of ________. Spec
 
 Answer: F.
 
-#### 1.2.3. TriviaQA — retrieving a fact from evidence or memory
+#### ✅ 1.2.3. TriviaQA — retrieving a fact from evidence or memory
 
 **Motivation:** evaluate factual question answering using naturally written
 trivia and independently collected evidence. Reading supplied evidence tests
@@ -189,7 +189,7 @@ Evidence excerpt: "Kiss You All Over" is a 1978 song performed by the group Exil
 
 Answer: Exile
 
-#### 1.2.4. SimpleQA — short answers that expose factual errors
+#### ✅ 1.2.4. SimpleQA — short answers that expose factual errors
 
 **Motivation:** make factuality easier to grade by asking for one short,
 verifiable fact, while selecting questions that challenge strong models.
@@ -214,7 +214,7 @@ Who received the IEEE Frank Rosenblatt Award in 2010?
 
 Answer: Michio Sugeno
 
-#### 1.2.5. TruthfulQA — resisting learned misconceptions
+#### ✅ 1.2.5. TruthfulQA — resisting learned misconceptions
 
 **Motivation:** test whether a model resists common misconceptions instead of
 reproducing plausible falsehoods learned from human text.
@@ -276,7 +276,7 @@ Given a fair coin, which coin toss sequence is more likely: HHHHH or HTTHT?
 
 True reference answers: A, B. False reference answers: C, D, E.
 
-#### 1.2.6. GPQA Diamond — expert knowledge combined with reasoning
+#### ✅ 1.2.6. GPQA Diamond — expert knowledge combined with reasoning
 
 **Motivation:** test specialized scientific knowledge and reasoning using
 questions that challenged skilled non-experts even with web access. This also
