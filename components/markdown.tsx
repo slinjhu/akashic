@@ -13,6 +13,7 @@ import { CodeBlock } from "./code-block";
 import { Diagram } from "./mermaid";
 import rehypeSections from "@/lib/rehype-sections.mjs";
 import { SectionTree } from "./section-tree";
+import { SectionSummary } from "./section-summary";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
   return <SectionTree key={file}><Markdown
@@ -20,6 +21,11 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
     rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }], rehypeSections]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{
+      summary: ({ node, children }) => {
+        const heading = node?.children.find(child => child.type === "element" && /^h[2-6]$/.test(child.tagName));
+        const id = heading?.type === "element" ? heading.properties.id : undefined;
+        return <SectionSummary id={typeof id === "string" ? id : undefined}>{children}</SectionSummary>;
+      },
       a: ({ href, children, ...props }) => href?.startsWith("/") && !href.startsWith("//") ? <Link href={href} title={props.title}>{children}</Link> : <a href={href} title={props.title} rel={href?.startsWith("http") ? "noreferrer" : undefined}>{children}</a>,
       img: ({ src, alt, title }) => <img src={typeof src === "string" && src.startsWith("/content/") ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}${src.includes("?") ? "&" : "?"}v=${assetRevision.slice(0, 12)}` : src} alt={alt || ""} title={title} loading="lazy" />,
       table: ({ children }) => <div className="table-scroll" tabIndex={0} role="region" aria-label="Table"><table>{children}</table></div>,

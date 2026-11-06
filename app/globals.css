@@ -70,17 +70,20 @@ pre { margin: 0; padding: 18px 22px; overflow-x: auto; background: var(--code); 
 .section-controls button { font-size: 12px; color: var(--muted); }
 .prose .note-section { margin: 24px 0; min-width: 0; }
 .prose .note-section[data-depth="2"] { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 36px; }
-.prose .note-section > summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; border-radius: 4px; }
+.prose .note-section > summary { display: flex; align-items: baseline; gap: 10px; cursor: default; list-style: none; border-radius: 4px; }
 .prose .note-section > summary::-webkit-details-marker { display: none; }
-.prose .note-section > summary::before { content: ""; flex: 0 0 7px; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); align-self: flex-start; margin-top: .65em; transition: transform .15s; }
-.prose .note-section[open] > summary::before { transform: rotate(45deg); }
-.prose .note-section > summary > :is(h2,h3,h4,h5,h6) { margin: 0; padding: 0; border: 0; min-width: 0; }
-.prose .note-section > summary:hover { color: var(--accent); }
+.prose .note-section > summary > :is(h2,h3,h4,h5,h6) { margin: 0; padding: 0; border: 0; min-width: 0; flex: 1; }
+.prose .section-toggle, .prose .section-anchor { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; align-self: flex-start; margin-top: 2px; }
+.prose .section-anchor { margin-left: auto; }
+.prose .section-toggle:hover, .prose .section-anchor:hover { color: var(--accent); background: var(--code); }
+.prose .section-toggle:focus-visible, .prose .section-anchor:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.prose .section-toggle svg { transition: transform .15s; }
+.prose .note-section[open] > summary > .section-toggle svg { transform: rotate(90deg); }
 .prose .note-section-content { padding-top: 16px; }
 .prose .note-section-content > .note-section { margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--line); }
 @media (max-width: 760px) { .prose .note-section-content > .note-section { margin-left: 4px; padding-left: 8px; } }
-@media (prefers-reduced-motion: reduce) { .prose .note-section > summary::before { transition: none; } }
-@media print { .section-controls { display: none; } }
+@media (prefers-reduced-motion: reduce) { .prose .section-toggle svg { transition: none; } }
+@media print { .section-controls, .prose .section-toggle, .prose .section-anchor { display: none; } }
 
 /* Persisted panel visibility also releases the panel's grid column. */
 .header-tools { gap: 12px; }
