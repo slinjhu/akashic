@@ -305,7 +305,7 @@ How many stereoisomers are there for the compound 6-chloro-9-ethyl-2-methylundec
 
 Answer: C.
 
-#### 1.2.7. SciQ — basic science questions at scale
+#### ✅ 1.2.7. SciQ — basic science questions at scale
 
 **Motivation:** build a large collection of science questions to train and test
 question-answering models. Human writers read science passages and wrote
