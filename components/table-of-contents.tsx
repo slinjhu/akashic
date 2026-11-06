@@ -1,5 +1,6 @@
 "use client";
 
+import { PanelResizeHandle } from "./resizable-panels";
 import { useId, useState } from "react";
 
 type Heading = { id: string; text: string; depth: number };
@@ -38,11 +39,12 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
     ancestors.push(node);
   }
 
-  return <aside className="toc" aria-label="On this page">
-    <p className="eyebrow">On this page</p>
+  return <aside id="page-toc" className="toc" aria-label="On this page">
+    <div className="panel-scroll"><p className="eyebrow">On this page</p>
     <nav aria-label="Table of contents">
       <ul>{roots.map(node => <HeadingBranch key={node.id} node={node} />)}</ul>
     </nav>
     <a className="back-top" href="#main-content">Back to top ↑</a>
+    </div><PanelResizeHandle side="right" controls="page-toc" label="Resize right table of contents" />
   </aside>;
 }

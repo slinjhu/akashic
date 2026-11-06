@@ -84,6 +84,12 @@ Open the gear button at the top right for settings. The card contains switches
 for the left navigation and right table of contents, plus an appearance selector. Their visibility is saved in this browser and
 restored after refresh. On narrow screens, opened panels appear above the content.
 
+On desktop, drag either side-panel divider to resize it. The divider runs from
+below the top navigation to the bottom of the viewport. Widths are saved in this
+browser. Focus a divider and use the arrow keys to adjust it, or double-click it
+(or press Enter) to restore the default width. Stacked panels on narrow screens
+use the available width instead.
+
 ## Code blocks
 
 Give fenced code blocks a language such as `python`, `sh`, `json`, or

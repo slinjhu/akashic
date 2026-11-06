@@ -1,5 +1,6 @@
 "use client";
 
+import { PanelResizeHandle } from "./resizable-panels";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -37,11 +38,12 @@ export function Navigation({ entries, tags }: { entries: Entry[]; tags: { tag: s
   return <>
     <button className="mobile-nav" aria-expanded={open} aria-controls="library-nav" onClick={() => setOpen(!open)}>{isTags ? "Browse tags" : "Browse library"} <span>{open ? "−" : "+"}</span></button>
     <nav id="library-nav" className={`sidebar ${open ? "is-open" : ""}`} aria-label={isTags ? "Tags" : "Library"}>
-      <p className="eyebrow">{isTags ? "Tags" : "Topics"}</p>
+      <div className="panel-scroll"><p className="eyebrow">{isTags ? "Tags" : "Topics"}</p>
       {isTags ? <ul className="sidebar-tags">{tags.map(({ tag, count }) => <li key={tag}>
         <a href={`#tag:${encodeURIComponent(tag)}`} onClick={() => setOpen(false)}><span>{tag}</span><span className="sidebar-tag-count">{count}</span></a>
       </li>)}</ul> : <ul className="nav-tree">{branches(tree)}</ul>}
       {!isTags && <div className="sidebar-footer">Keep learning.<br/><span>Make it your own.</span></div>}
+      </div><PanelResizeHandle side="left" controls="library-nav" label="Resize left navigation" />
     </nav>
   </>;
 }
