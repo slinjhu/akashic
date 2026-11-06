@@ -266,9 +266,9 @@ questions that challenged skilled non-experts even with web access. This also
 helps study how people can evaluate answers beyond their own expertise.
 [Paper](https://arxiv.org/html/2311.12022v1).
 
-**Size:** 198 four-choice questions in biology, chemistry, and physics.
-Diamond is the subset selected for stronger expert agreement and non-expert
-difficulty, rather than the full GPQA collection.
+**Size:** Diamond contains 198 four-choice questions selected from the
+448-question GPQA main set for stronger expert agreement and non-expert
+difficulty. The questions cover biology, chemistry, and physics.
 [Subset definition](https://arxiv.org/html/2311.12022v1#S2.SS3).
 
 **Metric:** one headline **accuracy (%)** score: correct choices ÷ 198 × 100.
