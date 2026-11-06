@@ -80,6 +80,8 @@ does not prove that the model's explanation or internal reasoning is correct.
 
 ### ✅ 1.2. World knowledge & factuality
 
+These datasets test subject knowledge, factual recall, resistance to common misconceptions, and whether claims or generated answers are supported by evidence.
+
 #### ✅ 1.2.1. MMLU — broad knowledge across subjects
 
 **Motivation:** narrow language tasks did not reveal whether a model could use
@@ -918,13 +920,13 @@ Question: Given the story, how would you uniquely allocate each person to make s
 
 Answer: B.
 
-### 1.4. Mathematics
+### ✅ 1.4. Mathematics
 
 Mathematical tasks make the final answer easier to check, while raising a new
 question: can the model translate words into operations and keep the steps
 consistent?
 
-#### 1.4.1. GSM8K — multistep arithmetic from word problems
+#### ✅ 1.4.1. GSM8K — multistep arithmetic from word problems
 
 **Motivation:** study multistep reasoning on word problems whose mathematics
 is elementary. The challenge is translating the story into a consistent
@@ -957,7 +959,7 @@ A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bol
 
 Answer: 3.
 
-#### 1.4.2. MATH-500 — competition-style mathematical problems
+#### ✅ 1.4.2. MATH-500 — competition-style mathematical problems
 
 **Motivation:** provide a compact evaluation of competition-style mathematics
 for repeated experiments. The subset was used in *Let's Verify Step by Step*
