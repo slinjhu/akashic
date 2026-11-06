@@ -1,6 +1,6 @@
 ---
 title: Common evaluation datasets
-description: Why LLM benchmarks exist, what their scores measure, and worked examples, starting with 21 text pretraining evaluations.
+description: Why LLM benchmarks exist, what their scores measure, and worked examples, covering 21 text pretraining and six text post-training benchmarks.
 tags:
   - LLM
   - Datasets
@@ -35,7 +35,7 @@ remembering facts, following a narrative, doing arithmetic, and writing working
 code. This page develops those distinctions through concrete examples.
 
 **About the samples:** benchmark samples below come from released datasets,
-with recorded answers and source links. Long passages labeled “excerpt” omit
+with recorded answers or evaluation checks and source links. Long passages labeled “excerpt” omit
 part of the original context. Row numbers start at 1, excluding headers.
 Letter labels are added when choices are stored without them; math delimiters
 are adapted for display. The opening plant question is illustrative.
@@ -1091,10 +1091,294 @@ share underlying questions or skills, so averaging all 21 scores does not create
 
 ## 2. Text post training
 
-*Planned section.* This will cover evaluations of behavior after instruction
-and preference training, including instruction following, conversational
-helpfulness, and tool use. The current page develops text pretraining first;
-the benchmarks above can also be rerun on post-trained checkpoints.
+Post-training turns a text model into an assistant that can follow requests
+and act on them. Start with a response constraint, such as “use only lowercase.”
+Then carry that constraint through a conversation. Finally, give the assistant
+tools and check whether it actually completes the user's task.
+
+These six benchmarks cover those steps. Their evaluation prompts are held-out
+tests, even when a project also releases separate data for training. Many tasks
+have no single correct wording: their samples below show the recorded checks or
+expected outcomes instead.
+
+### 2.1. Instruction following
+
+#### 2.1.1. IFEval — following checkable instructions
+
+**Motivation:** test whether an assistant obeys explicit requirements such as
+word limits, required phrases, or output format. These requirements can be
+checked with code, avoiding subjective judgments about whether a response
+“looks helpful.”
+[Original project](https://github.com/google-research/google-research/tree/master/instruction_following_eval).
+
+**Size:** 541 evaluation prompts covering 25 types of verifiable instruction.
+One prompt can contain several instructions.
+[Released prompts](https://github.com/google-research/google-research/blob/master/instruction_following_eval/data/input_data.jsonl).
+
+**Metric:** four accuracy scores, all higher is better. **Prompt-level accuracy**
+counts a response as correct only if it passes every instruction; **instruction-level
+accuracy** counts individual requirements passed. Each has a **strict** version
+that checks the original response and a **loose** version that also tries small
+cleanup steps, such as removing an introductory line. A single reported “IFEval”
+number should identify which of these four it uses. These checks establish
+constraint compliance, not factual accuracy or writing quality.
+[Scoring procedure](https://github.com/google-research/google-research/blob/master/instruction_following_eval/evaluation_lib.py).
+
+**Sample 1: letter case** (from the dataset):
+
+Compose a poem all in lowercase letters about my friend Barnet.
+
+Check: the response must use lowercase letters.
+[Record 1593](https://github.com/google-research/google-research/blob/master/instruction_following_eval/data/input_data.jsonl).
+
+**Sample 2: punctuation** (from the dataset):
+
+Write a riddle about Camilla that doesn't use commas.
+
+Check: the response must contain no commas.
+[Record 3615](https://github.com/google-research/google-research/blob/master/instruction_following_eval/data/input_data.jsonl).
+
+#### 2.1.2. Multi-IF — retaining instructions across turns and languages
+
+**Motivation:** an assistant may follow a request initially, then forget it when
+the user adds another requirement. Multi-IF extends IFEval into conversations
+and multiple languages to expose that failure.
+[Original paper](https://arxiv.org/abs/2410.15553).
+
+**Size:** 4,501 evaluation conversations across eight languages: English,
+French, Russian, Hindi, Italian, Portuguese, Spanish, and Chinese. The benchmark
+is designed around three user turns; the released CSV has 56 records without a
+third prompt, so it is more precise to say **up to three turns per record**.
+[Released dataset](https://huggingface.co/datasets/facebook/Multi-IF/blob/main/multiIF_20241018.csv).
+
+**Metric:** the paper averages four accuracy scores: strict and loose
+instruction-level accuracy, and strict and loose conversation-level accuracy.
+The latter requires all applicable instructions from the conversation to be
+satisfied. Results are reported by turn and language; an overall number averages
+across turns and languages. Higher is better. A final-turn score and an
+all-turn average summarize different things, so keep that label with the number.
+[Metric definitions](https://arxiv.org/html/2410.15553v1#S4.SS1).
+
+**Sample: accumulating requirements** (from the dataset):
+
+- Turn 1: Write an essay about Alvin and the Chipmunks in English and in all capital letters.
+- Turn 2: The text should contain less than 150 words.
+- Turn 3: Your response should include the word music at least 3 times.
+
+Checks at turn 3: retain uppercase text, stay below 150 words, and include
+“music” at least three times; the keyword check is case-insensitive.
+The assistant generates a response between user turns.
+[Record 2247:11:en](https://huggingface.co/datasets/facebook/Multi-IF/blob/main/multiIF_20241018.csv).
+
+#### 2.1.3. MultiChallenge — keeping track of a conversation
+
+**Motivation:** test conversational failures that simple format checks miss:
+forgetting an earlier instruction, overlooking a useful fact, losing parts of a
+draft during revision, or failing to notice inconsistent context.
+[Original paper](https://arxiv.org/abs/2501.17399).
+
+**Size:** 273 evaluation conversations across four categories: instruction
+retention, inference memory, reliable version editing, and self-coherence.
+[Released dataset](https://github.com/ekwinox117/multi-challenge/blob/main/data/benchmark_questions.jsonl).
+
+**Metric:** one overall pass rate, plus a pass rate for each category. The model
+receives a stored conversation and generates the final response. An LLM judge
+checks a question-specific yes/no criterion; the score is the percentage that
+pass, with higher being better. The default is one attempt. The runner can also
+count a conversation as successful if any of several attempts passes, so report
+the number of attempts and judge used.
+[Evaluation implementation](https://github.com/ekwinox117/multi-challenge).
+
+**Sample 1: instruction retention** (dataset excerpts):
+
+Earlier user instruction: For the entirety of our conversation, please answer
+only with 'Yes' or 'No' to my questions.
+
+Final user request: I'm really struggling with how to resolve conflicts among
+my staff. Could you please give me some advice?
+
+Check: does the response contain only “Yes” or “No”?
+[Record 6781ad8b500c15bd7ab291a1; full conversation](https://github.com/ekwinox117/multi-challenge/blob/main/data/benchmark_questions.jsonl).
+
+**Sample 2: inference memory** (dataset excerpts):
+
+Earlier user context: This time around, I watched lesson recap videos on Canvas,
+which I now have for all of my law school classes, and I think that watching
+them helped me in regard to retaining information about the subject.
+
+Final user question: What are some methods of studying that you would recommend
+for me, regarding the Copyright Law midterm?
+
+Check: recommend watching Copyright Law recap videos on Canvas.
+[Record 6765f1c80960c015f806a7c1; full conversation](https://github.com/ekwinox117/multi-challenge/blob/main/data/benchmark_questions.jsonl).
+
+**Sample 3: version editing** (dataset excerpts):
+
+Initial request: I'm a retired screenwrite preparing a lecture on the influence
+of Cold War ideology on Hollywood films. Could you help me draft an outline for it?
+
+After the assistant supplies an outline, the user asks: This outline looks great!
+Could you add a section for personal anecdotes about my experiences with the
+Hollywood blacklist and McCarthyism?Could you also add a paragraph on how Roy Cohn
+has remained influential over the years?
+
+Check: add the personal-anecdotes section while preserving the lecture-outline
+format.
+[Record 6765f1c843c9bda0861f11fa; full outline and conversation](https://github.com/ekwinox117/multi-challenge/blob/main/data/benchmark_questions.jsonl).
+
+**Sample 4: self-coherence** (dataset excerpts):
+
+Earlier user statement: I'm trying to get everything set up before the Open
+Source Summit in June.
+
+Later user question: Since the Open Source Summit is just a couple of weeks away
+in July, is there any other software you recommend I install?
+
+Check: recall that the user originally said June.
+[Record 67456856a77b2db232c76c97; full conversation](https://github.com/ekwinox117/multi-challenge/blob/main/data/benchmark_questions.jsonl).
+
+#### 2.1.4. IFBench — generalizing to unfamiliar constraints
+
+**Motivation:** a model can improve on familiar instruction checks without
+learning to follow new kinds of requirements. IFBench introduces constraints
+outside IFEval's set to test that generalization, such as counting distinct words
+or placing an emoji after every sentence.
+[Original project](https://github.com/allenai/IFBench).
+
+**Size:** 300 evaluation prompts using 58 new constraint types in
+`allenai/IFBench_test`. Hugging Face labels its split `train`, but this is the
+benchmark's test set; the separately released IF-RLVR data is for training.
+[Dataset](https://huggingface.co/datasets/allenai/IFBench_test).
+
+**Metric:** the paper's headline number is **prompt-level loose accuracy**:
+the percentage of responses passing every constraint after the allowed cleanup
+steps. Higher is better. Code performs the checks; strict and instruction-level
+variants are also available, so a score should name its variant.
+[Evaluation instructions](https://github.com/allenai/IFBench#how-to-run-the-evaluation).
+
+**Sample 1: vocabulary diversity** (from the dataset):
+
+Use at least 85 unique words in the response. what is lua code?
+
+Check: at least 85 distinct words under the benchmark's word-counting rules.
+[Record 54](https://huggingface.co/datasets/allenai/IFBench_test/viewer/default/train?row=54).
+
+**Sample 2: sentence formatting** (from the dataset):
+
+explain Relativistic speed Please use an emoji at the end of every sentence.
+
+Check: every sentence must end with an emoji.
+[Record 70](https://huggingface.co/datasets/allenai/IFBench_test/viewer/default/train?row=70).
+
+### 2.2. Agentic & tool use
+
+Here, an **agent** is an assistant that can call tools and use their results to
+choose its next action. A correct-looking reply is insufficient when the task
+requires changing an order, fixing a connection, or retrieving stored information.
+
+#### 2.2.1. Tau2-bench (τ²-bench) — completing tasks with a simulated user
+
+**Motivation:** test whether an agent can resolve customer-service requests
+while following business rules and coordinating with a user. In its telecom
+domain, both sides can act: the agent can update an account, while the simulated
+user can change phone settings.
+[Original paper](https://arxiv.org/abs/2506.07982).
+
+**Size:** the original English text suite contains **278 tasks**: 50 airline,
+114 retail, and 114 telecom. These counts refer to the
+[v0.1.0 release](https://github.com/sierra-research/tau2-bench/tree/v0.1.0/data/tau2/domains),
+not later multilingual or voice extensions. Each task can generate multiple
+different conversations when rerun.
+
+**Metric:** **pass^1** is the average success rate for a single run; domain scores
+are commonly reported separately. Task-specific checks examine the final database
+or environment state and, where specified, required actions or communicated
+information. **pass^k** estimates the chance that a task succeeds in all k
+independent runs, testing reliability. Higher is better. Unlike code benchmarks'
+pass@k, one successful attempt is not enough for pass^k. Report the domain,
+user-simulator model, and number of trials with the score.
+[Evaluation method](https://arxiv.org/html/2506.07982v1#S3.SS3).
+
+**Sample 1: retail exchange** (from the dataset's simulated-user instructions):
+
+You received your order #W2378156 and wish to exchange the mechanical keyboard
+for a similar one but with clicky switches and the smart thermostat for one
+compatible with Google Home instead of Apple HomeKit. If there is no keyboard
+that is clicky, RGB backlight, full size, you'd go for no backlight.
+
+Expected outcome: exchange both items in order #W2378156 for the specified
+replacement items. The task records an
+`exchange_delivered_order_items` call with replacement IDs `7706410293` and
+`7747408585`.
+[Retail task 0](https://github.com/sierra-research/tau2-bench/blob/v0.1.0/data/tau2/domains/retail/tasks.json).
+
+**Sample 2: mobile-data troubleshooting** (excerpt from the dataset's task ticket):
+
+The user is experiencing issues with their mobile data. They are unable to use
+their phone to browse the internet, and the status bar shows 'No Service'.
+
+Initial state: mobile data is switched off and the line has exceeded its data
+allowance. The user permits a 2 GB top-up but does not want a plan change.
+
+Checks: mobile data is enabled, the speed test reports “excellent” at 200 Mbps,
+and exactly 2 GB has been added. The agent must coordinate the user's phone
+action with its own account action.
+[Telecom task `[mobile_data_issue]data_mode_off|data_usage_exceeded[PERSONA:None]`](https://github.com/sierra-research/tau2-bench/blob/v0.1.0/data/tau2/domains/telecom/tasks.json).
+
+#### 2.2.2. BFCL v4 — choosing and using tools correctly
+
+**Motivation:** test whether an assistant selects the right function, supplies
+valid arguments, and uses tool results across multiple steps. The Berkeley
+Function Calling Leaderboard's fourth version adds web search and persistent
+memory to earlier single-turn and multi-turn tool tasks.
+[Release overview](https://gorilla.cs.berkeley.edu/blogs/15_bfcl_v4_web_search.html).
+
+**Size:** the inspected v4 release has **5,106 scored cases**: 3,641 single-turn
+cases, 800 multi-turn cases, 200 web-search cases, and 465 memory cases.
+The search cases reuse 100 questions with and without search snippets; memory
+reuses 155 questions across three memory backends. A separate 5,200-case
+format-sensitivity evaluation does not contribute to the overall score.
+[Released files and composition](https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard/bfcl_eval/data),
+[scored categories](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py).
+
+**Metric:** one overall accuracy plus category scores, all higher is better.
+Depending on the task, graders check function names and arguments, execution
+state and required calls, or a final answer against accepted answers. The overall
+score combines category summaries with fixed weights: 10% non-live, 10% live,
+10% irrelevance detection, 30% multi-turn, and 40% agentic. It is not
+simply correct cases divided by 5,106.
+[Score calculation](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py).
+
+**Sample 1: a single function call** (from the dataset):
+
+Find the area of a triangle with a base of 10 units and height of 5 units.
+
+Available function: `calculate_triangle_area(base, height, unit)`; `base` and
+`height` are required, and `unit` defaults to `"units"`.
+
+Accepted call: `calculate_triangle_area(base=10, height=5)`.
+The reference also accepts explicitly passing `unit="units"`.
+[Record simple_python_0](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_simple_python.json),
+[accepted arguments](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v4_simple_python.json).
+
+**Sample 2: web search** (from the dataset):
+
+Some countries are known for producing luxury goods, including the world's most
+expensive tea. In April 2025, who is the richest billionaire (according to Forbes)
+from the country that produces the most expensive tea?
+
+The agent has search tools and must gather the information needed to answer.
+The two configurations either expose search snippets or require opening pages.
+[Record web_search_0](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_web_search.json).
+
+**Sample 3: persistent memory** (from the dataset):
+
+What is my first name?
+
+The answer must come from information retained from earlier interactions.
+The evaluation supplies a memory environment; this is not an isolated question
+that the model can answer from general knowledge.
+[Record memory_0-customer-0](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_memory.json).
 
 ## 3. Multimodal pretraining
 
