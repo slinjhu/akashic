@@ -288,9 +288,11 @@ Answer: C.
 
 #### 1.2.7. SciQ — basic science questions at scale
 
-**Motivation:** collect science questions efficiently by helping human writers
-with source passages and machine-suggested wrong answers. This supports
-research on science question answering.
+**Motivation:** build a large collection of science questions to train and test
+question-answering models. Human writers read science passages and wrote
+questions with correct answers. A machine suggested plausible wrong choices,
+which the writers could select or edit. This made multiple-choice questions
+easier to create while avoiding obviously wrong options that make a test too easy.
 [Paper](https://arxiv.org/abs/1707.06209).
 
 **Size:** 1,000 test questions, each with four choices. These are part of a
@@ -304,7 +306,7 @@ supporting paragraph is supplied, since that changes what information the
 model can use.
 [Dataset and task](https://huggingface.co/datasets/allenai/sciq).
 
-**Sample** (illustrative, without supporting passage):
+**Sample 1: Biology** (illustrative, without supporting passage):
 
 Which gas is released during oxygenic photosynthesis?
 
@@ -312,6 +314,33 @@ Which gas is released during oxygenic photosynthesis?
 - B. Oxygen
 - C. Methane
 - D. Hydrogen
+
+Answer: B.
+
+**Sample 2: Physics** (illustrative, without supporting passage):
+
+A wooden block slides across a level floor and gradually slows down. Which
+force opposes its motion where the block contacts the floor?
+
+- A. Gravity
+- B. Magnetism
+- C. Friction
+- D. Buoyancy
+
+Answer: C.
+
+**Sample 3: Chemistry** (illustrative, with supporting passage):
+
+Supporting passage: An atom contains protons, neutrons, and electrons. Protons
+have a positive electric charge, electrons have a negative charge, and neutrons
+have no electric charge.
+
+Question: Which particle in an atom has no electric charge?
+
+- A. Proton
+- B. Neutron
+- C. Electron
+- D. All three particles
 
 Answer: B.
 
