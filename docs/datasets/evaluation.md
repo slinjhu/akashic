@@ -47,7 +47,7 @@ during or after pretraining**. It does not mean training on these test answers.
 The [LLM datasets overview](llm.md) explains the distinction between training
 corpora and held-out evaluation data.
 
-The 21 benchmarks below are grouped by the capabilities they assess. These are not exclusive
+The 25 benchmark entries below are grouped by the capabilities they assess. These are not exclusive
 stage assignments: SimpleQA, GPQA, MATH-500, and LiveCodeBench, for example, also
 appear in evaluations of post-trained models. A base model's ability to complete
 text and an assistant's ability to follow a request can produce different
@@ -78,7 +78,7 @@ As the tasks become richer, the scoring method changes:
 The entries below specify which of these applies. A correct final answer alone
 does not prove that the model's explanation or internal reasoning is correct.
 
-### 1.2. World knowledge & factuality
+### ✅ 1.2. World knowledge & factuality
 
 #### ✅ 1.2.1. MMLU — broad knowledge across subjects
 
@@ -210,6 +210,33 @@ This distinguishes factual success from abstention; higher correctness is better
 Who received the IEEE Frank Rosenblatt Award in 2010?
 
 Answer: Michio Sugeno
+
+##### 1.2.4.1. SimpleQA Verified — a curated variant
+
+**Motivation:** improve the reliability of short-answer factuality evaluation by
+removing redundant questions, reconciling conflicting sources, correcting labels,
+and balancing topics. It evaluates facts recalled without external tools.
+[Original paper](https://arxiv.org/abs/2509.07968).
+
+**Size:** 1,000 evaluation questions selected and revised from SimpleQA, released
+in the `eval` split. This is an alternative evaluation set, not 1,000 additional
+questions to combine with the original score.
+[Official dataset](https://huggingface.co/datasets/google/simpleqa-verified).
+
+**Metric:** the paper's headline is one **F1 score**, the harmonic mean of overall
+correctness and correctness among attempted answers. A reference-based judge labels
+responses correct, incorrect, or not attempted. Higher is better; this balances
+answering more questions correctly with avoiding wrong attempts. Label a reported
+plain accuracy separately from F1.
+[Metric and grading procedure](https://arxiv.org/html/2509.07968v1#S3).
+
+**Sample** (from the dataset):
+
+What day, month, and year was Vladislav Kaborda born?
+
+Answer: July 24, 1995.
+
+[Released CSV, original_index 50](https://huggingface.co/datasets/google/simpleqa-verified/blob/main/simpleqa_verified.csv).
 
 #### ✅ 1.2.5. TruthfulQA — resisting learned misconceptions
 
@@ -362,6 +389,162 @@ Compounds that are capable of accepting electrons, such as o 2 or f2, are called
 - D. residues
 
 Answer: B.
+
+#### ✅ 1.2.8. Natural Questions / NQ-Open — answering real search questions
+
+**Motivation:** test questions people actually asked Google, rather than questions
+written specifically for a quiz. In the original Natural Questions task, the model
+receives a question and a Wikipedia page, then selects the text on that page that
+answers the question. NQ-Open supplies only the question, so the model must answer
+from memory or search for supporting information itself.
+[Original dataset](https://ai.google.com/research/NaturalQuestions/dataset),
+[NQ-Open task](https://github.com/google-research-datasets/natural-questions/blob/master/nq_open/README.md).
+
+**Size:** NQ-Open has 87,925 training questions and a 3,610-question original
+**development set**, commonly used for reported evaluation. EfficientQA uses
+separate splits of 1,800 development and 1,769 test questions; do not mix these
+with the original NQ-Open results.
+[Official split sizes](https://github.com/google-research-datasets/natural-questions/blob/master/nq_open/README.md).
+
+**Metric:** for NQ-Open, one **normalized exact-match accuracy (%)**: a prediction
+passes if it matches any accepted answer after lowercasing and removing articles,
+punctuation, and extra whitespace. Average these binary results across questions;
+higher is better. State whether retrieval is allowed. The original page-based task
+scores how well the model locates the relevant passage and the short answer within
+it, so its scores are different.
+[NQ-Open scoring code](https://github.com/google-research/language/blob/master/language/orqa/utils/eval_utils.py),
+[Original NQ evaluation](https://github.com/google-research-datasets/natural-questions).
+
+**Sample** (from the dataset):
+
+when was the last time anyone was on the moon
+
+Accepted answers: “14 December 1972 UTC” or “December 1972”.
+
+[Original NQ-Open development set, row 1](https://github.com/google-research-datasets/natural-questions/blob/master/nq_open/NQ-open.dev.jsonl).
+
+#### ✅ 1.2.9. PopQA — knowing facts about less-famous entities
+
+**Motivation:** distinguish knowledge of well-known people and places from
+knowledge of obscure ones. Questions are built from Wikidata relationships, with
+Wikipedia page-view counts used to study how answer quality changes with entity
+popularity and when retrieval helps.
+[Original paper](https://arxiv.org/abs/2212.10511).
+
+**Size:** 14,267 questions in the released test set, covering 16 relationship
+types. Popularity-based subsets are smaller evaluations, not separate datasets.
+[Released data](https://huggingface.co/datasets/akariasai/PopQA).
+
+**Metric:** one **answer accuracy (%)**, often broken down by entity popularity.
+The original evaluator counts an answer as correct when the generated text
+contains an accepted answer or alias, with limited case variants. Average the
+binary results; higher is better. This containment check is more permissive than
+NQ-Open's exact match. Report whether the model uses retrieval.
+[Original evaluator](https://github.com/AlexTMallen/adaptive-retrieval/blob/main/run_model.py).
+
+**Sample 1: occupation** (from the dataset):
+
+What is George Rankin's occupation?
+
+Answer: politician. Accepted aliases include “political leader”.
+
+[Record 4222362](https://github.com/AlexTMallen/adaptive-retrieval/blob/main/data/popQA.tsv).
+
+**Sample 2: geography** (from the dataset):
+
+What is the capital of Massac County?
+
+Accepted answers: “Metropolis” or “Metropolis, Illinois”.
+
+[Record 3450708](https://github.com/AlexTMallen/adaptive-retrieval/blob/main/data/popQA.tsv).
+
+#### ✅ 1.2.10. FEVER — checking claims against evidence
+
+**Motivation:** test whether a system can find evidence and use it to verify a
+claim. FEVER means *Fact Extraction and VERification*. The task distinguishes a
+claim contradicted by evidence from one for which the corpus does not provide
+enough information.
+[Original dataset](https://fever.ai/dataset/fever.html).
+
+**Size:** 185,445 claims in the shared-task release: 145,449 training, 19,998
+development, and 19,998 blind-test claims. The labeled development set supports
+local evaluation; the original paper's split names differ from the shared task's.
+[Shared-task split table](https://aclanthology.org/W18-5501.pdf).
+
+**Metric:** one headline **FEVER score (%)**: the fraction of claims with both the
+correct label and at least one complete accepted evidence set. For a correct
+“Not enough information” prediction, evidence is not required. Higher is better.
+Label accuracy and evidence precision/recall are additional diagnostics; getting
+the label right without the required evidence does not earn a FEVER-score point.
+[Scoring definition](https://aclanthology.org/W18-5501.pdf).
+
+**Sample 1: supported claim** (from the dataset):
+
+Oliver Reed was a film actor.
+
+Label: SUPPORTS. One accepted evidence set is sentence 0 of `Oliver_Reed` in
+the released Wikipedia corpus.
+
+[Record 62037](https://fever.ai/dataset/fever.html).
+
+**Sample 2: refuted claim** (from the dataset):
+
+Lorelai Gilmore's father is named Robert.
+
+Label: REFUTES. The recorded evidence is sentence 3 of `Lorelai_Gilmore`.
+
+[Record 78526](https://fever.ai/dataset/fever.html).
+
+**Sample 3: insufficient evidence** (from the dataset):
+
+Henri Christophe is recognized for building a palace in Milot.
+
+Label: NOT ENOUGH INFO. No supporting or refuting evidence set is recorded;
+this label concerns evidence in the benchmark corpus, not a declaration that
+the claim is false.
+
+[Record 137637](https://fever.ai/dataset/fever.html).
+
+#### ✅ 1.2.11. FActScore — checking facts inside a long answer
+
+**Motivation:** a biography can mix accurate facts with invented details, making
+one correct/incorrect label too coarse. FActScore evaluates individual factual
+claims within generated text. It is a scoring method with accompanying biography
+data, and is also useful for evaluating post-trained assistants.
+[Original paper](https://arxiv.org/abs/2305.14251).
+
+**Size:** the official release provides a **183-person labeled prompt set** with
+human-annotated model outputs, and a **500-person unlabeled prompt set** for
+scoring new generations automatically. These count biography subjects, not
+individual factual claims; each response can contain many claims. Name the prompt
+set when reporting a result.
+[Released data and usage](https://github.com/shmsw25/FActScore#how-to-evaluate-your-own-lm).
+
+**Metric:** one mean **factual precision score**: split each response into atomic
+facts, check which are supported by a reference knowledge source such as Wikipedia,
+compute the supported fraction per response, then average over responses. Higher
+is better. The automated estimator uses retrieval and a model-based fact checker.
+The released scorer defaults to a penalty for responses with fewer than ten facts;
+report that setting and the response rate, since abstention is tracked separately.
+[Metric definition](https://arxiv.org/abs/2305.14251),
+[Scorer options](https://github.com/shmsw25/FActScore).
+
+**Sample** (from the released labeled data):
+
+Question: Tell me a bio of Lanny Flaherty.
+
+Two human-annotated claims from the released ChatGPT response:
+
+| Generated claim | Recorded annotation |
+|---|---|
+| Lanny Flaherty is an actor. | Supported |
+| Lanny Flaherty was born on December 18, 1949. | Not supported |
+
+These are excerpts from a model response being evaluated, not a reference
+biography. The remaining claims are omitted.
+
+[Official data archive](https://drive.google.com/file/d/155exEdKs7R21gZF4G-x54-XN3qswBcPo/view),
+`data/labeled/ChatGPT.jsonl`, row 1.
 
 ### 1.3. Commonsense & reasoning
 

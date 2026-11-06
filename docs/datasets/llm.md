@@ -234,7 +234,7 @@ Judge biases and label quality affect the behavior the model learns.
 
 ## 4. Evaluation datasets
 
-For motivations, scoring, and worked examples of 21 benchmarks, see
+For benchmark motivations, scoring, and worked examples, see
 [Common evaluation datasets](evaluation.md), starting with text pretraining.
 
 Training examples teach; held-out evaluation examples measure. If we train on
