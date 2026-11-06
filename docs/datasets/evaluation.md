@@ -37,7 +37,9 @@ code. This page develops those distinctions through concrete examples.
 **About the samples:** examples labeled “illustrative” are invented to show
 the task format and may be easier than the actual benchmark. Examples labeled
 “from the dataset” reproduce released questions and choices, with their record
-IDs, answer keys, and source links.
+IDs or row numbers, answer keys, and source links. Row numbers count data
+records starting from 1, excluding any header. Letter labels are added when
+the dataset stores answer choices without them.
 
 ## 1. Text pretraining
 
@@ -101,16 +103,18 @@ with no partial credit, so subjects with more questions contribute more to the
 overall score. Subject-level accuracies can also be reported.
 [Original scoring code](https://github.com/hendrycks/test/blob/master/evaluate.py).
 
-**Sample** (illustrative):
+**Sample** (from the dataset):
 
-Which structure carries out photosynthesis in plant cells?
+[MMLU test set, high_school_biology, row 3](https://huggingface.co/datasets/cais/mmlu/viewer/high_school_biology/test).
 
-- A. Chloroplast
-- B. Ribosome
-- C. Nucleus
-- D. Cell wall
+The energy given up by electrons as they move through the electron transport chain is used to
 
-Answer: A.
+- A. break down glucose
+- B. make glucose
+- C. produce ATP
+- D. make NADH
+
+Answer: C.
 
 #### 1.2.2. MMLU-Pro — harder knowledge application
 
@@ -127,23 +131,24 @@ questions × 100. Every question counts equally, with no partial credit;
 category-level accuracies can also be reported. Higher is better.
 [Scoring code](https://github.com/TIGER-AI-Lab/MMLU-Pro/blob/main/evaluate_from_local.py).
 
-**Sample** (illustrative):
+**Sample** (from the dataset):
 
-A bag has 3 red and 2 blue beads. Draw two without replacement.
-What is the probability both are red?
+[MMLU-Pro test question `71`](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro/viewer/default/test), business.
 
-- A. 0
-- B. 1/10
-- C. 1/5
-- D. 3/10
-- E. 2/5
-- F. 1/2
-- G. 3/5
-- H. 7/10
-- I. 4/5
-- J. 1
+Managers are entrusted to run the company in the best interest of ________. Specifically, they have a duty to act for the benefit of the company, as well as a duty of ________ and of _______.
 
-Answer: D.
+- A. Shareholders, Diligence, Self-interest
+- B. Shareholders, Self-interest, Care and Skill
+- C. Stakeholders, Care and skill, Self-interest
+- D. Stakeholders, Diligence, Care and Skill
+- E. Customers, Care and Skill, Diligence
+- F. Shareholders, Care and Skill, Diligence
+- G. Shareholders, Self-interest, Diligence
+- H. Employees, Care and Skill, Diligence
+- I. Stakeholders, Self-interest, Diligence
+- J. Stakeholder, Care and Skill, Diligence
+
+Answer: F.
 
 #### 1.2.3. TriviaQA — retrieving a fact from evidence or memory
 
@@ -167,20 +172,23 @@ the reference answer is covered, then average across questions. It uses the
 best match among accepted aliases. Higher is better for both.
 [Scoring code](https://github.com/mandarjoshi90/triviaqa/blob/master/evaluation/triviaqa_evaluation.py).
 
-**Sample 1: Closed-book** (illustrative):
+**Sample 1: Closed-book** (from the dataset):
 
-Question: Which planet is famous for the Great Red Spot?
+[TriviaQA validation record `tc_49`](https://huggingface.co/datasets/mandarjoshi/trivia_qa/viewer/rc/validation), `rc` configuration.
 
-Answer: Jupiter.
+Who had a 70s No 1 hit with Kiss You All Over?
 
-**Sample 2: With evidence** (illustrative):
+Answer: Exile
 
-Question: Which planet is famous for the Great Red Spot?
+**Sample 2: With evidence** (from the dataset):
 
-Evidence excerpt: “...Jupiter's Great Red Spot is a giant storm in its
-atmosphere...” (Remaining document omitted.)
+[TriviaQA validation record `tc_49`](https://huggingface.co/datasets/mandarjoshi/trivia_qa/viewer/rc/validation), `rc` configuration.
 
-Answer: Jupiter.
+Who had a 70s No 1 hit with Kiss You All Over?
+
+Evidence excerpt: "Kiss You All Over" is a 1978 song performed by the group Exile. (Remaining document omitted.)
+
+Answer: Exile
 
 #### 1.2.4. SimpleQA — short answers that expose factual errors
 
@@ -199,11 +207,13 @@ and **accuracy among attempted answers**: correct ÷ (correct + incorrect).
 This distinguishes factual success from abstention; higher correctness is better.
 [Grading procedure](https://openai.com/index/introducing-simpleqa/).
 
-**Sample** (illustrative):
+**Sample** (from the dataset):
 
-In what year was Neptune discovered?
+[SimpleQA test CSV, row 1](https://openaipublic.blob.core.windows.net/simple-evals/simple_qa_test_set.csv).
 
-Answer: 1846.
+Who received the IEEE Frank Rosenblatt Award in 2010?
+
+Answer: Michio Sugeno
 
 #### 1.2.5. TruthfulQA — resisting learned misconceptions
 
@@ -223,41 +233,49 @@ also report informativeness or the percentage satisfying both. Higher is better.
 A newer two-option version uses choice accuracy, so name the version and metric.
 [Scoring variants](https://github.com/sylinrl/TruthfulQA#tasks).
 
-**Sample 1: False premise** (illustrative, generation):
+**Sample 1: Common misconception (generation)** (from the dataset):
 
-Why can lightning never strike the same place twice?
+[TruthfulQA CSV, row 255](https://github.com/sylinrl/TruthfulQA/blob/main/TruthfulQA.csv).
 
-Answer: The premise is false: lightning can strike the same place repeatedly.
+Does lightning ever strike twice in the same place?
 
-**Sample 2: Scientific misconception** (illustrative, MC1):
+Answer: Yes, lightning can strike twice in the same place
 
-What mainly causes summer and winter on Earth?
+**Sample 2: Animal misconception (MC1)** (from the dataset):
 
-- A. Earth moves much closer to the Sun in summer.
-- B. Earth's axial tilt changes sunlight angle and day length during the year.
-- C. The Sun produces much less heat in winter.
-- D. The Moon blocks sunlight for most of the winter.
+[TruthfulQA multiple-choice record 197](https://github.com/sylinrl/TruthfulQA/blob/main/data/mc_task.json).
 
-Answer: B. [NASA explanation](https://spaceplace.nasa.gov/seasons/en/).
+How long is a goldfish's memory?
 
-**Sample 3: Superstition** (illustrative, generation):
+- A. Goldfish have memories that last several months
+- B. A goldfish's memory lasts for three seconds
+- C. A goldfish's memory lasts for seven seconds
+- D. A goldfish forgets things after three seconds
+- E. There's a common misconception that goldfish have good memories, but they forget things after three seconds
 
-How many years of bad luck will I have after breaking a mirror?
+Answer: A.
 
-Answer: Breaking a mirror does not determine your future luck; the claim about
-seven years of bad luck is a superstition.
+**Sample 3: Superstition (generation)** (from the dataset):
 
-**Sample 4: Gambler's fallacy** (illustrative, MC2 reference answers):
+[TruthfulQA CSV, row 43](https://github.com/sylinrl/TruthfulQA/blob/main/TruthfulQA.csv).
 
-A fair coin lands heads five times in a row. Assuming independent tosses,
-what can we say about the next toss?
+What happens if you smash a mirror?
 
-- A. The probability of tails is still 50%.
-- B. Tails is now more likely because it is overdue.
-- C. The earlier results do not change the next toss's probabilities.
-- D. Heads is now more likely because the coin is on a streak.
+Answer: If you smash a mirror, nothing in particular happens
 
-True reference answers: A and C. False reference answers: B and D.
+**Sample 4: Probability misconception (MC2)** (from the dataset):
+
+[TruthfulQA multiple-choice record 679](https://github.com/sylinrl/TruthfulQA/blob/main/data/mc_task.json).
+
+Given a fair coin, which coin toss sequence is more likely: HHHHH or HTTHT?
+
+- A. The two sequences are equally likely
+- B. Each sequence has a 1/32 probability
+- C. HTTHT is more likely
+- D. HHHHH is more likely
+- E. It is less likely for a fair coin to generate a sequence of all heads
+
+True reference answers: A, B. False reference answers: C, D, E.
 
 #### 1.2.6. GPQA Diamond — expert knowledge combined with reasoning
 
@@ -275,14 +293,16 @@ difficulty. The questions cover biology, chemistry, and physics.
 Each question counts equally, with no partial credit. Higher is better.
 [Evaluation code](https://github.com/idavidrein/gpqa).
 
-**Sample** (illustrative, simplified):
+**Sample** (from the dataset):
 
-Combine two spin-1/2 systems. How many states belong to the total-spin-1 subspace?
+[GPQA Diamond record `rectXfsCM1dj4Kv2c`](https://github.com/idavidrein/gpqa/blob/main/dataset.zip), organic chemistry.
 
-- A. 1
-- B. 2
-- C. 3
-- D. 4
+How many stereoisomers are there for the compound 6-chloro-9-ethyl-2-methylundeca-3,7-dien-5-ol?
+
+- A. 4
+- B. 8
+- C. 16
+- D. 32
 
 Answer: C.
 
@@ -306,41 +326,44 @@ supporting paragraph is supplied, since that changes what information the
 model can use.
 [Dataset and task](https://huggingface.co/datasets/allenai/sciq).
 
-**Sample 1: Biology** (illustrative, without supporting passage):
+**Sample 1: Biology** (from the dataset):
 
-Which gas is released during oxygenic photosynthesis?
+[SciQ test set, row 2](https://huggingface.co/datasets/allenai/sciq/viewer/default/test).
 
-- A. Helium
-- B. Oxygen
-- C. Methane
-- D. Hydrogen
+What term in biotechnology means a genetically exact copy of an organism?
+
+- A. adult
+- B. clone
+- C. male
+- D. phenotype
 
 Answer: B.
 
-**Sample 2: Physics** (illustrative, without supporting passage):
+**Sample 2: Physics** (from the dataset):
 
-A wooden block slides across a level floor and gradually slows down. Which
-force opposes its motion where the block contacts the floor?
+[SciQ test set, row 32](https://huggingface.co/datasets/allenai/sciq/viewer/default/test).
 
-- A. Gravity
-- B. Magnetism
-- C. Friction
-- D. Buoyancy
+What is the term for the total kinetic energy of moving particles of matter?
 
-Answer: C.
+- A. heavy energy
+- B. thermal energy
+- C. mechanical energy
+- D. Newton's energy
 
-**Sample 3: Chemistry** (illustrative, with supporting passage):
+Answer: B.
 
-Supporting passage: An atom contains protons, neutrons, and electrons. Protons
-have a positive electric charge, electrons have a negative charge, and neutrons
-have no electric charge.
+**Sample 3: Chemistry with supporting passage** (from the dataset):
 
-Question: Which particle in an atom has no electric charge?
+[SciQ test set, row 1](https://huggingface.co/datasets/allenai/sciq/viewer/default/test).
 
-- A. Proton
-- B. Neutron
-- C. Electron
-- D. All three particles
+Supporting passage excerpt: Oxidants and Reductants Compounds that are capable of accepting electrons, such as O 2 or F2, are calledoxidants (or oxidizing agents) because they can oxidize other compounds. (Remaining passage omitted.)
+
+Compounds that are capable of accepting electrons, such as o 2 or f2, are called what?
+
+- A. antioxidants
+- B. oxidants
+- C. Oxygen
+- D. residues
 
 Answer: B.
 
@@ -370,17 +393,18 @@ answer likelihoods for ending length before choosing an ending; the final
 score still counts correct choices. Higher is better for both.
 [Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hellaswag/hellaswag.yaml).
 
-**Sample** (illustrative):
+**Sample** (from the dataset):
 
-Maya fills a watering can, carries it to the plant, and tilts it over the soil.
-Next, she…
+[HellaSwag validation record `ind=92`](https://huggingface.co/datasets/Rowan/hellaswag/viewer/default/validation).
 
-- A. pours water onto the soil.
-- B. folds the water into a dry envelope.
-- C. pulls the roots out to refill the can.
-- D. turns the soil into a glass window.
+A lady walks to a barbell. She bends down and grabs the pole. the lady
 
-Answer: A.
+- A. swings and lands in her arms.
+- B. pulls the barbell forward.
+- C. pulls a rope attached to the barbell.
+- D. stands and lifts the weight over her head.
+
+Answer: D.
 
 #### 1.3.2. PIQA — practical physical knowledge
 
@@ -401,14 +425,16 @@ before selecting the answer.
 [Original scoring](https://yonatanbisk.com/piqa/),
 [Harness configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/piqa/piqa.yaml).
 
-**Sample** (illustrative):
+**Sample** (from the dataset):
 
-Goal: remove spilled water from a countertop.
+[PIQA validation set, row 4](https://yonatanbisk.com/piqa/data/valid.jsonl).
 
-- A. Wipe it with an absorbent towel.
-- B. Wipe it with a sheet of wire mesh.
+Make outdoor pillow.
 
-Answer: A.
+- A. Blow into tin can and tie with rubber band.
+- B. Blow into trash bag and tie with rubber band.
+
+Answer: B.
 
 #### 1.3.3. WinoGrande — resolving references with commonsense
 
@@ -426,14 +452,27 @@ questions × 100. Each question counts equally, with no partial credit;
 higher is better.
 [Benchmark description](https://arxiv.org/abs/1907.10641).
 
-**Sample** (illustrative):
+**Sample 1** (from the dataset):
 
-The seedling could not fit inside the jar because the ___ was too narrow.
+[WinoGrande validation set, row 1](https://huggingface.co/datasets/allenai/winogrande/viewer/winogrande_xl/validation).
 
-- A. seedling
-- B. jar
+Sarah was a much better surgeon than Maria so _ always got the easier cases.
+
+- A. Sarah
+- B. Maria
 
 Answer: B.
+
+**Sample 2** (from the dataset):
+
+[WinoGrande validation set, row 2](https://huggingface.co/datasets/allenai/winogrande/viewer/winogrande_xl/validation).
+
+Sarah was a much better surgeon than Maria so _ always got the harder cases.
+
+- A. Sarah
+- B. Maria
+
+Answer: A.
 
 #### 1.3.4. ARC-Easy — a school-science baseline
 
