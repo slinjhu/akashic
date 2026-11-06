@@ -83,7 +83,7 @@ does not prove that the model's explanation or internal reasoning is correct.
 Start with what the model knows. Then separate **recognizing** the right fact
 from **recalling** it without choices, and from **resisting a plausible falsehood**.
 
-#### 1.2.1. MMLU — broad knowledge across subjects
+#### ✅ 1.2.1. MMLU — broad knowledge across subjects
 
 **Motivation:** narrow language tasks did not reveal whether a model could use
 the breadth of knowledge encountered during pretraining. MMLU (Massive Multitask
@@ -115,7 +115,7 @@ The energy given up by electrons as they move through the electron transport cha
 
 Answer: C.
 
-#### 1.2.2. MMLU-Pro — harder knowledge application
+#### ✅ 1.2.2. MMLU-Pro — harder knowledge application
 
 **Motivation:** make MMLU-style evaluation harder and less sensitive to prompt
 wording by emphasizing reasoning and using more plausible wrong answers.
