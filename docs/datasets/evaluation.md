@@ -1014,12 +1014,12 @@ in terms of $p$ and $q.$
 
 Answer: $p - q$.
 
-### 1.5. Reading comprehension & language modeling
+### ✅ 1.5. Reading comprehension & language modeling
 
 So far, many answers depended on stored knowledge. These tasks make information
 in the supplied text central to the answer.
 
-#### 1.5.1. BoolQ — answering yes/no questions using a passage
+#### ✅ 1.5.1. BoolQ — answering yes/no questions using a passage
 
 **Motivation:** test reading comprehension with naturally occurring yes/no
 questions. Despite their short answers, these questions can require inference
@@ -1056,7 +1056,7 @@ Question: is barq's root beer a pepsi product
 
 Answer: No.
 
-#### 1.5.2. LAMBADA (OpenAI variant) — predicting a word from broader context
+#### ✅ 1.5.2. LAMBADA (OpenAI variant) — predicting a word from broader context
 
 **Motivation:** test whether a model uses broader narrative context rather
 than only nearby words. LAMBADA selects passages whose final word people can
@@ -1090,7 +1090,7 @@ Shane gripped her arm and started leading her to the dock.
 
 Answer: Shane.
 
-### 1.6. Code
+### ✅ 1.6. Code
 
 Code adds an executable check: a plausible-looking answer can fail when run.
 **pass@k** estimates the probability that at least one of $k$ sampled solutions
@@ -1100,7 +1100,7 @@ passed. The HumanEval evaluation defines and implements this approach.
 [Paper](https://arxiv.org/abs/2107.03374),
 [Evaluation code](https://github.com/openai/human-eval).
 
-#### 1.6.1. HumanEval — implementing small functions from specifications
+#### ✅ 1.6.1. HumanEval — implementing small functions from specifications
 
 **Motivation:** evaluate whether generated code works instead of whether it
 resembles a reference program, since different implementations can solve the
@@ -1167,7 +1167,7 @@ Answer (dataset reference completion):
     return [x for x in strings if substring in x]
 ```
 
-#### 1.6.2. LiveCodeBench v6 — contest programming with dated problems
+#### ✅ 1.6.2. LiveCodeBench v6 — contest programming with dated problems
 
 **Motivation:** reduce contamination risk from repeatedly evaluating on old
 public coding problems by collecting new programming-contest tasks over time.
@@ -1240,7 +1240,7 @@ Example input: `l = 10, r = 20`.
 
 Expected output: `2`.
 
-### 1.7. Reading a scorecard without losing the meaning
+### ✅ 1.7. Reading a scorecard without losing the meaning
 
 Return to our plant question. Giving the model the supporting paragraph,
 providing five examples, or letting it search the web can each change the score.
@@ -1283,9 +1283,9 @@ tests, even when a project also releases separate data for training. Many tasks
 have no single correct wording: their samples below show the recorded checks or
 expected outcomes instead.
 
-### 2.1. Instruction following
+### ✅ 2.1. Instruction following
 
-#### 2.1.1. IFEval — following checkable instructions
+#### ✅ 2.1.1. IFEval — following checkable instructions
 
 **Motivation:** test whether an assistant obeys explicit requirements such as
 word limits, required phrases, or output format. These requirements can be
@@ -1320,7 +1320,7 @@ Write a riddle about Camilla that doesn't use commas.
 Check: the response must contain no commas.
 [Record 3615](https://github.com/google-research/google-research/blob/master/instruction_following_eval/data/input_data.jsonl).
 
-#### 2.1.2. Multi-IF — retaining instructions across turns and languages
+#### ✅ 2.1.2. Multi-IF — retaining instructions across turns and languages
 
 **Motivation:** an assistant may follow a request initially, then forget it when
 the user adds another requirement. Multi-IF extends IFEval into conversations
@@ -1352,7 +1352,7 @@ Checks at turn 3: retain uppercase text, stay below 150 words, and include
 The assistant generates a response between user turns.
 [Record 2247:11:en](https://huggingface.co/datasets/facebook/Multi-IF/blob/main/multiIF_20241018.csv).
 
-#### 2.1.3. MultiChallenge — keeping track of a conversation
+#### ✅ 2.1.3. MultiChallenge — keeping track of a conversation
 
 **Motivation:** test conversational failures that simple format checks miss:
 forgetting an earlier instruction, overlooking a useful fact, losing parts of a
@@ -1419,7 +1419,7 @@ in July, is there any other software you recommend I install?
 Check: recall that the user originally said June.
 [Record 67456856a77b2db232c76c97; full conversation](https://github.com/ekwinox117/multi-challenge/blob/main/data/benchmark_questions.jsonl).
 
-#### 2.1.4. IFBench — generalizing to unfamiliar constraints
+#### ✅ 2.1.4. IFBench — generalizing to unfamiliar constraints
 
 **Motivation:** a model can improve on familiar instruction checks without
 learning to follow new kinds of requirements. IFBench introduces constraints
