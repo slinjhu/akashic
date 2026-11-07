@@ -4,15 +4,14 @@ import { mkdtemp, mkdir, readFile, writeFile, symlink, rm } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
-import { sectionReviews, setSectionReview, withoutReviewEmoji } from "../lib/section-reviews.mjs";
+import { sectionHeadings, sectionReviews, setSectionReview, withoutReviewEmoji } from "../lib/section-reviews.mjs";
 import { createReviewHandler } from "../scripts/review-api.mjs";
-import { parseNote } from "../scripts/content.mjs";
 
 test("review emojis preserve anchors, front matter, and unrelated text", () => {
   const source = '---\ntitle: Example\n---\n# Title\n\n## Same *name*\n\nText\n\n## Same *name*\n\n```md\n## Ignore\n```\n\nSetext\n------\n';
   const changed = setSectionReview(source, "same-name-1", true);
   assert.deepEqual(sectionReviews(changed), { "same-name": false, "same-name-1": true, setext: false });
-  assert.deepEqual(parseNote(source, "test.md").headings, parseNote(changed, "test.md").headings);
+  assert.deepEqual(sectionHeadings(source), sectionHeadings(changed));
   assert.equal(changed.replace('## ✅ Same', '## Same'), source);
   const pending = setSectionReview(changed, "same-name-1", false);
   assert.equal((pending.match(/⏳/g) || []).length, 1);
@@ -21,6 +20,19 @@ test("review emojis preserve anchors, front matter, and unrelated text", () => {
   assert.equal(sectionReviews(setSectionReview(source, "setext", true)).setext, true);
   assert.throws(() => setSectionReview(source, "ignore", true), /Section not found/);
   assert.throws(() => setSectionReview(source, "title", true), /Section not found/);
+});
+
+test("TOC headings and review status share clean labels and anchors from Markdown", () => {
+  const source = "# Title\n\n## ✅ 1. Reviewed *section*\n\n### ⏳ Detail\n\n### ✅ Detail\n\n```md\n## ✅ Not a section\n```\n";
+  const headings = sectionHeadings(source);
+  assert.deepEqual(headings, [
+    { id: "title", text: "Title", depth: 1 },
+    { id: "1-reviewed-section", text: "1. Reviewed section", depth: 2 },
+    { id: "detail", text: "Detail", depth: 3 },
+    { id: "detail-1", text: "Detail", depth: 3 },
+  ]);
+  assert.deepEqual(sectionReviews(source), { "1-reviewed-section": true, detail: false, "detail-1": true });
+  assert.deepEqual(sectionHeadings(withoutReviewEmoji(source)), headings);
 });
 
 test("review editing retains Windows newlines and ignores markers inside code", () => {

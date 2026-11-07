@@ -5,7 +5,7 @@ import { notes, assetRevision, allTags } from "@/lib/content";
 import { NoteMarkdown } from "@/components/markdown";
 import { TableOfContents } from "@/components/table-of-contents";
 import { SectionReviews } from "@/components/section-reviews";
-import { sectionReviews } from "@/lib/section-reviews.mjs";
+import { sectionHeadings, sectionReviews } from "@/lib/section-reviews.mjs";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 export const dynamicParams = false;
@@ -25,13 +25,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function NotePage({ params }: Props) {
   const note = findNote((await params).slug);
   if (!note) notFound();
-  const toc = note.headings.filter(heading => heading.depth > 1 && heading.depth <= 4);
+  const headings = sectionHeadings(note.body);
+  const toc = headings.filter(heading => heading.depth > 1 && heading.depth <= 4);
   const home = note.url === "/";
   return <SectionReviews key={note.file} file={note.file} initial={sectionReviews(note.body)}><div className={`reading-layout ${home ? "home-page" : ""}`}>
     <article className="note">
       <div className="breadcrumbs"><Link href="/">Library</Link><span>/</span><span>{home ? "Overview" : note.file.split("/").slice(0, -1).join(" / ") || note.title}</span></div>
       {!note.hideTags && note.tags.length > 0 && <div className="tags page-tags" aria-label="Page tags">{note.tags.map(tag => <Link className="tag" key={tag} href={`/search?tag=${encodeURIComponent(tag)}`}>{tag}</Link>)}</div>}
-      {!note.headings.some(heading => heading.depth === 1) && <h1>{note.title}</h1>}
+      {!headings.some(heading => heading.depth === 1) && <h1>{note.title}</h1>}
       {home && <p className="eyebrow home-kicker">Learn · Connect · Revisit</p>}
       <NoteMarkdown body={note.body} file={note.file} assetRevision={assetRevision} />
       {home && <section className="library-cards" aria-label="Explore notes"><div className="section-heading"><h2>Explore the collection</h2><Link href="/search">View all →</Link></div><div className="card-grid">{notes.filter(item => !["/", "/tags"].includes(item.url) && !item.file.endsWith("/index.md")).map(item => <Link className="note-card" href={item.url} key={item.url}><span className="eyebrow">{item.tags.join(" / ") || "Note"}</span><h3>{item.title}</h3><span className="card-link">Open note ↗</span></Link>)}</div></section>}

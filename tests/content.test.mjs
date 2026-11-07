@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseNote, generateContent } from "../scripts/content.mjs";
 import { noteUrl, resolveContentUrl } from "../lib/paths.mjs";
+import { sectionHeadings } from "../lib/section-reviews.mjs";
 
 test("nested note URLs, folder indexes, fragments, and images resolve from source files", () => {
   assert.equal(noteUrl("index.md"), "/");
@@ -24,7 +25,8 @@ test("front matter preserves tags and headings use stable, unique anchors", () =
   const note = parseNote('---\ntitle: "Networking: AWS"\ntags: [AWS, Network, AWS]\n---\n# Networking\n## A **route**\n## A route\n\nSome knowledge.', "aws/networking.md");
   assert.equal(note.title, "Networking: AWS");
   assert.deepEqual(note.tags, ["AWS", "Network"]);
-  assert.deepEqual(note.headings.map(heading => heading.id), ["networking", "a-route", "a-route-1"]);
+  assert.equal(Object.hasOwn(note, "headings"), false);
+  assert.deepEqual(sectionHeadings(note.body).map(heading => heading.id), ["networking", "a-route", "a-route-1"]);
   assert.match(note.text, /Some knowledge/);
   assert.throws(() => parseNote("---\ntags: AWS\n---\n# Bad", "bad.md"), /array of strings/);
   assert.throws(() => parseNote("---\ntitle: 123\n---\n", "bad.md"), /title must be a string/);

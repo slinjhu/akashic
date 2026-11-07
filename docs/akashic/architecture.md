@@ -13,7 +13,7 @@ controls their layout, rendering, and interactions. Git records their history.
 ```mermaid
 flowchart TD
     docs["docs/<br/>Markdown notes and assets"] --> generator["Content generator<br/>scripts/content.mjs"]
-    generator --> index[".generated/library.json<br/>Metadata, text, and headings"]
+    generator --> index[".generated/library.json<br/>Metadata, Markdown, and search text"]
     generator --> assets["public/content/<br/>Images and other assets"]
     index --> pages["Next.js pages and layout"]
     pages --> renderer["Markdown-to-React renderer"]
@@ -45,10 +45,9 @@ live beside their notes or in `docs/assets/`.
 
 1. Parses and validates front matter.
 2. Assigns a URL to each note and checks for conflicting routes.
-3. Extracts headings and anchor IDs for the table of contents.
-4. Extracts plain text for search.
-5. Copies supported assets into `public/content/`.
-6. Writes the note collection to `.generated/library.json`.
+3. Extracts plain text for search.
+4. Copies supported assets into `public/content/`.
+5. Writes the note collection to `.generated/library.json`.
 
 `lib/content.ts` imports that generated index and exposes the notes, navigation
 entries, search data, unique tags, and per-tag note counts. Both `.generated/` and `public/content/`
@@ -65,6 +64,10 @@ The header has Library, Tags, and Search tabs. Library shows the topic tree;
 Tags shows tag counts with links to sections of the tag index; Search leaves
 the sidebar empty. The Akashic guides are ordinary Markdown pages in Library.
 The table of contents includes heading levels 2 through 4, indented by depth.
+The page derives its headings and anchor IDs from the same Markdown body it
+renders, using `sectionHeadings` in `lib/section-reviews.mjs`. Heading lists are
+not stored in the generated index. Review status uses the same parser, so a
+heading's status emoji does not become part of its label or anchor.
 
 The same page component adds the collection cards on the Library overview and the
 grouped listings on the tag index. `/search` has its own route, which reads the

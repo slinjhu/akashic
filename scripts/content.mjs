@@ -8,7 +8,6 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { toString } from "mdast-util-to-string";
-import GithubSlugger from "github-slugger";
 import { withoutReviewEmoji } from "../lib/section-reviews.mjs";
 import { noteUrl } from "../lib/paths.mjs";
 
@@ -29,13 +28,9 @@ export function parseNote(source, file) {
   const tree = parser.parse(withoutReviewEmoji(content));
   const firstHeading = tree.children.find(node => node.type === "heading" && node.depth === 1);
   const title = data.title || (firstHeading && toString(firstHeading)) || path.basename(file, ".md");
-  const slugger = new GithubSlugger();
-  const headings = tree.children.filter(node => node.type === "heading").map(node => ({
-    id: slugger.slug(toString(node)), text: toString(node), depth: node.depth,
-  }));
   return {
     file, url: noteUrl(file), title, description: typeof data.description === "string" ? data.description : "",
-    tags: [...new Set(data.tags || [])], body: content, text: tree.children.map(node => toString(node)).join("\n\n"), headings,
+    tags: [...new Set(data.tags || [])], body: content, text: tree.children.map(node => toString(node)).join("\n\n"),
     hideTags: Array.isArray(data.hide) && data.hide.includes("tags"),
   };
 }
