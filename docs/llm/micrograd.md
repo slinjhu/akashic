@@ -9,6 +9,10 @@ tags:
 
 # micrograd — understand how a neural network learns
 
+## ✅ 1. Start with one adjustable prediction
+
+### 1.1. What training needs to solve
+
 A neural network makes predictions using adjustable numbers. Training means
 measuring its mistakes and changing those numbers to make the mistakes smaller.
 The missing connection is: **how does a mistake at the output tell each number
@@ -20,9 +24,7 @@ progression with a small example you can calculate by hand, then expands it into
 a network you can train. Basic Python is enough to start; we will introduce the
 calculus as it becomes useful.
 
-## ✅ 1. Start with one adjustable prediction
-
-### ✅ 1.1. Define the prediction and loss
+### ✅ 1.2. Define the prediction and loss
 
 Suppose the input is `x = 2` and the desired answer, called the **target**, is `1`.
 Our first model is:
@@ -46,7 +48,7 @@ Our loss is `(4 - 1)² = 9`. A perfect answer would give a loss of zero. Squarin
 makes errors in either direction positive, and makes larger errors more costly.
 The task is now concrete: adjust `w` and `b` to reduce this number.
 
-### ✅ 1.2. Set up the experiment
+### ✅ 1.3. Set up the experiment
 
 Create a temporary workspace with [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
@@ -63,6 +65,8 @@ so you can inspect every operation. We will use its published implementation
 while explaining the machinery the lecture builds from scratch.
 
 ## 2. Which way should a weight move?
+
+### 2.1. Estimate the effect of a small change
 
 Try increasing `w` slightly, from `-3` to `-2.999`. The prediction rises from `4`
 to `4.002`, and the loss rises from `9` to `9.012004`. Increasing this weight
@@ -89,7 +93,7 @@ raises the loss by about `12 × 0.001`. This estimate is called a **finite
 difference**. It is useful for checking derivatives, but repeating the calculation
 separately for every parameter would require many forward calculations.
 
-### 2.1. Follow the effect through the calculation
+### 2.2. Follow the effect through the calculation
 
 Break the prediction and loss into small operations. The resulting **computation
 graph** records which numbers were used to produce each result. Computing those
@@ -118,6 +122,8 @@ the parameters change.
 
 ## 3. Make arithmetic remember how to go backward
 
+### 3.1. Record values and backward rules
+
 A normal Python float stores a number. micrograd's `Value` also remembers the
 operation that produced it, its input nodes, and a small function for passing a
 gradient backward. For example, multiplying two `Value` objects produces another
@@ -141,7 +147,7 @@ local rule after all operations that used its result have contributed. This
 process is **backpropagation**. Automatically recording and applying these rules
 is **automatic differentiation**, or **autograd**.
 
-### 3.1. Why the gradients add
+### 3.2. Why the gradients add
 
 A parameter can affect the loss through several paths. For `a + a`, increasing
 `a` increases both inputs to the addition, so its derivative is `1 + 1 = 2`.
@@ -153,6 +159,8 @@ the next step.
 
 ## 4. Take one learning step
 
+### 4.1. Use the gradient to update parameters
+
 Move each parameter a little in the direction that reduces the loss:
 
 ```python
@@ -163,6 +171,8 @@ This update rule is **gradient descent**. The **learning rate** controls the siz
 of the step. With a rate of `0.01`, our weight moves from `-3` to `-3.12`, and the
 bias moves from `10` to `9.94`. The input and target stay fixed: they define the
 example we want the model to learn.
+
+### 4.2. Run one complete learning step
 
 Save this as `one_step.py` in your experiment folder:
 
@@ -210,6 +220,8 @@ learning rate can overshoot and increase the loss.
 
 ## 5. Give the model a pattern a line cannot fit
 
+### 5.1. Add examples that require a bend
+
 One input-target pair leaves many possible models. Add more examples, keeping
 our original `x = 2 → target = 1`:
 
@@ -225,7 +237,7 @@ These points form a V: `target = abs(x) - 1`. A model of the form `w * x + b`
 always draws a straight line, so changing its two parameters cannot fit this
 pattern. We need a model that can bend.
 
-### 5.1. Add neurons and a hidden layer
+### 5.2. Add neurons and a hidden layer
 
 A **neuron** combines inputs with weights and a bias, then can apply an
 **activation function**. In this lab, that function is **ReLU**:
@@ -250,7 +262,7 @@ parameters. The output has no ReLU, so it can predict negative targets too.
 The lecture notebooks build with `tanh`, a different nonlinear activation;
 this runnable lab uses the package's ReLU implementation.
 
-### 5.2. Train the network
+### 5.3. Train the network
 
 We now average the squared errors across all five examples. Each example uses
 the same model parameters, so backpropagation adds their contributions to each
@@ -321,6 +333,8 @@ being given the formula `abs(x) - 1`; the code supplied only examples and a loss
 
 ## 6. Read the lecture code with this model in mind
 
+### 6.1. Follow the two notebooks
+
 The lecture's [first notebook](https://github.com/karpathy/nn-zero-to-hero/blob/master/lectures/micrograd/micrograd_lecture_first_half_roughly.ipynb)
 develops derivatives, computation graphs, and backward rules. Follow a multiplication
 from its forward value to the gradients it sends to its inputs. Then look for why
@@ -330,6 +344,8 @@ The [second notebook](https://github.com/karpathy/nn-zero-to-hero/blob/master/le
 carries the engine into neurons, layers, and training. The network looks larger,
 but its parameters are still numbers connected by arithmetic operations. The
 same chain rule reaches every weight through those connections.
+
+### 6.2. Connect micrograd to nanoGPT
 
 In the [nanoGPT guide](nanogpt.md), the model processes text and PyTorch handles
 arrays of numbers called tensors. Its learning step follows the same pattern:
