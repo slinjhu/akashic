@@ -40,7 +40,7 @@ part of the original context. Row numbers start at 1, excluding headers.
 Letter labels are added when choices are stored without them; math delimiters
 are adapted for display. The opening plant question is illustrative.
 
-## 1. Text pretraining
+## ✅ 1. Text pretraining
 
 The 25 benchmark entries below are grouped by the capabilities they assess. These are not exclusive
 stage assignments: SimpleQA, GPQA, MATH-500, and LiveCodeBench, for example, also
