@@ -1271,7 +1271,7 @@ answer moves accuracy by about 0.51 percentage points. Multiple benchmarks may
 share underlying questions or skills, so averaging all 21 scores does not create
 21 independent measurements of general intelligence.
 
-## 2. Text post training
+## ✅ 2. Text post training
 
 Post-training turns a text model into an assistant that can follow requests
 and act on them. Start with a response constraint, such as “use only lowercase.”
@@ -1562,7 +1562,7 @@ The evaluation supplies a memory environment; this is not an isolated question
 that the model can answer from general knowledge.
 [Record memory_0-customer-0](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_memory.json).
 
-## 3. Multimodal pretraining
+## ✅ 3. Multimodal pretraining
 
 A text model can name a bicycle. A multimodal model must also recognize one in a
 photo, read its price tag, or locate it when several bicycles are present.
@@ -1721,7 +1721,7 @@ Answer: A.
 
 [Question 0](https://huggingface.co/datasets/craigwu/vstar_bench/viewer/default/test?row=0)
 
-### 3.2. Captioning
+### ✅ 3.2. Captioning
 
 A caption describes the visual input without a specific question directing attention to one detail.
 
@@ -1817,7 +1817,7 @@ Answer: Go forward to the end, after that turn left and continue to the end, the
 
 [Planning_navigation test row 1](https://huggingface.co/datasets/EgoThink/EgoThink/viewer/Planning_navigation/test?row=0)
 
-### 3.4. Document, chart & OCR
+### ✅ 3.4. Document, chart & OCR
 
 **Optical character recognition (OCR)** reads text from pixels. These benchmarks then ask whether the model can use that text, its layout, or a chart's visual structure.
 
@@ -2098,7 +2098,7 @@ Reference: three points, one inside each annotated black bomb. The supplied mask
 
 [Test row 2](https://huggingface.co/datasets/allenai/pixmo-points-eval/viewer/default/test?row=1)
 
-### 3.6. Spatial reasoning
+### ✅ 3.6. Spatial reasoning
 
 These tasks distinguish a position on the flat image from a position in the depicted three-dimensional scene.
 
@@ -2209,11 +2209,11 @@ Answer: C.
 
 [Question 0](https://huggingface.co/datasets/RunsenXu/MMSI-Bench/viewer/default/test?row=0)
 
-### 3.7. Multi-image understanding
+### ✅ 3.7. Multi-image understanding
 
 The model must compare or combine the supplied images, rather than answer from one image in isolation.
 
-#### 3.7.1. BLINK — visual comparisons that people make quickly
+#### ✅ 3.7.1. BLINK — visual comparisons that people make quickly
 
 **Motivation:** test perception skills that are easy for humans but difficult to solve through verbal descriptions alone, such as matching visual style, judging depth, and finding correspondences.
 
@@ -2255,7 +2255,7 @@ Answer: (B).
 
 [val_Relative_Depth_1](https://huggingface.co/datasets/BLINK-Benchmark/BLINK/viewer/Relative_Depth/val?row=0)
 
-#### 3.7.2. MuirBench — robust reasoning over image sets
+#### ✅ 3.7.2. MuirBench — robust reasoning over image sets
 
 **Motivation:** test tasks such as matching maps, ordering events, and comparing diagrams across several images. Each answerable instance has a closely related unanswerable counterpart, testing whether the model notices when the evidence no longer supports an answer.
 
