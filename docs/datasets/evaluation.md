@@ -1452,13 +1452,13 @@ explain Relativistic speed Please use an emoji at the end of every sentence.
 Check: every sentence must end with an emoji.
 [Record 70](https://huggingface.co/datasets/allenai/IFBench_test/viewer/default/train?row=70).
 
-### 2.2. Agentic & tool use
+### ✅ 2.2. Agentic & tool use
 
 Here, an **agent** is an assistant that can call tools and use their results to
 choose its next action. A correct-looking reply is insufficient when the task
 requires changing an order, fixing a connection, or retrieving stored information.
 
-#### 2.2.1. Tau2-bench (τ²-bench) — completing tasks with a simulated user
+#### ✅ 2.2.1. Tau2-bench (τ²-bench) — completing tasks with a simulated user
 
 **Motivation:** test whether an agent can resolve customer-service requests
 while following business rules and coordinating with a user. In its telecom
@@ -1507,7 +1507,7 @@ and exactly 2 GB has been added. The agent must coordinate the user's phone
 action with its own account action.
 [Telecom task `[mobile_data_issue]data_mode_off|data_usage_exceeded[PERSONA:None]`](https://github.com/sierra-research/tau2-bench/blob/v0.1.0/data/tau2/domains/telecom/tasks.json).
 
-#### 2.2.2. BFCL v4 — choosing and using tools correctly
+#### ✅ 2.2.2. BFCL v4 — choosing and using tools correctly
 
 **Motivation:** test whether an assistant selects the right function, supplies
 valid arguments, and uses tool results across multiple steps. The Berkeley
@@ -1574,7 +1574,7 @@ labels describe where the evaluations are useful; many also evaluate post-traine
 assistants. Image-question pairs, referring expressions, and video questions are
 different units, so each Size section names what is counted.
 
-### 3.1. General VQA
+### ✅ 3.1. General VQA
 
 **Visual question answering (VQA)** means answering a question using an image or video.
 
@@ -1618,7 +1618,7 @@ Answer: C.
 
 [Released sample 768](https://github.com/open-compass/MMBench/blob/main/samples/README.md)
 
-#### 3.1.2. RealWorldQA — understanding everyday scenes
+#### ✅ 3.1.2. RealWorldQA — understanding everyday scenes
 
 **Motivation:** test practical visual understanding of real scenes, especially object sizes, positions, and spatial relationships that matter when interacting with the world.
 
@@ -1644,7 +1644,7 @@ Answer: C.
 
 [Test row 1](https://huggingface.co/datasets/xai-org/RealworldQA/viewer/default/test?row=0)
 
-#### 3.1.3. SEED-Bench — image and video comprehension
+#### ✅ 3.1.3. SEED-Bench — image and video comprehension
 
 **Motivation:** test both what appears in a scene and what happens over time. Its tasks cover image properties such as counting and video properties such as recognizing actions.
 
@@ -1684,7 +1684,7 @@ Answer: C.
 
 [Question v1](https://huggingface.co/datasets/AILab-CVC/SEED-Bench/blob/main/SEED-Bench.json)
 
-#### 3.1.4. V* — finding small details in large images
+#### ✅ 3.1.4. V* — finding small details in large images
 
 **Motivation:** test whether a model can search a high-resolution image for a small, relevant detail instead of relying on a coarse description of the whole scene.
 
@@ -1715,7 +1715,7 @@ Answer: A.
 
 A caption describes the visual input without a specific question directing attention to one detail.
 
-#### 3.2.1. DetailCaps — describing images in detail
+#### ✅ 3.2.1. DetailCaps — describing images in detail
 
 **Motivation:** test whether long captions cover meaningful visual details accurately. Short reference captions can miss much of an image, making them poor targets for judging a detailed description.
 
@@ -1735,7 +1735,7 @@ Reference-caption excerpt (GPT-4V annotation): The image shows a domestic cat st
 
 [Image coco2017/val/000000211042.jpg and full references](https://huggingface.co/datasets/foundation-multimodal-models/DetailCaps-4870/viewer/default/test?row=0)
 
-#### 3.2.2. CAPability — correct and complete captions
+#### ✅ 3.2.2. CAPability — correct and complete captions
 
 **Motivation:** separate two failures: saying something false about an image or video, and omitting something important. The benchmark checks specific visual dimensions, including color, text, camera motion, and events.
 
@@ -1767,11 +1767,11 @@ Recorded action annotation: rushes forward.
 
 [Action split, row 1](https://huggingface.co/datasets/lntzm/CAPability/viewer/action/test?row=0)
 
-### 3.3. Egocentric understanding
+### ✅ 3.3. Egocentric understanding
 
 **Egocentric** means interpreting the scene from the camera wearer's viewpoint.
 
-#### 3.3.1. EgoThink — reasoning from the first-person viewpoint
+#### ✅ 3.3.1. EgoThink — reasoning from the first-person viewpoint
 
 **Motivation:** test whether a model can connect what the camera sees with what “I” am doing, can reach, or should do next. Recognizing an object alone does not establish this first-person understanding.
 
@@ -1805,7 +1805,7 @@ Answer: Go forward to the end, after that turn left and continue to the end, the
 
 **Optical character recognition (OCR)** reads text from pixels. These benchmarks then ask whether the model can use that text, its layout, or a chart's visual structure.
 
-#### 3.4.1. OCRBench — reading text in varied visual settings
+#### ✅ 3.4.1. OCRBench — reading text in varied visual settings
 
 **Motivation:** test text recognition beyond clean printed pages: scene text, handwriting, document questions, information extraction, and mathematical expressions.
 
@@ -1825,7 +1825,7 @@ Answer: CENTRE.
 
 [Test row 1](https://huggingface.co/datasets/echo840/OCRBench/viewer/default/test?row=0)
 
-#### 3.4.2. TextVQA — using text found in photographs
+#### ✅ 3.4.2. TextVQA — using text found in photographs
 
 **Motivation:** test questions whose answers depend on reading signs, labels, screens, or other text inside a natural image, then connecting that text to the question.
 
@@ -1845,7 +1845,7 @@ Recorded human answers include “dakota” (5 annotators) and “dakota digital
 
 [Validation question 34602](https://huggingface.co/datasets/Multimodal-Fatima/TextVQA_validation/viewer/default/validation?row=0)
 
-#### 3.4.3. CharXiv (RQ) — reasoning about scientific charts
+#### ✅ 3.4.3. CharXiv (RQ) — reasoning about scientific charts
 
 **Motivation:** test reasoning over real research figures, whose legends, subplots, and visual conventions are more varied than simple generated charts. RQ means the reasoning-question track.
 
@@ -1865,13 +1865,15 @@ Answer: Joint-CNN.
 
 [Validation chart 0](https://huggingface.co/datasets/princeton-nlp/CharXiv/viewer/default/validation?row=0)
 
-#### 3.4.4. DocVQA — answering questions about a document page
+#### ✅ 3.4.4. DocVQA — answering questions about a document page
 
 **Motivation:** test whether a model can find the relevant information on a scanned page, using text and layout rather than treating the document as a photograph to describe.
 
 **Size:** the original single-page dataset has 50,000 questions: 39,463 training, 5,349 validation, and 5,188 test. These are questions, not page counts; several can refer to the same page.
 
 **Metric:** one **ANLS** score (Average Normalized Levenshtein Similarity). Compare the answer with accepted references using normalized character-edit distance: small spelling differences receive partial credit, but a distance of 0.5 or more earns zero. Take the best accepted match per question and average across questions. Higher is better, up to 1 or 100%.
+
+**Why this metric:** a model may find the right answer but misread a few characters through OCR (optical character recognition). ANLS gives partial credit for that instead of scoring it as entirely wrong. It measures transcription similarity, not reasoning correctness or numerical closeness: `0.30` receives no credit against `0.29`, even though the values are close. The authors chose it to soften the penalty for OCR errors. [DocVQA paper, §5.1](https://arxiv.org/abs/2007.00398)
 
 [Original dataset](https://www.docvqa.org/datasets/docvqa), [DocVQA paper and metric](https://arxiv.org/abs/2007.00398)
 
@@ -1885,7 +1887,7 @@ Answer: 0.28.
 
 [Validation question 49153](https://huggingface.co/datasets/lmms-lab-encoder/DocVQA/viewer/DocVQA/validation?row=0)
 
-#### 3.4.5. ChartQA — reading and calculating from charts
+#### ✅ 3.4.5. ChartQA — reading and calculating from charts
 
 **Motivation:** test both retrieving a plotted value and combining values, for example by comparing categories or performing arithmetic.
 
