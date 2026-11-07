@@ -47,9 +47,9 @@ training speed depends on your machine. Work through sections 1–6 in order,
 then use the experiments to test your understanding. All commands after setup
 run inside the separate `nanoGPT` checkout, with its virtual environment active.
 
-## 1. Turn text into training examples
+## ✅ 1. Turn text into training examples
 
-### 1.1. Create an isolated workspace
+### ✅ 1.1. Create an isolated workspace
 
 Create a temporary folder for the experiment:
 
@@ -65,7 +65,7 @@ uv pip install torch numpy requests tiktoken
 python -c "import torch; print(torch.__version__); print(torch.rand(2, 3))"
 ```
 
-### 1.2. See how text becomes tokens
+### ✅ 1.2. See how text becomes tokens
 
 **[tiktoken](https://github.com/openai/tiktoken)** is OpenAI's library for splitting
 text into tokens, such as words or word fragments, and converting them into numeric
@@ -122,7 +122,7 @@ while preserving the original text. Other words split into fragments, as
 `tokenization` shows. A token is
 therefore not always a whole word. In the diagrams, `_` denotes a space.
 
-### 1.3. Learn to predict the next token
+### ✅ 1.3. Learn to predict the next token
 
 Every token after the first gives us a training question: given the text so far,
 what comes next? The token that actually follows is the correct answer, called
@@ -150,7 +150,7 @@ prompt containing four tokens, so the input tensor has shape `[1, 4]`. Follow
 those four positions through the network below. The model still supports up
 to 64 tokens; we are using a shorter input to see the process clearly.
 
-### 2.1. Embeddings: a learned table inside the model
+### ✅ 2.1. Embeddings: a learned table inside the model
 
 A token ID tells us which token we have, but gives the network no useful
 features to work with. An **embedding table** supplies a vector for each ID.
@@ -166,7 +166,7 @@ rest of the model. nanoGPT names the table `wte` (word token embedding) and
 performs the lookup with `self.transformer.wte(idx)` in
 [`model.py`](https://github.com/karpathy/nanoGPT/blob/3adf61e154c3fe3fca428ad6bc3818b27a3b8291/model.py).
 
-### 2.2. Add information about position
+### ✅ 2.2. Add information about position
 
 “Here will I lie tonight” uses **lie** to mean rest or sleep, while “I am a
 villain: yet I lie” uses it to mean say something untrue. The model needs the
