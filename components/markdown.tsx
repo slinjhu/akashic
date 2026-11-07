@@ -16,13 +16,27 @@ import { SectionTree } from "./section-tree";
 import { SectionSummary } from "./section-summary";
 import { SectionDisclosure } from "./section-disclosure";
 import { withoutReviewEmoji } from "@/lib/section-reviews.mjs";
+import remarkImageGallery from "@/lib/remark-image-gallery.mjs";
+import { ImageGallery, type GalleryImage } from "./image-gallery";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
+  const imageUrl = (src: string) => src.startsWith("/content/")
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}${src.includes("?") ? "&" : "?"}v=${assetRevision.slice(0, 12)}` : src;
   return <SectionTree key={file}><Markdown
-    remarkPlugins={[remarkGfm, remarkMath]}
+    remarkPlugins={[remarkGfm, remarkMath, remarkImageGallery]}
     rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }], rehypeSections]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{
+      div: ({ node, children, className }) => {
+        if (node?.properties["data-image-gallery"] === "true") {
+          const images = Children.toArray(children).flatMap(child => {
+            if (!isValidElement<{ src?: string; alt?: string; title?: string }>(child) || !child.props.src) return [];
+            return [{ src: imageUrl(child.props.src), alt: child.props.alt || "", title: child.props.title } satisfies GalleryImage];
+          });
+          return <ImageGallery images={images} />;
+        }
+        return <div className={className}>{children}</div>;
+      },
       details: ({ node, children, className }) => {
         const summary = node?.children.find(child => child.type === "element" && child.tagName === "summary");
         const heading = summary?.type === "element" ? summary.children.find(child => child.type === "element" && /^h[2-6]$/.test(child.tagName)) : undefined;
@@ -37,7 +51,7 @@ export function NoteMarkdown({ body, file, assetRevision }: { body: string; file
         return <SectionSummary id={typeof id === "string" ? id : undefined}>{children}</SectionSummary>;
       },
       a: ({ href, children, ...props }) => href?.startsWith("/") && !href.startsWith("//") ? <Link href={href} title={props.title}>{children}</Link> : <a href={href} title={props.title} rel={href?.startsWith("http") ? "noreferrer" : undefined}>{children}</a>,
-      img: ({ src, alt, title }) => <img src={typeof src === "string" && src.startsWith("/content/") ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}${src.includes("?") ? "&" : "?"}v=${assetRevision.slice(0, 12)}` : src} alt={alt || ""} title={title} loading="lazy" />,
+      img: ({ src, alt, title }) => <img src={typeof src === "string" ? imageUrl(src) : src} alt={alt || ""} title={title} loading="lazy" />,
       table: ({ children }) => <div className="table-scroll" tabIndex={0} role="region" aria-label="Table"><table>{children}</table></div>,
       pre: ({ node, children }) => {
         const codeNode = node?.children.find(child => child.type === "element" && child.tagName === "code");

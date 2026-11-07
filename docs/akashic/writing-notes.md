@@ -147,6 +147,26 @@ them with a relative path and meaningful alt text:
 
 ![An example linear plot](../assets/images/example-plot.svg)
 
+### Image arrays and lightbox albums
+
+Use an `images` fence for compact, clickable images. Put ordinary Markdown image
+links inside it, one per line:
+
+````markdown
+```images
+![First view](../assets/images/first.jpg)
+![Second view](../assets/images/second.jpg)
+```
+````
+
+A single image occupies half the content width. Two or four images use two
+columns; three images or five and above use three columns, reduced to two on
+narrow screens. Preview height follows each image's natural aspect ratio.
+Click a preview to open the
+album, then use its thumbnails, Previous/Next buttons, or arrow keys to browse.
+Press Escape or Close to return to the page. Alt text appears as the caption;
+an optional image title overrides that caption and also labels its preview.
+
 For Python plots, export an SVG or PNG and embed it the same way. For example,
 in a separate environment with Matplotlib installed:
 

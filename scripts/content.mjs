@@ -10,9 +10,10 @@ import remarkMath from "remark-math";
 import { toString } from "mdast-util-to-string";
 import { withoutReviewEmoji } from "../lib/section-reviews.mjs";
 import { noteUrl } from "../lib/paths.mjs";
+import remarkImageGallery from "../lib/remark-image-gallery.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
+const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath).use(remarkImageGallery);
 const assetPattern = /\.(?:svg|png|jpe?g|gif|webp|avif|pdf|mp4|webm|mp3|ogg|csv|txt)$/i;
 
 export function parseNote(source, file) {
@@ -25,7 +26,7 @@ export function parseNote(source, file) {
   if (data.tags !== undefined && (!Array.isArray(data.tags) || data.tags.some(tag => typeof tag !== "string"))) {
     throw new Error(`${file}: tags must be an array of strings`);
   }
-  const tree = parser.parse(withoutReviewEmoji(content));
+  const tree = parser.runSync(parser.parse(withoutReviewEmoji(content)));
   const firstHeading = tree.children.find(node => node.type === "heading" && node.depth === 1);
   const title = data.title || (firstHeading && toString(firstHeading)) || path.basename(file, ".md");
   return {

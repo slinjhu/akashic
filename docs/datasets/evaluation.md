@@ -1590,7 +1590,9 @@ different units, so each Size section names what is counted.
 
 **Sample 1: emotion** (from the dataset):
 
+```images
 ![MMBench sample 544](evaluation-assets/mmbench-544.jpg)
+```
 
 Identify the emotion expressed in this image.
 
@@ -1605,7 +1607,9 @@ Answer: A.
 
 **Sample 2: comparing visual properties** (from the dataset):
 
+```images
 ![MMBench brightness comparison, sample 768](evaluation-assets/mmbench-768.jpg)
+```
 
 Which image is the brightest one?
 
@@ -1630,7 +1634,9 @@ Answer: C.
 
 **Sample** (from the dataset):
 
+```images
 ![RealWorldQA test image, row 1](evaluation-assets/real-0-1.jpg)
+```
 
 Which of the 3 objects is the smallest?
 
@@ -1656,7 +1662,9 @@ Answer: C.
 
 **Sample 1: image counting** (from the dataset):
 
+```images
 ![SEED-Bench image for question 101669](evaluation-assets/seed-1.jpg)
+```
 
 How many towels are in the image?
 
@@ -1696,7 +1704,9 @@ Answer: C.
 
 **Sample** (from the dataset):
 
+```images
 ![V* high-resolution image for question 0](evaluation-assets/vstar-19.jpg)
+```
 
 What is the material of the glove?
 
@@ -1727,7 +1737,9 @@ A caption describes the visual input without a specific question directing atten
 
 **Sample** (from the dataset):
 
+```images
 ![DetailCaps COCO image 211042](evaluation-assets/detail-1.jpg)
+```
 
 Task: produce a detailed caption of this image.
 
@@ -1783,7 +1795,9 @@ Recorded action annotation: rushes forward.
 
 **Sample 1: current activity** (from the dataset):
 
+```images
 ![EgoThink Activity test image, row 1](evaluation-assets/ego-2-1.jpg)
+```
 
 What am I doing?
 
@@ -1793,7 +1807,9 @@ Answer: tightening the screws.
 
 **Sample 2: navigation** (from the dataset):
 
+```images
 ![EgoThink Planning_navigation test image, row 1](evaluation-assets/ego-3-1.jpg)
+```
 
 How to go to the ATM?
 
@@ -1817,7 +1833,9 @@ Answer: Go forward to the end, after that turn left and continue to the end, the
 
 **Sample** (from the dataset):
 
+```images
 ![OCRBench IIIT5K word image](evaluation-assets/ocr-4-1.jpg)
+```
 
 what is written in the image?
 
@@ -1837,7 +1855,9 @@ Answer: CENTRE.
 
 **Sample** (from the dataset):
 
+```images
 ![TextVQA camera-brand image, question 34602](evaluation-assets/text-27-1.jpg)
+```
 
 what is the brand of this camera?
 
@@ -1857,7 +1877,9 @@ Recorded human answers include “dakota” (5 annotators) and “dakota digital
 
 **Sample** (from the dataset):
 
+```images
 ![CharXiv validation chart 0 with two accuracy plots](evaluation-assets/charxiv-5-1.jpg)
+```
 
 Which model shows a greater decline in accuracy from Session 1 to Session 9 in the 5-way full-shot scenario?
 
@@ -1879,7 +1901,9 @@ Answer: Joint-CNN.
 
 **Sample** (from the dataset):
 
+```images
 ![DocVQA document page pybv0228, page 81](evaluation-assets/doc-25-1.jpg)
+```
 
 What is the ‘actual’ value per 1000, during the year 1975?
 
@@ -1899,7 +1923,9 @@ Answer: 0.28.
 
 **Sample** (from the dataset):
 
+```images
 ![ChartQA test bar chart, row 1](evaluation-assets/chartqa-6-1.png)
+```
 
 How many food item is shown in the bar graph?
 
@@ -1919,7 +1945,9 @@ Answer: 14.
 
 **Sample** (from the dataset):
 
+```images
 ![InfographicVQA social-media infographic from Constant Contact](evaluation-assets/doc-26-1.jpg)
+```
 
 Which social platform has heavy female audience?
 
@@ -1947,7 +1975,9 @@ counts a prediction as correct when IoU exceeds 0.5.
 
 **Sample** (from the dataset):
 
+```images
 ![COCO image 581282 for referring-expression evaluation](evaluation-assets/ref-a.jpg)
+```
 
 Expression: person bottom left
 
@@ -1967,7 +1997,9 @@ Reference box in pixels, `[x, y, width, height]`: `[3.24, 159.31, 156.4, 312.81]
 
 **Sample** (from the dataset):
 
+```images
 ![COCO image 581282 for referring-expression evaluation](evaluation-assets/ref-a.jpg)
+```
 
 Expression: black shirt person holding umbrella
 
@@ -1987,7 +2019,9 @@ Reference box in pixels, `[x, y, width, height]`: `[3.24, 159.31, 156.4, 312.81]
 
 **Sample** (from the dataset):
 
+```images
 ![COCO image 581563 for referring-expression evaluation](evaluation-assets/ref-b.jpg)
+```
 
 Expression: black car
 
@@ -2007,7 +2041,9 @@ Reference box in pixels, `[x, y, width, height]`: `[0.0, 373.89, 137.59, 126.11]
 
 **Sample** (from the dataset):
 
+```images
 ![COCO image 581563 for referring-expression evaluation](evaluation-assets/ref-b.jpg)
+```
 
 Expression: black van in front of cab
 
@@ -2027,7 +2063,9 @@ Reference box in pixels, `[x, y, width, height]`: `[0.0, 373.89, 137.59, 126.11]
 
 **Sample** (from the dataset):
 
+```images
 ![COCO image 419645 for referring-expression evaluation](evaluation-assets/refg-long.jpg)
+```
 
 Expression: There is red colored truck in between the other trucks
 
@@ -2050,7 +2088,9 @@ datasets for training Molmo vision-language models.
 
 **Sample** (from the dataset):
 
+```images
 ![PixMo-Points-Eval game image with three annotated black bombs](evaluation-assets/pixmo-candidate-1.jpg)
+```
 
 Target label: black bomb
 
@@ -2076,7 +2116,9 @@ These tasks distinguish a position on the flat image from a position in the depi
 
 **Sample** (from the dataset):
 
+```images
 ![3DSRBench COCO image 557944](evaluation-assets/sr-7.jpg)
+```
 
 Consider the real-world 3D locations of the objects. Which object has a higher location?
 
@@ -2099,7 +2141,9 @@ Answer: B.
 
 **Sample** (from the dataset):
 
+```images
 ![CV-Bench 2D test image, index 0](evaluation-assets/cv-8-1.jpg)
+```
 
 How many organs are in the image?
 
@@ -2124,7 +2168,9 @@ Answer: (C).
 
 **Sample** (from the dataset):
 
+```images
 ![CV-Bench depth comparison with red and blue bounding boxes](evaluation-assets/cv-9-1.jpg)
+```
 
 Which object is closer to the camera taking this photo, the table (highlighted by a red box) or the bookcase (highlighted by a blue box)?
 
@@ -2147,9 +2193,10 @@ Answer: (A).
 
 **Sample** (from the dataset):
 
+```images
 ![MMSI-Bench question 0, first view](evaluation-assets/mmsi-10-1.jpg)
-
 ![MMSI-Bench question 0, second view](evaluation-assets/mmsi-10-2.jpg)
+```
 
 The images are taken continuously from a first-person perspective. In which direction are you moving?
 
@@ -2178,9 +2225,11 @@ The model must compare or combine the supplied images, rather than answer from o
 
 **Sample 1: visual style** (from the dataset):
 
-| Reference image | Second image | Third image |
-|---|---|---|
-| ![BLINK art-style reference painting](evaluation-assets/blink-12-1.jpg) | ![BLINK art-style second painting](evaluation-assets/blink-12-2.jpg) | ![BLINK art-style third painting](evaluation-assets/blink-12-3.jpg) |
+```images
+![BLINK art-style reference painting](evaluation-assets/blink-12-1.jpg "Reference image")
+![BLINK art-style second painting](evaluation-assets/blink-12-2.jpg "Second image")
+![BLINK art-style third painting](evaluation-assets/blink-12-3.jpg "Third image")
+```
 
 Which image shares the same style as the reference image?
 
@@ -2193,7 +2242,9 @@ Answer: (A).
 
 **Sample 2: relative depth** (from the dataset):
 
+```images
 ![BLINK depth image with points A and B](evaluation-assets/blink-11-1.jpg)
+```
 
 Which point is closer to the camera?
 
@@ -2216,9 +2267,12 @@ Answer: (B).
 
 **Sample 1: answerable map matching** (from the dataset):
 
-| Reference | B | C | D |
-|---|---|---|---|
-| ![MuirBench map 1](evaluation-assets/muir-13-1.jpg) | ![MuirBench map 2](evaluation-assets/muir-13-2.jpg) | ![MuirBench map 3](evaluation-assets/muir-13-3.jpg) | ![MuirBench map 4](evaluation-assets/muir-13-4.jpg) |
+```images
+![MuirBench map 1](evaluation-assets/muir-13-1.jpg "Reference")
+![MuirBench map 2](evaluation-assets/muir-13-2.jpg "B")
+![MuirBench map 3](evaluation-assets/muir-13-3.jpg "C")
+![MuirBench map 4](evaluation-assets/muir-13-4.jpg "D")
+```
 
 Identify the map image that shows overlapping geographic areas similar to the reference image.
 
@@ -2233,9 +2287,12 @@ Answer: C.
 
 **Sample 2: its unanswerable counterpart** (from the dataset):
 
-| Reference | A | B | D |
-|---|---|---|---|
-| ![MuirBench map 1](evaluation-assets/muir-unanswerable-1.jpg) | ![MuirBench map 2](evaluation-assets/muir-unanswerable-2.jpg) | ![MuirBench map 3](evaluation-assets/muir-unanswerable-3.jpg) | ![MuirBench map 4](evaluation-assets/muir-unanswerable-4.jpg) |
+```images
+![MuirBench map 1](evaluation-assets/muir-unanswerable-1.jpg "Reference")
+![MuirBench map 2](evaluation-assets/muir-unanswerable-2.jpg "A")
+![MuirBench map 3](evaluation-assets/muir-unanswerable-3.jpg "B")
+![MuirBench map 4](evaluation-assets/muir-unanswerable-4.jpg "D")
+```
 
 Identify the map image that shows overlapping geographic areas similar to the reference image.
 
@@ -2269,7 +2326,9 @@ earlier checkpoints; they do not prescribe a training method.
 
 **Sample 1: composition constraints** (from the dataset):
 
+```images
 ![MM-IFEval C-Level_0 spot-the-difference image](evaluation-assets/mmif-14-1.jpg)
+```
 
 You are provided with an image which contains two pictures side by side. Your task is to identify the differences between the two pictures. Separate the differences with a semicolon. Please write between 50 and 70 words in total. Do not use any commas in the response. Use \*\*bold\*\* for the first difference mentioned and \*italic\* for the last difference mentioned. If the difference is the cars, don't mention their color. Each difference must be followed by a brief explanation of why it stands out or how it changes the scene.
 
@@ -2277,7 +2336,9 @@ You are provided with an image which contains two pictures side by side. Your ta
 
 **Sample 2: perception with a numeric constraint** (from the dataset):
 
+```images
 ![MM-IFEval P-Level_0 Shanghai weather chart](evaluation-assets/mmif-perception.jpg)
+```
 
 Based on the information in the figure, please calculate the average maximum temperature in Shanghai from this Saturday to next Wednesday, and keep three decimal places.
 
@@ -2297,7 +2358,9 @@ Answer: `8.200`.
 
 **Sample** (from the dataset):
 
+```images
 ![MIA-Bench COCO image 397133](evaluation-assets/mia-0.jpg)
+```
 
 Explain the activity taking place in the image using exactly two sentences, including one metaphor.
 
@@ -2317,7 +2380,9 @@ Recorded rubric: describe the activity (4 points), use exactly two sentences (3)
 
 **Sample** (from the dataset):
 
+```images
 ![VisIT-Bench star field, test row 2](evaluation-assets/visit-stars-1.jpg)
+```
 
 What are the bright little specks and what causes them to be bright?
 
@@ -2360,7 +2425,9 @@ Answer: B.
 
 **Sample 2: the same problem in vision-only form** (from the dataset):
 
+```images
 ![MMMU-Pro vision-only screenshot containing test_History_1 and ten answer choices](evaluation-assets/mmmu-17-1.png)
+```
 
 The question and choices are embedded in this released screenshot.
 
@@ -2380,7 +2447,9 @@ Answer: B.
 
 **Sample 1: an open numeric answer** (from the dataset):
 
+```images
 ![MATH-Vision problem 1](evaluation-assets/mathvision-18-1.jpg)
+```
 
 Which number should be written in place of the question mark?
 
@@ -2390,7 +2459,9 @@ Answer: 60.
 
 **Sample 2: multiple choice** (from the dataset):
 
+```images
 ![MATH-Vision problem 2](evaluation-assets/mathvision-mcq-1.jpg)
+```
 
 Which bike is most expensive?
 
