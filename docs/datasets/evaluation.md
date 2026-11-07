@@ -42,47 +42,17 @@ are adapted for display. The opening plant question is illustrative.
 
 ## 1. Text pretraining
 
-Here, “text pretraining” means **evaluating the capabilities of a text model
-during or after pretraining**. It does not mean training on these test answers.
-The [LLM datasets overview](llm.md) explains the distinction between training
-corpora and held-out evaluation data.
-
 The 25 benchmark entries below are grouped by the capabilities they assess. These are not exclusive
 stage assignments: SimpleQA, GPQA, MATH-500, and LiveCodeBench, for example, also
 appear in evaluations of post-trained models. A base model's ability to complete
 text and an assistant's ability to follow a request can produce different
 results on the same underlying questions.
 
-### 1.1. How a next-token model takes a test
-
-For our plant question, one evaluation can compare the probabilities of the
-candidate answers and choose the most likely. Another can ask the model to
-generate a response, then extract its answer. Those are different procedures.
-
-**Zero-shot** means no worked examples are provided in the prompt; **few-shot**
-means a few examples precede the test question. Neither updates the model's
-weights. **Chain-of-thought prompting** asks for intermediate reasoning before
-the answer. Report these settings because they affect what the score means.
-Evaluation harnesses explicitly configure prompts, output types, and metrics.
-[Harness task configuration](https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/task_guide.md).
-
-As the tasks become richer, the scoring method changes:
-
-| Model's job | Typical scoring | What a correct result establishes |
-|---|---|---|
-| Select an answer | Choice accuracy | It selected the reference option |
-| Produce a short answer | Normalized exact match or a reference-based grader | Its answer matched an accepted answer under that grading rule |
-| Complete a passage | Final-word accuracy or target-word perplexity | It predicted the withheld continuation |
-| Write a function or program | Execution against tests | Its program passed the supplied checks |
-
-The entries below specify which of these applies. A correct final answer alone
-does not prove that the model's explanation or internal reasoning is correct.
-
-### ✅ 1.2. World knowledge & factuality
+### ✅ 1.1. World knowledge & factuality
 
 These datasets test subject knowledge, factual recall, resistance to common misconceptions, and whether claims or generated answers are supported by evidence.
 
-#### ✅ 1.2.1. MMLU — broad knowledge across subjects
+#### ✅ 1.1.1. MMLU — broad knowledge across subjects
 
 **Motivation:** narrow language tasks did not reveal whether a model could use
 the breadth of knowledge encountered during pretraining. MMLU (Massive Multitask
@@ -114,7 +84,7 @@ The energy given up by electrons as they move through the electron transport cha
 
 Answer: C.
 
-#### ✅ 1.2.2. MMLU-Pro — harder knowledge application
+#### ✅ 1.1.2. MMLU-Pro — harder knowledge application
 
 **Motivation:** make MMLU-style evaluation harder and less sensitive to prompt
 wording by emphasizing reasoning and using more plausible wrong answers.
@@ -148,7 +118,7 @@ Managers are entrusted to run the company in the best interest of ________. Spec
 
 Answer: F.
 
-#### ✅ 1.2.3. TriviaQA — retrieving a fact from evidence or memory
+#### ✅ 1.1.3. TriviaQA — retrieving a fact from evidence or memory
 
 **Motivation:** evaluate factual question answering using naturally written
 trivia and independently collected evidence. Reading supplied evidence tests
@@ -188,7 +158,7 @@ Evidence excerpt: "Kiss You All Over" is a 1978 song performed by the group Exil
 
 Answer: Exile
 
-#### ✅ 1.2.4. SimpleQA — short answers that expose factual errors
+#### ✅ 1.1.4. SimpleQA — short answers that expose factual errors
 
 **Motivation:** make factuality easier to grade by asking for one short,
 verifiable fact, while selecting questions that challenge strong models.
@@ -240,7 +210,7 @@ Answer: July 24, 1995.
 
 [Released CSV, original_index 50](https://huggingface.co/datasets/google/simpleqa-verified/blob/main/simpleqa_verified.csv).
 
-#### ✅ 1.2.5. TruthfulQA — resisting learned misconceptions
+#### ✅ 1.1.5. TruthfulQA — resisting learned misconceptions
 
 **Motivation:** test whether a model resists common misconceptions instead of
 reproducing plausible falsehoods learned from human text.
@@ -302,7 +272,7 @@ Given a fair coin, which coin toss sequence is more likely: HHHHH or HTTHT?
 
 True reference answers: A, B. False reference answers: C, D, E.
 
-#### ✅ 1.2.6. GPQA Diamond — expert knowledge combined with reasoning
+#### ✅ 1.1.6. GPQA Diamond — expert knowledge combined with reasoning
 
 **Motivation:** test specialized scientific knowledge and reasoning using
 questions that challenged skilled non-experts even with web access. This also
@@ -331,7 +301,7 @@ How many stereoisomers are there for the compound 6-chloro-9-ethyl-2-methylundec
 
 Answer: C.
 
-#### ✅ 1.2.7. SciQ — basic science questions at scale
+#### ✅ 1.1.7. SciQ — basic science questions at scale
 
 **Motivation:** build a large collection of science questions to train and test
 question-answering models. Human writers read science passages and wrote
@@ -392,7 +362,7 @@ Compounds that are capable of accepting electrons, such as o 2 or f2, are called
 
 Answer: B.
 
-#### ✅ 1.2.8. Natural Questions / NQ-Open — answering real search questions
+#### ✅ 1.1.8. Natural Questions / NQ-Open — answering real search questions
 
 **Motivation:** test questions people actually asked Google, rather than questions
 written specifically for a quiz. In the original Natural Questions task, the model
@@ -425,7 +395,7 @@ Accepted answers: “14 December 1972 UTC” or “December 1972”.
 
 [Original NQ-Open development set, row 1](https://github.com/google-research-datasets/natural-questions/blob/master/nq_open/NQ-open.dev.jsonl).
 
-#### ✅ 1.2.9. PopQA — knowing facts about less-famous entities
+#### ✅ 1.1.9. PopQA — knowing facts about less-famous entities
 
 **Motivation:** distinguish knowledge of well-known people and places from
 knowledge of obscure ones. Questions are built from Wikidata relationships, with
@@ -460,7 +430,7 @@ Accepted answers: “Metropolis” or “Metropolis, Illinois”.
 
 [Record 3450708](https://github.com/AlexTMallen/adaptive-retrieval/blob/main/data/popQA.tsv).
 
-#### ✅ 1.2.10. FEVER — checking claims against evidence
+#### ✅ 1.1.10. FEVER — checking claims against evidence
 
 **Motivation:** test whether a system can find evidence and use it to verify a
 claim. FEVER means *Fact Extraction and VERification*. The task distinguishes a
@@ -507,7 +477,7 @@ the claim is false.
 
 [Record 137637](https://fever.ai/dataset/fever.html).
 
-#### ✅ 1.2.11. FActScore — checking facts inside a long answer
+#### ✅ 1.1.11. FActScore — checking facts inside a long answer
 
 **Motivation:** a biography can mix accurate facts with invented details, making
 one correct/incorrect label too coarse. FActScore evaluates individual factual
@@ -548,14 +518,14 @@ biography. The remaining claims are omitted.
 [Official data archive](https://drive.google.com/file/d/155exEdKs7R21gZF4G-x54-XN3qswBcPo/view),
 `data/labeled/ChatGPT.jsonl`, row 1.
 
-### ✅ 1.3. Commonsense & reasoning
+### ✅ 1.2. Commonsense & reasoning
 
 These benchmarks range from understanding everyday situations to combining
 scientific facts, tracking changes, and solving multistep problems. Some
 questions mainly test knowledge; others require inference. Their scores describe
 performance on specific tasks rather than a single universal reasoning ability.
 
-#### ✅ 1.3.1. HellaSwag — choosing a plausible continuation
+#### ✅ 1.2.1. HellaSwag — choosing a plausible continuation
 
 **Motivation:** test whether a model recognizes plausible event sequences,
 even when wrong continuations are fluent. Adversarial filtering selects
@@ -587,7 +557,7 @@ A lady walks to a barbell. She bends down and grabs the pole. the lady
 
 Answer: D.
 
-#### ✅ 1.3.2. PIQA — practical physical knowledge
+#### ✅ 1.2.2. PIQA — practical physical knowledge
 
 **Motivation:** test practical knowledge of how objects and materials behave
 when used to achieve a goal, such as understanding absorbency, friction, or
@@ -617,7 +587,7 @@ Make outdoor pillow.
 
 Answer: B.
 
-#### ✅ 1.3.3. WinoGrande — resolving references with commonsense
+#### ✅ 1.2.3. WinoGrande — resolving references with commonsense
 
 **Motivation:** test commonsense reference resolution while reducing shortcuts
 from word associations. The model must use the relationship between entities
@@ -655,7 +625,7 @@ Sarah was a much better surgeon than Maria so _ always got the harder cases.
 
 Answer: A.
 
-#### ✅ 1.3.4. ARC-Easy — a school-science baseline
+#### ✅ 1.2.4. ARC-Easy — a school-science baseline
 
 **Motivation:** ARC (AI2 Reasoning Challenge) is a collection of multiple-choice,
 grade-school science questions created by the Allen Institute for AI to test
@@ -702,7 +672,7 @@ Which statement best explains why photosynthesis is the foundation of most food 
 
 Answer: A.
 
-#### ✅ 1.3.5. ARC-Challenge — science questions that defeated simple retrieval
+#### ✅ 1.2.5. ARC-Challenge — science questions that defeated simple retrieval
 
 **Motivation:** test science questions that require more than simple retrieval
 or word associations. The Challenge partition of the AI2 Reasoning Challenge
@@ -745,7 +715,7 @@ The end result in the process of photosynthesis is the production of sugar and o
 
 Answer: C.
 
-#### ✅ 1.3.6. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
+#### ✅ 1.2.6. BBH (BIG-Bench Hard) — several kinds of multistep reasoning
 
 **Motivation:** focus on reasoning tasks where the models assessed in the
 original BIG-Bench work had not surpassed average human-rater performance,
@@ -800,7 +770,7 @@ not ( True ) and ( True ) is
 
 Answer: False.
 
-#### ✅ 1.3.7. AGIEval — reasoning in human exam formats
+#### ✅ 1.2.7. AGIEval — reasoning in human exam formats
 
 **Motivation:** evaluate knowledge, reading, and reasoning using problems
 designed to assess people, including admission exams, professional qualification
@@ -854,7 +824,7 @@ Factor $r^2+10r+25$.
 
 Answer: $(r+5)^2$.
 
-#### ✅ 1.3.8. MuSR — combining clues across a narrative
+#### ✅ 1.2.8. MuSR — combining clues across a narrative
 
 **Motivation:** test whether models can combine distributed clues and
 commonsense assumptions across natural-language narratives. MuSR uses
@@ -920,13 +890,13 @@ Question: Given the story, how would you uniquely allocate each person to make s
 
 Answer: B.
 
-### ✅ 1.4. Mathematics
+### ✅ 1.3. Mathematics
 
 Mathematical tasks make the final answer easier to check, while raising a new
 question: can the model translate words into operations and keep the steps
 consistent?
 
-#### ✅ 1.4.1. GSM8K — multistep arithmetic from word problems
+#### ✅ 1.3.1. GSM8K — multistep arithmetic from word problems
 
 **Motivation:** study multistep reasoning on word problems whose mathematics
 is elementary. The challenge is translating the story into a consistent
@@ -959,7 +929,7 @@ A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bol
 
 Answer: 3.
 
-#### ✅ 1.4.2. MATH-500 — competition-style mathematical problems
+#### ✅ 1.3.2. MATH-500 — competition-style mathematical problems
 
 **Motivation:** provide a compact evaluation of competition-style mathematics
 for repeated experiments. The subset was used in *Let's Verify Step by Step*
@@ -1014,12 +984,12 @@ in terms of $p$ and $q.$
 
 Answer: $p - q$.
 
-### ✅ 1.5. Reading comprehension & language modeling
+### ✅ 1.4. Reading comprehension & language modeling
 
 So far, many answers depended on stored knowledge. These tasks make information
 in the supplied text central to the answer.
 
-#### ✅ 1.5.1. BoolQ — answering yes/no questions using a passage
+#### ✅ 1.4.1. BoolQ — answering yes/no questions using a passage
 
 **Motivation:** test reading comprehension with naturally occurring yes/no
 questions. Despite their short answers, these questions can require inference
@@ -1056,7 +1026,7 @@ Question: is barq's root beer a pepsi product
 
 Answer: No.
 
-#### ✅ 1.5.2. LAMBADA (OpenAI variant) — predicting a word from broader context
+#### ✅ 1.4.2. LAMBADA (OpenAI variant) — predicting a word from broader context
 
 **Motivation:** test whether a model uses broader narrative context rather
 than only nearby words. LAMBADA selects passages whose final word people can
@@ -1090,7 +1060,7 @@ Shane gripped her arm and started leading her to the dock.
 
 Answer: Shane.
 
-### ✅ 1.6. Code
+### ✅ 1.5. Code
 
 Code adds an executable check: a plausible-looking answer can fail when run.
 **pass@k** estimates the probability that at least one of $k$ sampled solutions
@@ -1100,7 +1070,7 @@ passed. The HumanEval evaluation defines and implements this approach.
 [Paper](https://arxiv.org/abs/2107.03374),
 [Evaluation code](https://github.com/openai/human-eval).
 
-#### ✅ 1.6.1. HumanEval — implementing small functions from specifications
+#### ✅ 1.5.1. HumanEval — implementing small functions from specifications
 
 **Motivation:** evaluate whether generated code works instead of whether it
 resembles a reference program, since different implementations can solve the
@@ -1167,7 +1137,7 @@ Answer (dataset reference completion):
     return [x for x in strings if substring in x]
 ```
 
-#### ✅ 1.6.2. LiveCodeBench v6 — contest programming with dated problems
+#### ✅ 1.5.2. LiveCodeBench v6 — contest programming with dated problems
 
 **Motivation:** reduce contamination risk from repeatedly evaluating on old
 public coding problems by collecting new programming-contest tasks over time.
@@ -1240,7 +1210,7 @@ Example input: `l = 10, r = 20`.
 
 Expected output: `2`.
 
-### ✅ 1.7. Reading a scorecard without losing the meaning
+### ✅ 1.6. Reading a scorecard without losing the meaning
 
 Return to our plant question. Giving the model the supporting paragraph,
 providing five examples, or letting it search the web can each change the score.
@@ -2305,16 +2275,16 @@ Answer: C.
 
 [Record 1; image placeholders displayed as labeled maps](https://huggingface.co/datasets/MUIRBENCH/MUIRBENCH/viewer/default/test?row=1)
 
-## 4. Multimodal posttraining
+## ✅ 4. Multimodal posttraining
 
 Once a model can interpret visual input, can it follow a precise request about
 it and use it to solve a difficult problem? These five benchmarks focus on
 assistant behavior and reasoning after post-training. They can also diagnose
 earlier checkpoints; they do not prescribe a training method.
 
-### 4.1. Visual instruction following
+### ✅ 4.1. Visual instruction following
 
-#### 4.1.1. MM-IFEval — following instructions tied to images
+#### ✅ 4.1.1. MM-IFEval — following instructions tied to images
 
 **Motivation:** test both how a response is composed and whether the model applies instructions to the right visual information. A correctly formatted answer can still fail if the model reads the wrong values from an image.
 
@@ -2346,7 +2316,9 @@ Answer: `8.200`.
 
 [P-Level_0](https://huggingface.co/datasets/mm-eval/MM-IFEval/viewer/default/test?row=587)
 
-#### 4.1.2. MIA-Bench — obeying layered visual requests
+#### ✅ 4.1.2. MIA-Bench — obeying layered visual requests
+
+**MIA** stands for **Multimodal Instruction Adherence**.
 
 **Motivation:** test whether the assistant can satisfy several requirements at once, such as describing the pictured activity in exactly two sentences while including a metaphor.
 
@@ -2366,9 +2338,13 @@ Explain the activity taking place in the image using exactly two sentences, incl
 
 Recorded rubric: describe the activity (4 points), use exactly two sentences (3), and include a metaphor (3).
 
+**Example response** (illustrative):
+
+> A cook in an apron prepares food at a stove beneath rows of hanging pots and pans. The kitchen is a workshop of flavors, with ingredients and utensils spread across the wooden table.
+
 [First released record](https://github.com/apple-aiml-research/ml-mia-bench/blob/main/instruction_benchmark_all.json)
 
-#### 4.1.3. VisIT-Bench — useful responses to varied visual instructions
+#### ✅ 4.1.3. VisIT-Bench — useful responses to varied visual instructions
 
 **Motivation:** test realistic requests such as explaining a pictured phenomenon or suggesting what to do with an object. The response must be useful for the request, beyond simply recognizing what is visible.
 
@@ -2390,9 +2366,9 @@ Released GPT-4 response excerpt, marked correct by human annotators: The bright 
 
 [Single-image test row 2; full response and annotations](https://huggingface.co/datasets/mlfoundations/VisIT-Bench/viewer/default/test?row=1)
 
-### 4.2. Multimodal STEM & reasoning
+### ✅ 4.2. Multimodal STEM & reasoning
 
-#### 4.2.1. MMMU-Pro — academic reasoning that needs the image
+#### ✅ 4.2.1. MMMU-Pro — academic reasoning that needs the image
 
 **Motivation:** make academic multimodal questions harder to answer through text-only shortcuts or guessing. It filters the original MMMU, expands the answer choices, and adds a version where the question itself must be read from an image.
 
@@ -2435,7 +2411,7 @@ Answer: B.
 
 [test_History_1, vision](https://huggingface.co/datasets/MMMU/MMMU_Pro/viewer/vision/test?row=0)
 
-#### 4.2.2. MATH-Vision — competition mathematics with visual input
+#### ✅ 4.2.2. MATH-Vision — competition mathematics with visual input
 
 **Motivation:** test mathematical reasoning where diagrams, arrangements, or other visual information are part of the problem. The collection spans more topics and difficulty levels than basic visual arithmetic.
 
@@ -2468,10 +2444,3 @@ Which bike is most expensive?
 Answer: A.
 
 [Problem 2](https://huggingface.co/datasets/MathLLMs/MathVision/viewer/default/test?row=1)
-
-## Related notes
-
-- [LLM datasets](llm.md): the training corpora, instruction data, and preference
-  data that precede evaluation.
-- [nanoGPT hands-on guide](../llm/nanogpt.md): build a small next-token model to
-  connect the pretraining objective with model behavior.
