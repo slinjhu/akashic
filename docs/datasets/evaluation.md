@@ -1569,7 +1569,7 @@ photo, read its price tag, or locate it when several bicycles are present.
 These evaluations test how well a model connects language with visual evidence.
 
 The 25 entries below include dataset subsets, such as
-RefCOCO testB and CV-Bench 2D, rather than 25 independent collections. The stage
+RefCOCO testB (non-person targets) and CV-Bench 2D, rather than 25 independent collections. The stage
 labels describe where the evaluations are useful; many also evaluate post-trained
 assistants. Image-question pairs, referring expressions, and video questions are
 different units, so each Size section names what is counted.
@@ -1907,7 +1907,7 @@ Answer: 14.
 
 [Test row 1](https://huggingface.co/datasets/HuggingFaceM4/ChartQA/viewer/default/test?row=0)
 
-#### 3.4.6. InfoVQA — connecting information across infographics
+#### ✅ 3.4.6. InfoVQA — connecting information across infographics
 
 **Motivation:** test understanding of infographics that mix text, diagrams, icons, and statistics. The answer may require finding and combining information spread around the graphic.
 
@@ -1927,7 +1927,7 @@ Answer: pinterest.
 
 [Validation question 98313](https://huggingface.co/datasets/lmms-lab-encoder/DocVQA/viewer/InfographicVQA/validation?row=0)
 
-### 3.5. Referring & grounding
+### ✅ 3.5. Referring & grounding
 
 **Grounding** connects a phrase to a location in an image. In the RefCOCO
 family, the usual task is to return a bounding box for the referred object.
@@ -1935,15 +1935,11 @@ family, the usual task is to return a bounding box for the referred object.
 reference boxes divided by the area covered by either box. A typical evaluation
 counts a prediction as correct when IoU exceeds 0.5.
 
-The sizes below count referring expressions, not unique objects: several
-expressions can describe the same object. “RefCOCOB” and “RefCOCO+B” are interpreted
-here as the testB subsets, which contain non-person targets; testA contains people.
-
-#### 3.5.1. RefCOCO — locating the object described by a phrase
+#### ✅ 3.5.1. RefCOCO — locating the object described by a phrase
 
 **Motivation:** test whether language identifies a particular object among nearby alternatives. Short expressions may use appearance or location, such as which person is on the left.
 
-**Size:** the UNC evaluation splits contain 10,834 validation expressions, 5,657 testA expressions, and 5,095 testB expressions. The training split is separate.
+**Size:** the UNC (University of North Carolina at Chapel Hill) evaluation splits contain 10,834 validation expressions, 5,657 testA (people) expressions, and 5,095 testB (non-person targets) expressions. The training split is separate.
 
 **Metric:** one **grounding accuracy** per split: the fraction of expression–image queries whose predicted box passes the IoU threshold. Higher is better. A segmentation version predicts masks and uses different metrics, so label it separately.
 
@@ -1959,11 +1955,11 @@ Reference box in pixels, `[x, y, width, height]`: `[3.24, 159.31, 156.4, 312.81]
 
 [Reference 47, expression 136](https://huggingface.co/datasets/jxu124/refcoco/viewer/default/test?row=0)
 
-#### 3.5.2. RefCOCO+ — grounding without simple location words
+#### ✅ 3.5.2. RefCOCO+ — grounding without simple location words
 
 **Motivation:** test appearance-based identification more strongly. Annotators were asked to avoid location words, encouraging descriptions of color, clothing, and other visible properties.
 
-**Size:** 10,758 validation expressions, 5,726 testA expressions, and 4,889 testB expressions under the UNC split.
+**Size:** 10,758 validation expressions, 5,726 testA (people) expressions, and 4,889 testB (non-person targets) expressions under the UNC split.
 
 **Metric:** one grounding accuracy per split, using box IoU > 0.5. Average the binary outcomes across expressions; higher is better.
 
@@ -1979,13 +1975,13 @@ Reference box in pixels, `[x, y, width, height]`: `[3.24, 159.31, 156.4, 312.81]
 
 [Reference 45, expression 129](https://huggingface.co/datasets/jxu124/refcocoplus/viewer/default/test?row=0)
 
-#### 3.5.3. RefCOCO+B — RefCOCO+ on non-person targets
+#### ✅ 3.5.3. RefCOCO+B — RefCOCO+ on non-person targets
 
-**Motivation:** isolate how well the model grounds appearance-based descriptions of objects other than people. This is RefCOCO+ testB, not a separate collection.
+**Motivation:** isolate how well the model grounds appearance-based descriptions of objects other than people. This is RefCOCO+ testB (non-person targets), not a separate collection.
 
-**Size:** 4,889 referring expressions in testB, describing 1,798 target objects.
+**Size:** 4,889 referring expressions in testB (non-person targets), describing 1,798 target objects.
 
-**Metric:** one testB grounding accuracy: the percentage of expressions whose predicted boxes have IoU > 0.5 with the reference. Higher is better.
+**Metric:** one testB (non-person targets) grounding accuracy: the percentage of expressions whose predicted boxes have IoU > 0.5 with the reference. Higher is better.
 
 [Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
 
@@ -1999,13 +1995,13 @@ Reference box in pixels, `[x, y, width, height]`: `[0.0, 373.89, 137.59, 126.11]
 
 [Reference 25, expression 70](https://huggingface.co/datasets/jxu124/refcocoplus/viewer/default/testB?row=0)
 
-#### 3.5.4. RefCOCOB — RefCOCO on non-person targets
+#### ✅ 3.5.4. RefCOCOB — RefCOCO on non-person targets
 
-**Motivation:** isolate non-person grounding with RefCOCO's unrestricted expressions, including spatial descriptions. It complements the people-focused testA score.
+**Motivation:** isolate non-person grounding with RefCOCO's unrestricted expressions, including spatial descriptions. It complements the testA (people) score.
 
-**Size:** 5,095 referring expressions in RefCOCO testB, describing 1,810 target objects.
+**Size:** 5,095 referring expressions in RefCOCO testB (non-person targets), describing 1,810 target objects.
 
-**Metric:** one testB grounding accuracy at box IoU > 0.5, with higher being better. Its scoring rule matches RefCOCO; the evaluated targets differ.
+**Metric:** one testB (non-person targets) grounding accuracy at box IoU > 0.5, with higher being better. Its scoring rule matches RefCOCO; the evaluated targets differ.
 
 [Original RefCOCO family and split definitions](https://github.com/lichengunc/refer), [Expression counts in the ReCLIP paper](https://nlp.cs.berkeley.edu/pubs/Subramanian-Merrill-Darrell-Gardner-Singh-Rohrbach_2022_ReCLIP_paper.pdf)
 
@@ -2019,11 +2015,11 @@ Reference box in pixels, `[x, y, width, height]`: `[0.0, 373.89, 137.59, 126.11]
 
 [Reference 25, expression 73](https://huggingface.co/datasets/jxu124/refcoco/viewer/default/testB?row=0)
 
-#### 3.5.5. RefCOCOg — grounding longer descriptions
+#### ✅ 3.5.5. RefCOCOg — grounding longer descriptions
 
 **Motivation:** test descriptions that tend to be longer and more detailed than RefCOCO's short phrases, often combining attributes and relationships.
 
-**Size:** the UMD split has 4,896 validation and 9,602 test expressions. The Google split is different, so retain the split name with the score.
+**Size:** the UMD (University of Maryland, College Park) split has 4,896 validation and 9,602 test expressions. The Google split is different, so retain the split name with the score.
 
 **Metric:** one grounding accuracy per split at box IoU > 0.5. Each expression receives a binary result, then results are averaged; higher is better.
 
@@ -2039,7 +2035,10 @@ Reference box in pixels, `[x, y, width, height]`: `[93.95, 83.29, 504.61, 290.57
 
 [Reference 1, expression 10](https://huggingface.co/datasets/jxu124/refcocog/viewer/default/test?row=1)
 
-#### 3.5.6. PixMo-Points — pointing to the requested objects
+#### ✅ 3.5.6. PixMo-Points — pointing to the requested objects
+
+**PixMo** stands for **Pixels for Molmo**, Ai2's collection of image-and-text
+datasets for training Molmo vision-language models.
 
 **Motivation:** test whether a model can return the locations of every object matching a description. Points offer a simpler output than full boxes or masks and naturally support several matching objects.
 
@@ -2063,7 +2062,9 @@ Reference: three points, one inside each annotated black bomb. The supplied mask
 
 These tasks distinguish a position on the flat image from a position in the depicted three-dimensional scene.
 
-#### 3.6.1. 3DSRBench — reasoning about three-dimensional relationships
+#### ✅ 3.6.1. 3DSRBench — reasoning about three-dimensional relationships
+
+**3DSRBench** stands for **3D Spatial Reasoning Benchmark**.
 
 **Motivation:** test height, depth, orientation, and relationships among several objects. A thing appearing higher in the image is not necessarily higher in the real scene.
 
@@ -2086,7 +2087,7 @@ Answer: B.
 
 [Record VIN6MS3J](https://huggingface.co/datasets/ccvl/3DSRBench/viewer/benchmark/test?row=0)
 
-#### 3.6.2. CV-Bench 2D — counting and locating objects in the image
+#### ✅ 3.6.2. CV-Bench 2D — counting and locating objects in the image
 
 **Motivation:** test basic visual skills using questions derived from established computer-vision annotations: counting objects and identifying their two-dimensional spatial relationships.
 
@@ -2111,7 +2112,7 @@ Answer: (C).
 
 [2D index 0](https://huggingface.co/datasets/nyu-visionx/CV-Bench/viewer/2D/test?row=0)
 
-#### 3.6.3. CV-Bench 3D — comparing depth and distance
+#### ✅ 3.6.3. CV-Bench 3D — comparing depth and distance
 
 **Motivation:** test whether the model can distinguish closeness to the camera from closeness to another object. Colored boxes identify which objects to compare.
 
@@ -2134,7 +2135,7 @@ Answer: (A).
 
 [3D index 1438](https://huggingface.co/datasets/nyu-visionx/CV-Bench/viewer/3D/test?row=0)
 
-#### 3.6.4. MMSI-Bench — reconstructing space across images
+#### ✅ 3.6.4. MMSI-Bench — reconstructing space across images
 
 **Motivation:** test spatial understanding that requires relating multiple views: camera movement, object positions, room connections, and multi-step spatial deductions.
 
