@@ -32,7 +32,9 @@ export function Settings() {
   }, [open]);
 
   return <div className="settings" ref={container} onBlur={event => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+    // Safari can blur to no element when clicking a button inside the popup.
+    // Outside pointer presses already close it; only follow real focus moves here.
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
     <button ref={trigger} type="button" className="settings-trigger" aria-label="Settings" title="Settings"
       aria-expanded={open} aria-controls="settings-card" aria-haspopup="dialog" onClick={() => setOpen(!open)}>
