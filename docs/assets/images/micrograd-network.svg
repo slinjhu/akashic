@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="422" viewBox="0 0 840 422" role="img" aria-labelledby="title desc">
+  <title id="title">A network with one input, eight hidden neurons, and one output</title>
+  <desc id="desc">The same input x goes to eight hidden neurons. Each neuron has its own weight and bias and applies ReLU to w times x plus b. One output neuron combines all eight hidden features with eight weights and one bias to produce a scalar prediction. The network has 25 trainable parameters.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="840" height="422" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a" text-anchor="middle">
+    <text x="420" y="40" font-size="24" font-weight="700">Learn features, then combine them</text>
+    <text x="380" y="78" font-size="18" fill="#475569">8 hidden neurons · each has its own w and b</text>
+    <g fill="none" stroke="#94a3b8" stroke-width="1.5">
+      <path d="M160 224 H200 M200 113 V337 M200 113 H250 M200 145 H250 M200 177 H250 M200 209 H250 M200 241 H250 M200 273 H250 M200 305 H250 M200 337 H250"/>
+      <path d="M550 113 V337 M550 224 H600 M510 113 H550 M510 145 H550 M510 177 H550 M510 209 H550 M510 241 H550 M510 273 H550 M510 305 H550 M510 337 H550"/>
+    </g>
+    <rect x="30" y="191" width="130" height="66" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+    <text x="95" y="218" font-size="18">Input</text><text x="95" y="244" font-size="21" font-weight="600">x</text>
+    <g fill="#dbeafe" stroke="#60a5fa">
+      <rect x="250" y="100" width="260" height="26" rx="5"/>
+      <rect x="250" y="132" width="260" height="26" rx="5"/>
+      <rect x="250" y="164" width="260" height="26" rx="5"/>
+      <rect x="250" y="196" width="260" height="26" rx="5"/>
+      <rect x="250" y="228" width="260" height="26" rx="5"/>
+      <rect x="250" y="260" width="260" height="26" rx="5"/>
+      <rect x="250" y="292" width="260" height="26" rx="5"/>
+      <rect x="250" y="324" width="260" height="26" rx="5"/>
+    </g>
+    <g font-size="16">
+      <text x="380" y="119">h₁ = ReLU(w₁ × x + b₁)</text>
+      <text x="380" y="151">h₂ = ReLU(w₂ × x + b₂)</text>
+      <text x="380" y="183">h₃ = ReLU(w₃ × x + b₃)</text>
+      <text x="380" y="215">h₄ = ReLU(w₄ × x + b₄)</text>
+      <text x="380" y="247">h₅ = ReLU(w₅ × x + b₅)</text>
+      <text x="380" y="279">h₆ = ReLU(w₆ × x + b₆)</text>
+      <text x="380" y="311">h₇ = ReLU(w₇ × x + b₇)</text>
+      <text x="380" y="343">h₈ = ReLU(w₈ × x + b₈)</text>
+    </g>
+    <rect x="600" y="166" width="210" height="116" rx="8" fill="#ede9fe" stroke="#a78bfa"/>
+    <text x="705" y="196" font-size="20" font-weight="600">Output neuron</text>
+    <text x="705" y="225" font-size="17">Weighted sum of h₁…h₈</text>
+    <text x="705" y="250" font-size="17">+ output bias</text>
+    <path d="M705 282 V320" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="705" y="347" font-size="20" font-weight="600">Prediction</text>
+    <text x="420" y="394" font-size="18" fill="#475569">16 hidden-layer parameters + 9 output parameters = 25</text>
+  </g>
+</svg>

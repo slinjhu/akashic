@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="350" viewBox="0 0 960 350" role="img" aria-labelledby="title desc">
+  <title id="title">One prediction becomes a loss through connected arithmetic</title>
+  <desc id="desc">Multiply input x equals 2 by weight w equals negative 3 to get negative 6. Add bias b equals 10 to get prediction 4. Subtract target 1 to get error 3, then square to get loss 9. Arrows show the forward calculation.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="960" height="350" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#0f172a" text-anchor="middle">
+    <text x="480" y="40" font-size="24" font-weight="700">A loss is the end of a calculation</text>
+    <g stroke="#475569" stroke-width="2" fill="none" marker-end="url(#arrow)">
+      <path d="M156 133 H184 V193 H210"/>
+      <path d="M156 253 H184 V207 H210"/>
+      <path d="M340 200 H410"/>
+      <path d="M475 124 V162"/>
+      <path d="M540 200 H610"/>
+      <path d="M740 200 H810"/>
+    </g>
+    <g stroke="#60a5fa" fill="#dbeafe">
+      <rect x="26" y="102" width="130" height="62" rx="8"/>
+      <rect x="210" y="165" width="130" height="70" rx="8"/>
+      <rect x="410" y="165" width="130" height="70" rx="8"/>
+      <rect x="610" y="165" width="130" height="70" rx="8"/>
+    </g>
+    <g stroke="#a78bfa" fill="#ede9fe">
+      <rect x="26" y="222" width="130" height="62" rx="8"/>
+      <rect x="410" y="62" width="130" height="62" rx="8"/>
+    </g>
+    <rect x="810" y="165" width="124" height="70" rx="8" fill="#dcfce7" stroke="#4ade80"/>
+    <g font-size="20">
+      <text x="91" y="140">x = 2</text>
+      <text x="91" y="260">w = −3</text>
+      <text x="475" y="100">b = 10</text>
+      <text x="275" y="192">Product</text><text x="275" y="220" font-weight="600">−6</text>
+      <text x="475" y="192">Prediction</text><text x="475" y="220" font-weight="600">4</text>
+      <text x="675" y="192">Error</text><text x="675" y="220" font-weight="600">3</text>
+      <text x="872" y="192">Loss</text><text x="872" y="220" font-weight="600">9</text>
+    </g>
+    <g font-size="17" fill="#475569">
+      <text x="275" y="151">multiply</text>
+      <text x="375" y="187">add</text>
+      <text x="575" y="187">−1</text>
+      <text x="775" y="187">square</text>
+      <text x="480" y="320">Forward: compute each result from the numbers feeding into it.</text>
+    </g>
+  </g>
+</svg>
