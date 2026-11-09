@@ -122,9 +122,7 @@ the parameters change.
 
 ## 3. Make arithmetic remember how to go backward
 
-### ⏳ 3.1. Follow the full backward pass
-
-#### ⏳ 3.1.1. Apply the chain rule
+### ⏳ 3.1. Apply the chain rule
 
 If a value $a$ affects the loss $L$ through an intermediate value $z$, the chain
 rule gives:
@@ -139,7 +137,7 @@ how sensitive $z$ is to $a$. Multiplying them gives the loss's sensitivity to $a
 through this connection. A backward rule receives the first factor from the next
 operation and multiplies it by its own local derivative.
 
-#### 3.1.2. Work backward through every operation
+### 3.2. Work backward through every operation
 
 Write our forward calculation as four connected operations. Here $p$ is the
 product, $y$ is the prediction, $e$ is the error, and $t$ is the fixed target:
@@ -169,18 +167,18 @@ value. Starting with all gradients at zero, the manual backward pass is:
 loss.grad = 1.0
 
 # 2. loss = error ** 2: the local derivative is 2 * error.
-error.grad += 2 * error.data * loss.grad
+error.grad = 2 * error.data * loss.grad
 
 # 3. error = prediction - target: the derivative with respect to prediction is 1.
-prediction.grad += error.grad
+prediction.grad = error.grad
 
 # 4. prediction = product + b: both local derivatives are 1.
-product.grad += prediction.grad
-b.grad += prediction.grad
+product.grad = prediction.grad
+b.grad = prediction.grad
 
 # 5. product = w * x: the local derivatives are x and w.
-w.grad += x.data * product.grad
-x.grad += w.data * product.grad
+w.grad = x.data * product.grad
+x.grad = w.data * product.grad
 ```
 
 This explains where `product.grad` comes from: the square passes sensitivity to
@@ -188,11 +186,7 @@ the error, and subtraction and addition pass it on to the product. Multiplicatio
 then passes it to `w` and `x`. The bias receives its contribution at the addition.
 The target stays fixed, so we do not track a gradient for it here.
 
-Each of `w`, `x`, and `b` has one path to the loss in this example. Their gradients
-therefore each receive one contribution. The `*` applies the chain rule; `+=`
-collects contributions so the same rules also work when a value has multiple paths.
-
-#### 3.1.3. Let micrograd carry out these steps
+### 3.3. Let micrograd carry out these steps
 
 A normal Python float stores a number. micrograd's `Value` also stores connections
 to its input nodes and a backward function for the operation that produced it.
@@ -204,13 +198,6 @@ It performs the steps above automatically; see the
 Passing sensitivities backward through the graph is **backpropagation**.
 Recording the operations and applying their derivative rules automatically is
 **automatic differentiation**, or **autograd**.
-
-### 3.2. Why the gradients add
-
-A parameter can affect the loss through several paths. For `a + a`, increasing
-`a` increases both inputs to the addition, so its derivative is `1 + 1 = 2`.
-The backward rules use `+=` to collect every contribution. This becomes essential
-when the same weight is used to predict several training examples.
 
 Backpropagation computes gradients. It does not change the parameters; that is
 the next step.
