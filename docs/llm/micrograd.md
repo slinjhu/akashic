@@ -11,7 +11,7 @@ tags:
 
 ## ✅ 1. Start with one adjustable prediction
 
-### 1.1. What training needs to solve
+### ✅ 1.1. What training needs to solve
 
 A neural network makes predictions using adjustable numbers. Training means
 measuring its mistakes and changing those numbers to make the mistakes smaller.
@@ -64,9 +64,9 @@ uv pip install micrograd==0.1.0
 so you can inspect every operation. We will use its published implementation
 while explaining the machinery the lecture builds from scratch.
 
-## 2. Which way should a weight move?
+## ✅ 2. Which way should a weight move?
 
-### 2.1. Estimate the effect of a small change
+### ✅ 2.1. Estimate the effect of a small change
 
 Try increasing `w` slightly, from `-3` to `-2.999`. The prediction rises from `4`
 to `4.002`, and the loss rises from `9` to `9.012004`. Increasing this weight
@@ -93,7 +93,7 @@ raises the loss by about `12 × 0.001`. This estimate is called a **finite
 difference**. It is useful for checking derivatives, but repeating the calculation
 separately for every parameter would require many forward calculations.
 
-### 2.2. Follow the effect through the calculation
+### ✅ 2.2. Follow the effect through the calculation
 
 Break the prediction and loss into small operations. The resulting **computation
 graph** records which numbers were used to produce each result. Computing those
@@ -122,30 +122,63 @@ the parameters change.
 
 ## 3. Make arithmetic remember how to go backward
 
-### 3.1. Record values and backward rules
+### ⏳ 3.1. Follow the gradient from loss to inputs
 
-A normal Python float stores a number. micrograd's `Value` also remembers the
-operation that produced it, its input nodes, and a small function for passing a
-gradient backward. For example, multiplying two `Value` objects produces another
-`Value` connected to both inputs. See the [engine implementation](https://github.com/karpathy/micrograd/blob/master/micrograd/engine.py).
+#### 3.1.1. Apply the chain rule
 
-For `product = w * x`, the backward rule is:
+Keep two expressions: the product $p = wx$ and the loss $L$, where $t$ is the
+fixed target:
+
+$$
+p = wx, \qquad L = (p + b - t)^2
+$$
+
+First find how sensitive the loss is to the product, then multiply by how
+sensitive the product is to each input:
+
+$$
+\begin{aligned}
+\frac{\partial L}{\partial p} &= 2(p + b - t) \\
+\frac{\partial L}{\partial w}
+&= \frac{\partial L}{\partial p}\frac{\partial p}{\partial w}
+= \frac{\partial L}{\partial p}\,x \\
+\frac{\partial L}{\partial x}
+&= \frac{\partial L}{\partial p}\frac{\partial p}{\partial x}
+= \frac{\partial L}{\partial p}\,w \\
+\frac{\partial L}{\partial b} &= 2(p + b - t)
+\end{aligned}
+$$
+
+These are the **chain rule**: the loss's sensitivity to an input is the product
+of the sensitivities along its path through $p$. The bias affects the loss
+through $p + b$, so its derivative equals the derivative with respect to $p$.
+
+#### 3.1.2. Connect the equations to code
+
+In micrograd, `.data` stores a forward value and `.grad` stores the derivative of
+the loss with respect to that value. Grouping the loss calculation into one rule,
+we can write the manual gradients as:
 
 ```python
-# product.grad is the loss's sensitivity to product.
+# L = (p + b - target) ** 2: sensitivity to p and b.
+product.grad = 2 * (product.data + b.data - target)
+b.grad += product.grad
+
+# p = w * x: pass that sensitivity to w and x.
 w.grad += x.data * product.grad
 x.grad += w.data * product.grad
 ```
 
-`.data` is the forward value; `.grad` is the derivative of the final loss with
-respect to that node. In our example, `product.grad` is `6`, so `w.grad` receives
-`2 × 6 = 12`.
+Here each input has one path to the loss, and its gradient starts at zero. The
+multiplication applies the chain rule; `+=` lets the same rule collect additional
+contributions when a value is used along multiple paths.
 
-Calling `loss.backward()` starts with `loss.grad = 1`: changing the loss by one
-changes itself by one. It then visits the graph backward, applying each operation's
-local rule after all operations that used its result have contributed. This
-process is **backpropagation**. Automatically recording and applying these rules
-is **automatic differentiation**, or **autograd**.
+micrograd's `Value` records the operations and their backward rules.
+Calling `loss.backward()` applies those rules automatically, starting at the loss
+and working back to the inputs. This backward process is **backpropagation**;
+automatically recording and applying derivative rules is **automatic
+differentiation**, or **autograd**. See the
+[engine implementation](https://github.com/karpathy/micrograd/blob/master/micrograd/engine.py).
 
 ### 3.2. Why the gradients add
 
