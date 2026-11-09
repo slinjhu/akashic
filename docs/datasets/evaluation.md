@@ -40,7 +40,7 @@ part of the original context. Row numbers start at 1, excluding headers.
 Letter labels are added when choices are stored without them; math delimiters
 are adapted for display. The opening plant question is illustrative.
 
-## ✅ 1. Text pretraining
+## ⏳ 1. Text pretraining
 
 The 25 benchmark entries below are grouped by the capabilities they assess. These are not exclusive
 stage assignments: SimpleQA, GPQA, MATH-500, and LiveCodeBench, for example, also
@@ -1241,7 +1241,7 @@ answer moves accuracy by about 0.51 percentage points. Multiple benchmarks may
 share underlying questions or skills, so averaging all 21 scores does not create
 21 independent measurements of general intelligence.
 
-## ✅ 2. Text post training
+## ⏳ 2. Text post training
 
 Post-training turns a text model into an assistant that can follow requests
 and act on them. Start with a response constraint, such as “use only lowercase.”
@@ -1532,14 +1532,14 @@ The evaluation supplies a memory environment; this is not an isolated question
 that the model can answer from general knowledge.
 [Record memory_0-customer-0](https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_memory.json).
 
-## ✅ 3. Multimodal pretraining
+## ⏳ 3. Multimodal pretraining
 
 A text model can name a bicycle. A multimodal model must also recognize one in a
 photo, read its price tag, or locate it when several bicycles are present.
 These evaluations test how well a model connects language with visual evidence.
 
-The 25 entries below include dataset subsets, such as
-RefCOCO testB (non-person targets) and CV-Bench 2D, rather than 25 independent collections. The stage
+The 26 entries below include dataset subsets, such as
+RefCOCO testB (non-person targets) and CV-Bench 2D, rather than 26 independent collections. The stage
 labels describe where the evaluations are useful; many also evaluate post-trained
 assistants. Image-question pairs, referring expressions, and video questions are
 different units, so each Size section names what is counted.
@@ -1690,6 +1690,40 @@ Answer with the option's letter from the given choices directly.
 Answer: A.
 
 [Question 0](https://huggingface.co/datasets/craigwu/vstar_bench/viewer/default/test?row=0)
+
+#### ✅ 3.1.5. MM-Vet — combining visual capabilities in open-ended answers
+
+**Motivation:** MM-Vet stands for *Multimodal Veterinarian*, with “Vet” short for “veterinarian.” It tests whether a model can combine visual skills to answer a question, such as reading room dimensions on a floor plan and comparing their areas. MM-Vet covers recognition, OCR, knowledge, language generation, spatial awareness, and math. Each question is labeled with the capabilities it requires, allowing results to be broken down by individual skills and their combinations.
+
+**Size:** the original MM-Vet evaluation set has 218 questions over 200 images, covering 16 capability combinations. These counts refer to the original release, not the expanded MM-Vet v2.
+
+**Metric:** one overall score from 0 to 100; higher is better. A GPT-4 judge compares each generated answer with the question and reference answer, assigning correctness from 0 to 1 with partial credit. Average these grades across questions and multiply by 100. The paper repeats judging five times and reports the mean and variation; report the judge version and number of runs with the score. Capability scores average the grades for questions carrying the corresponding labels.
+
+[Original paper, dataset and evaluation](https://arxiv.org/html/2308.02490v3#S3), [Official evaluator](https://github.com/yuweihao/MM-Vet/blob/main/mm-vet_evaluator.py)
+
+**Sample 1: recognition** (from the dataset):
+
+```images
+![MM-Vet tomato-counting sample](evaluation-assets/mmvet-tomatoes.jpg)
+```
+
+How many tomatoes are there?
+
+Answer: 5.
+
+[Official sample 2](https://github.com/yuweihao/MM-Vet#some-samples-on-mm-vet)
+
+**Sample 2: OCR, spatial awareness, and math** (from the dataset):
+
+```images
+![MM-Vet floor plan with labeled rooms and dimensions](evaluation-assets/mmvet-floorplan.jpg)
+```
+
+Which room is bigger, the double garage or the living room?
+
+Answer: double garage.
+
+[Official sample 4](https://github.com/yuweihao/MM-Vet#some-samples-on-mm-vet)
 
 ### ✅ 3.2. Captioning
 
@@ -2275,7 +2309,7 @@ Answer: C.
 
 [Record 1; image placeholders displayed as labeled maps](https://huggingface.co/datasets/MUIRBENCH/MUIRBENCH/viewer/default/test?row=1)
 
-## ✅ 4. Multimodal posttraining
+## ⏳ 4. Multimodal posttraining
 
 Once a model can interpret visual input, can it follow a precise request about
 it and use it to solve a difficult problem? These five benchmarks focus on
