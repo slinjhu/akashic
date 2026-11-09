@@ -122,63 +122,88 @@ the parameters change.
 
 ## 3. Make arithmetic remember how to go backward
 
-### ⏳ 3.1. Follow the gradient from loss to inputs
+### ⏳ 3.1. Follow the full backward pass
 
-#### 3.1.1. Apply the chain rule
+#### ⏳ 3.1.1. Apply the chain rule
 
-Keep two expressions: the product $p = wx$ and the loss $L$, where $t$ is the
-fixed target:
-
-$$
-p = wx, \qquad L = (p + b - t)^2
-$$
-
-First find how sensitive the loss is to the product, then multiply by how
-sensitive the product is to each input:
+If a value $a$ affects the loss $L$ through an intermediate value $z$, the chain
+rule gives:
 
 $$
-\begin{aligned}
-\frac{\partial L}{\partial p} &= 2(p + b - t) \\
+\frac{\partial L}{\partial a}
+= \frac{\partial L}{\partial z}\frac{\partial z}{\partial a}
+$$
+
+The first factor tells us how sensitive the loss is to $z$. The second tells us
+how sensitive $z$ is to $a$. Multiplying them gives the loss's sensitivity to $a$
+through this connection. A backward rule receives the first factor from the next
+operation and multiplies it by its own local derivative.
+
+#### 3.1.2. Work backward through every operation
+
+Write our forward calculation as four connected operations. Here $p$ is the
+product, $y$ is the prediction, $e$ is the error, and $t$ is the fixed target:
+
+$$
+p = wx, \qquad y = p + b, \qquad e = y - t, \qquad L = e^2
+$$
+
+The full chain from the weight to the loss is:
+
+$$
 \frac{\partial L}{\partial w}
-&= \frac{\partial L}{\partial p}\frac{\partial p}{\partial w}
-= \frac{\partial L}{\partial p}\,x \\
-\frac{\partial L}{\partial x}
-&= \frac{\partial L}{\partial p}\frac{\partial p}{\partial x}
-= \frac{\partial L}{\partial p}\,w \\
-\frac{\partial L}{\partial b} &= 2(p + b - t)
-\end{aligned}
+= \frac{\partial L}{\partial e}
+  \frac{\partial e}{\partial y}
+  \frac{\partial y}{\partial p}
+  \frac{\partial p}{\partial w}
+= (2e)\cdot 1\cdot 1\cdot x
 $$
 
-These are the **chain rule**: the loss's sensitivity to an input is the product
-of the sensitivities along its path through $p$. The bias affects the loss
-through $p + b$, so its derivative equals the derivative with respect to $p$.
-
-#### 3.1.2. Connect the equations to code
-
-In micrograd, `.data` stores a forward value and `.grad` stores the derivative of
-the loss with respect to that value. Grouping the loss calculation into one rule,
-we can write the manual gradients as:
+Work backward through the forward calculation: start at the loss, then visit the
+error, prediction, product, and its inputs. In the code, `.data` stores a forward
+value and `.grad` stores the derivative of the final loss with respect to that
+value. Starting with all gradients at zero, the manual backward pass is:
 
 ```python
-# L = (p + b - target) ** 2: sensitivity to p and b.
-product.grad = 2 * (product.data + b.data - target)
-b.grad += product.grad
+# 1. Seed the loss: its derivative with respect to itself is 1.
+loss.grad = 1.0
 
-# p = w * x: pass that sensitivity to w and x.
+# 2. loss = error ** 2: the local derivative is 2 * error.
+error.grad += 2 * error.data * loss.grad
+
+# 3. error = prediction - target: the derivative with respect to prediction is 1.
+prediction.grad += error.grad
+
+# 4. prediction = product + b: both local derivatives are 1.
+product.grad += prediction.grad
+b.grad += prediction.grad
+
+# 5. product = w * x: the local derivatives are x and w.
 w.grad += x.data * product.grad
 x.grad += w.data * product.grad
 ```
 
-Here each input has one path to the loss, and its gradient starts at zero. The
-multiplication applies the chain rule; `+=` lets the same rule collect additional
-contributions when a value is used along multiple paths.
+This explains where `product.grad` comes from: the square passes sensitivity to
+the error, and subtraction and addition pass it on to the product. Multiplication
+then passes it to `w` and `x`. The bias receives its contribution at the addition.
+The target stays fixed, so we do not track a gradient for it here.
 
-micrograd's `Value` records the operations and their backward rules.
-Calling `loss.backward()` applies those rules automatically, starting at the loss
-and working back to the inputs. This backward process is **backpropagation**;
-automatically recording and applying derivative rules is **automatic
-differentiation**, or **autograd**. See the
+Each of `w`, `x`, and `b` has one path to the loss in this example. Their gradients
+therefore each receive one contribution. The `*` applies the chain rule; `+=`
+collects contributions so the same rules also work when a value has multiple paths.
+
+#### 3.1.3. Let micrograd carry out these steps
+
+A normal Python float stores a number. micrograd's `Value` also stores connections
+to its input nodes and a backward function for the operation that produced it.
+Calling `loss.backward()` seeds the loss gradient and runs those functions in
+reverse order, after all operations using a node have contributed to its gradient.
+It performs the steps above automatically; see the
 [engine implementation](https://github.com/karpathy/micrograd/blob/master/micrograd/engine.py).
+
+Passing sensitivities backward through the graph is **backpropagation**.
+Recording the operations and applying their derivative rules automatically is
+**automatic differentiation**, or **autograd**.
 
 ### 3.2. Why the gradients add
 
