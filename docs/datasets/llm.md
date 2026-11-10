@@ -302,6 +302,10 @@ public exposure, and differences in prompting or tools affect interpretation.
 
 ## Related notes
 
+For how raw web pages become training text, follow
+[Data curation for LLM pretraining](data-curation.md), from Common Crawl captures
+through extraction, filtering, deduplication, and model experiments.
+
 For a small pretraining experiment you can run and inspect, follow the
 [nanoGPT hands-on guide](../llm/nanogpt.md), from subword tokens to a trained
 model and generated text.

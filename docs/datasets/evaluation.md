@@ -48,7 +48,7 @@ appear in evaluations of post-trained models. A base model's ability to complete
 text and an assistant's ability to follow a request can produce different
 results on the same underlying questions.
 
-### ✅ 1.1. World knowledge & factuality
+### ⏳ 1.1. World knowledge & factuality
 
 These datasets test subject knowledge, factual recall, resistance to common misconceptions, and whether claims or generated answers are supported by evidence.
 
