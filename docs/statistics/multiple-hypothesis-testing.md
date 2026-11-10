@@ -155,7 +155,7 @@ the five benchmarks in advance and keep all five comparisons in the group,
 including those with large p-values. Reporting only the favorable results
 would hide how many chances we had to find a small p-value by luck.
 
-## ⏳ 3. Decide which error rate to control
+## ✅ 3. Decide which error rate to control
 
 There are two common goals for a family of tests:
 
@@ -189,6 +189,8 @@ It is a property of the procedure across repeated experiments.
 
 ## ⏳ 4. Apply Benjamini–Hochberg to the five benchmarks
 
+### ✅ 4.1. How the procedure works
+
 **Benjamini–Hochberg (BH)** takes the family's raw p-values and selects
 discoveries at a target FDR, written $q$. It can adjust Welch p-values, but
 also p-values from other valid tests.
@@ -197,6 +199,8 @@ For $m$ tests, sort the p-values from smallest to largest. At rank $i$, compare
 $p_{(i)}$ with $iq/m$. Find the **largest rank** that passes, and reject every
 null up to that rank. If no rank passes, reject none.
 [Original BH procedure](https://www.math.tau.ac.il/~ybenja/MyPapers/benjamini_hochberg1995.pdf)
+
+### ✅ 4.2. Work through the five benchmarks
 
 Here are illustrative p-values for our five benchmarks, already sorted,
 with $q=0.05$:
@@ -209,12 +213,15 @@ with $q=0.05$:
 | 4 | D | 0.060 | 0.040 | No | Do not reject |
 | 5 | E | 0.200 | 0.050 | No | Do not reject |
 
-The largest passing rank is 3, so BH selects A, B, and C. Notice that B is
+The largest passing rank is 3, so BH selects A, B, and C. This means the
+comparisons on benchmarks A, B, and C are **statistically significant after
+BH correction at a target FDR of 5%**: we reject their equal-means null
+hypotheses. Notice that B is
 included even though its own row fails: **BH is not five independent threshold
 checks, and you must not stop at the first failure.** Bonferroni at 5% would
 select only A in this example.
 
-### ⏳ 4.1. What an adjusted p-value means
+### ✅ 4.3. What an adjusted p-value means
 
 Software often returns a **BH-adjusted p-value** for each test instead of
 showing the rank thresholds. Compare these adjusted values directly with
@@ -287,38 +294,3 @@ only favorable metrics, or tuning on the evaluation set changes the analysis.
 Correcting the final visible table does not account for all those hidden
 opportunities. Plan the comparisons and report the full family.
 [ASA guidance on interpretation and selective reporting](https://www.amstat.org/asa/files/pdfs/p-valuestatement.pdf)
-
-## ⏳ 6. Reproduce the calculation in Python
-
-Use Welch's test only when the independent-group setup fits your data:
-
-```python
-from scipy import stats
-
-# scores_b and scores_a contain one score per independent run.
-result = stats.ttest_ind(scores_b, scores_a, equal_var=False,
-                         alternative="two-sided")
-welch_p = result.pvalue
-```
-
-Then adjust all raw p-values in the planned family together. This reproduces
-the illustrative table; the values below are not measured model results:
-
-```python
-from scipy import stats
-
-raw_p = [0.001, 0.021, 0.024, 0.060, 0.200]
-adjusted_p = stats.false_discovery_control(raw_p, method="bh")
-selected = adjusted_p <= 0.05
-
-# adjusted_p: [0.005, 0.040, 0.040, 0.075, 0.200]
-# selected:   [True,  True,  True,  False, False]
-```
-
-`equal_var=False` requests Welch instead of the default equal-variance test.
-The BH function preserves input order, so you do not need to sort the values
-yourself. [Welch API](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html),
-[FDR adjustment API](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.false_discovery_control.html)
-
-For examples of the model evaluation tasks these comparisons might use, see
-[Evaluation datasets](../datasets/evaluation.md).
