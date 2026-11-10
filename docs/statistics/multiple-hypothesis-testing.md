@@ -246,51 +246,75 @@ is true. Reports sometimes call these values “q-values,” but that term can
 also refer to other FDR methods; name the adjustment explicitly.
 [SciPy's BH implementation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.false_discovery_control.html)
 
-## ⏳ 5. Check the study design before interpreting the result
+## ⏳ 5. Before concluding that recipe B is better
 
-### ⏳ 5.1. Independent runs and paired questions are different
+### ✅ 5.1. Choose a test that matches what you measured
 
-Our Welch example treats independently trained runs as the observations.
-Its uncertainty concerns variation between runs on the chosen benchmark.
-It does not automatically capture uncertainty from sampling different test
-questions.
+In our example, we train each recipe three times. Each run produces one
+benchmark score. Welch's test uses those scores to ask whether the average
+difference stands out against the variation between runs.
 
-If both models answer the **same questions**, their outcomes are paired:
-easy questions tend to be easy for both. Use an analysis that preserves that
-pairing, such as a paired test on suitable per-question differences, rather
-than assuming two independent groups. Likewise, matched experimental runs
-need an analysis that respects the matching.
+Now suppose we have only one trained model from each recipe. We ask both
+models the same 1,000 questions. We cannot treat those as 1,000 training runs.
+They tell us about performance across questions, not variation across training.
 
-Welch allows unequal variances; it does not fix dependence, extreme outliers,
-or poorly estimated uncertainty from very small samples. Its usual calibration
-relies on approximately normal populations or sufficiently well-behaved large
-samples. Choose the observation unit and test before applying BH.
+The answers also come in pairs: A's answer and B's answer to the same question.
+A hard question may cause both models to fail. The analysis should compare
+them question by question and keep these pairs together. This is called a
+**paired analysis**. The same principle applies if training runs are deliberately
+matched across recipes.
+
+You should first decide what counts as one observation: a run, a question,
+or a matched pair. Then choose a test that fits those observations. Our Welch
+example assumes independent runs. With only three runs per recipe, its result
+also depends strongly on the assumption that run scores follow an approximately
+normal distribution. A few unusual scores can change the conclusion.
+
+BH comes afterward. It adjusts the p-values you give it. It cannot fix a
+p-value calculated using an unsuitable test.
 [NIST discussion of paired and unpaired samples](https://www.itl.nist.gov/div898/handbook/eda/section3/eda353.htm)
 
-### ⏳ 5.2. Dependence between tests also matters
+### ✅ 5.2. Check whether the benchmarks share evidence
 
-There are two separate questions: are observations within a test independent,
-and are p-values across tests dependent? Fixing the first does not settle the
-second. Benchmarks can share questions or capabilities.
+Suppose two of our five benchmarks contain many of the same questions.
+When B improves on those shared questions, both benchmark scores may rise.
+Their p-values can move together. These are **dependent tests**.
 
-BH controls FDR under independence and certain forms of positive dependence,
-formally called positive regression dependence. Correlation alone does not
-establish this condition. **Benjamini–Yekutieli (BY)** offers FDR control under
-arbitrary dependence, with more conservative thresholds. Neither procedure
-repairs invalid input p-values.
+This raises a new question. Section 5.1 checked the observations used in each
+comparison. Here we are checking the relationship between the five comparisons.
+
+Why check this? BH's FDR guarantee has conditions. It holds for independent
+tests and certain kinds of positive dependence. It does not cover every possible
+relationship between tests. Seeing that two benchmarks are correlated is not
+enough to establish those conditions.
+
+You should check for shared questions and other reasons the results might be
+related. If BH's conditions cannot be justified, **Benjamini–Yekutieli (BY)**
+is an alternative. It controls FDR under arbitrary dependence, provided each
+input p-value is valid. Its stricter thresholds can make real differences
+harder to detect.
 [SciPy's assumptions for BH and BY](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.false_discovery_control.html)
 
-### ⏳ 5.3. Report the improvement, not just significance
+### ✅ 5.3. Decide whether the improvement is useful
 
-Report the **effect size**, such as B's mean score minus A's, with an uncertainty
-interval, the sample sizes, raw p-values, adjusted p-values, and the correction
-method. A tiny improvement can become significant with enough observations;
-a useful improvement can remain uncertain with little data. Ordinary per-test
-95% confidence intervals are not automatically simultaneous 95% intervals
-for the whole family.
+Suppose B improves by 0.1 points and costs twice as much to train. With enough
+runs, that small difference could be statistically significant. It may still
+be too small to justify the cost. Statistical significance tells us about the
+evidence for a difference. It does not decide whether the difference is useful.
 
-Repeatedly checking results and stopping when a p-value is small, selecting
-only favorable metrics, or tuning on the evaluation set changes the analysis.
-Correcting the final visible table does not account for all those hidden
-opportunities. Plan the comparisons and report the full family.
+Report the **effect size**: in our example, B's average score minus A's.
+Also report how precisely you estimated it. A **confidence interval** gives
+a range of differences compatible with the data under the analysis assumptions.
+A wide interval means the size of the improvement is still uncertain.
+
+Show the results for all five benchmarks. Include the number of runs, the raw
+and adjusted p-values, and the correction method. If B improves significantly
+on three benchmarks, you have evidence on those three. The other two remain
+inconclusive. This alone does not establish that B is better overall.
+
+You should also report how you chose the results. Trying many metrics and
+showing only the favorable ones hides chances to get a small p-value by luck.
+Repeatedly checking and stopping as soon as a result becomes significant
+creates a similar problem. Adjusting only the final table does not account
+for those extra chances.
 [ASA guidance on interpretation and selective reporting](https://www.amstat.org/asa/files/pdfs/p-valuestatement.pdf)
