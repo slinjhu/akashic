@@ -175,7 +175,7 @@ OpenID Connect (OIDC) standardizes how FileBox communicates the result. It build
 on OAuth 2.0's authorization code flow and adds an ID token: a signed statement
 about the user who signed in. See [the OIDC overview](https://openid.net/specs/openid-connect-core-1_0.html#Overview).
 
-### 2.1. Follow the basic authentication flow
+### ✅ 2.1. Follow the basic authentication flow
 
 The initial authorization request has four required parameters: `response_type`,
 `client_id`, `redirect_uri`, and `scope`. Start with those to trace the exchange.
@@ -329,18 +329,15 @@ The provider's login session and our app's session are separate. The same
 separation appears in [Google's OIDC server flow](https://developers.google.com/identity/openid-connect/openid-connect#server-flow),
 where validating the ID token precedes establishing the application's session.
 
-### 2.2. Add state to protect the callback
+### ✅ 2.2. Add state to protect the callback
 
 What if an attacker starts a sign-in using the attacker's FileBox account, then
 tricks Alice's browser into submitting that callback? Without a check tying the
 callback to Alice's attempt, our app could sign Alice into the attacker's account.
 This is login CSRF.
 
-Add `state` to the authorization request:
-
-```text
-&state=STATE
-```
+Add `state` to the authorization URL:
+`https://login.filebox.example/authorize?...&state=STATE`.
 
 - Our backend generates a random, unguessable value once for this attempt and
   stores it bound to Alice's browser session. It must have enough randomness;
@@ -355,18 +352,15 @@ properly bound and validated PKCE or OIDC `nonce` can also provide it, so `state
 is not mandatory in every secure design. Our example uses it explicitly.
 See [OAuth CSRF protection](https://www.rfc-editor.org/rfc/rfc9700#section-4.7).
 
-### 2.3. Add nonce to bind the ID token to this attempt
+### ✅ 2.3. Add nonce to bind the ID token to this attempt
 
 An ID token can have a valid signature and still belong to an earlier or
 unrelated sign-in. `nonce` helps prevent that token from being replayed as the
 result of Alice's current attempt.
 
 “Nonce” is commonly explained as “number used once.” Here, “once” means one
-sign-in attempt; the value can be a random string. Add it to the request:
-
-```text
-&nonce=NONCE
-```
+sign-in attempt; the value can be a random string. Add it to the authorization
+URL: `https://login.filebox.example/authorize?...&state=STATE&nonce=NONCE`.
 
 - Our backend generates a separate random, unguessable nonce for the attempt
   and stores it for comparison.
@@ -463,44 +457,3 @@ The app can offer FileBox sign-in without document access. It can also request
 document access for a user who signs into example.com with a local password.
 OAuth access and OIDC sign-in address different needs, even when one flow
 requests both.
-
-## 4. Follow each credential to its destination
-
-| Credential | Who receives it? | Purpose in our example |
-|---|---|---|
-| Authorization code | FileBox token endpoint, sent by our backend | Exchange once for tokens |
-| ID token | example.com backend | Verify FileBox's assertion about Alice |
-| Access token | FileBox API | Authorize document access |
-| Session cookie | example.com backend | Recognize Alice on later visits |
-
-The code is an intermediate credential. The ID token establishes identity at
-sign-in. The access token authorizes API use. The session cookie lets our app
-recognize later requests. Sending one in place of another does not give it the
-other credential's purpose.
-
-## 5. Extend the model when another need appears
-
-### 5.1. Find the provider's endpoints and keys
-
-Starting from its configured, trusted issuer, the app retrieves FileBox's OIDC
-discovery document:
-
-```text
-https://login.filebox.example/.well-known/openid-configuration
-```
-
-It supplies endpoint locations and `jwks_uri`, the public signing key location.
-Metadata must match the expected issuer. FileBox retains its private signing
-keys. See [OIDC discovery](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig).
-
-### 5.2. Import documents after the access token expires
-
-A provider may issue a refresh token that our backend exchanges for new access
-tokens. It goes to the token endpoint, not the document API. See [OAuth refresh
-tokens](https://www.rfc-editor.org/rfc/rfc6749#section-1.5).
-
-### 5.3. Sign out after using OIDC
-
-Ending example.com's session and ending FileBox's login session are separate
-operations. Ending either is also distinct from revoking document access.
-Provider logout can use [OIDC RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html).
