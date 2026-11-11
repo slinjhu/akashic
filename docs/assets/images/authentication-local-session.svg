@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="580" viewBox="0 0 800 580" role="img" aria-labelledby="title desc">
+  <title id="title">Sign into one site with a password and session</title>
+  <desc id="desc">Alice's browser sends credentials to example.com. The backend verifies the password and creates a session for user-42, returning a session cookie. Later the browser requests notes with the cookie. The backend looks up the session, checks permissions, and returns Alice's notes.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="800" height="580" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="17" fill="#0f172a">
+    <text x="30" y="38" font-size="20" font-weight="650">One site: verify once, recognize later requests</text>
+    <rect x="40" y="64" width="230" height="64" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="155" y="103" text-anchor="middle" font-weight="600">Alice's browser</text>
+    <rect x="500" y="64" width="260" height="64" rx="12" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="630" y="103" text-anchor="middle" font-weight="600">example.com backend</text>
+    <g fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 6">
+      <path d="M155 128 V545"/><path d="M630 128 V545"/>
+    </g>
+    <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M155 183 H630"/>
+      <path d="M630 305 H155" stroke-dasharray="7 5"/>
+      <path d="M155 386 H630"/>
+      <path d="M630 520 H155" stroke-dasharray="7 5"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="392" y="169">1. Submit email and password over HTTPS</text>
+      <rect x="420" y="203" width="340" height="64" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="590" y="229">Verify password</text>
+      <text x="590" y="252">Create session → user-42</text>
+      <text x="392" y="291">2. Set session cookie</text>
+      <text x="392" y="354">3. Request /notes</text>
+      <text x="392" y="377">Browser includes session cookie</text>
+      <rect x="420" y="407" width="340" height="70" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="590" y="434">Look up session → user-42</text>
+      <text x="590" y="459">Check permission to read notes</text>
+      <text x="392" y="506">4. Return Alice's notes</text>
+      <text x="400" y="562" fill="#475569">The account and session records stay on the server.</text>
+    </g>
+  </g>
+</svg>

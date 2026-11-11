@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="390" viewBox="0 0 800 390" role="img" aria-labelledby="title desc">
+  <title id="title">Delegated access with OAuth</title>
+  <desc id="desc">Alice approves document access at FileBox. FileBox issues an access token to the example.com backend, which presents it to the FileBox API to read documents.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="800" height="390" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="17" fill="#0f172a">
+    <text x="32" y="38" font-size="20" font-weight="650">Give the app permission to read documents</text>
+    <rect x="32" y="76" width="190" height="72" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="127" y="119" text-anchor="middle" font-weight="600">Alice</text>
+    <rect x="578" y="76" width="190" height="72" rx="12" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="673" y="119" text-anchor="middle" font-weight="600">FileBox</text>
+    <rect x="578" y="278" width="190" height="72" rx="12" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="673" y="308" text-anchor="middle" font-weight="600">example.com</text>
+    <text x="673" y="331" text-anchor="middle">backend</text>
+    <rect x="32" y="278" width="190" height="72" rx="12" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="127" y="321" text-anchor="middle" font-weight="600">FileBox API</text>
+    <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M222 112 H566"/>
+      <path d="M673 148 V266"/>
+      <path d="M578 314 H234"/>
+    </g>
+    <text x="400" y="97" text-anchor="middle">1. Approves document access</text>
+    <text x="653" y="205" text-anchor="end">2. Issues</text>
+    <text x="653" y="229" text-anchor="end">access token</text>
+    <text x="400" y="270" text-anchor="middle">3. Presents token</text>
+    <text x="400" y="294" text-anchor="middle">to read documents</text>
+  </g>
+</svg>

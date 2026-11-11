@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="690" viewBox="0 0 900 690" role="img" aria-labelledby="title desc">
+  <title id="title">OAuth authorization code flow</title>
+  <desc id="desc">The browser requests Connect FileBox at example.com, follows a redirect to FileBox, and sends an authorization request. FileBox authenticates Alice and obtains authorization, then redirects the browser to example.com/callback with a code. The browser delivers the code. The backend exchanges it directly over HTTPS for an access token.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker>
+    <marker id="direct" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#15803d"/></marker>
+  </defs>
+  <rect width="900" height="690" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="17" fill="#0f172a">
+    <text x="30" y="38" font-size="20" font-weight="650">The browser carries a code; the backend receives the token</text>
+    <rect x="30" y="66" width="200" height="70" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="130" y="108" text-anchor="middle" font-weight="600">Alice's browser</text>
+    <rect x="330" y="66" width="220" height="70" rx="12" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="440" y="96" text-anchor="middle" font-weight="600">example.com</text>
+    <text x="440" y="119" text-anchor="middle">backend</text>
+    <rect x="650" y="66" width="220" height="70" rx="12" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="760" y="96" text-anchor="middle" font-weight="600">FileBox</text>
+    <text x="760" y="119" text-anchor="middle">authorization server</text>
+    <g stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 6">
+      <path d="M130 136 V645"/><path d="M440 136 V645"/><path d="M760 136 V645"/>
+    </g>
+    <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M130 190 H440"/>
+      <path d="M440 250 H130" stroke-dasharray="7 5"/>
+      <path d="M130 310 H760"/>
+      <path d="M760 442 H130" stroke-dasharray="7 5"/>
+      <path d="M130 502 H440"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="285" y="178">1. Connect FileBox</text>
+      <text x="285" y="238">2. Redirect to FileBox</text>
+      <rect x="320" y="282" width="250" height="25" fill="#f8fafc"/>
+      <text x="445" y="298">3. Authorization request</text>
+      <rect x="160" y="342" width="570" height="48" rx="8" fill="#fef3c7" stroke="#d97706"/>
+      <text x="445" y="372">FileBox authenticates Alice and obtains authorization</text>
+      <rect x="201" y="414" width="488" height="25" fill="#f8fafc"/>
+      <text x="445" y="430">4. Redirect to example.com/callback with code</text>
+      <text x="285" y="490">5. Deliver code</text>
+    </g>
+    <rect x="408" y="526" width="384" height="114" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <g fill="none" stroke="#15803d" stroke-width="2" marker-end="url(#direct)">
+      <path d="M440 570 H760"/>
+      <path d="M760 620 H440" stroke-dasharray="7 5"/>
+    </g>
+    <text x="600" y="551" text-anchor="middle" fill="#166534">6. Exchange code over HTTPS</text>
+    <text x="600" y="605" text-anchor="middle" fill="#166534">7. Access token</text>
+    <text x="450" y="670" text-anchor="middle" fill="#475569">Steps 6–7 are direct backend communication.</text>
+  </g>
+</svg>
