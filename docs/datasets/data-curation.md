@@ -267,7 +267,7 @@ filtering disproportionately removed text from and about minority groups.
 You should inspect samples of both accepted and rejected documents. Looking
 only at what survived will not reveal useful material that a filter erased.
 
-## ⏳ 4. Stop repeated copies from dominating training
+## ✅ 4. Stop repeated copies from dominating training
 
 Our tomato article may appear in several captures: at the original URL, in a
 print view, and in a later crawl. A copied version may also appear on another
@@ -425,7 +425,7 @@ accidental candidates. Both approaches can make mistakes, so inspect the
 groups they produce.
 [DataTrove pipeline implementation](https://github.com/huggingface/datatrove/blob/main/src/datatrove/pipeline/dedup/minhash.py)
 
-### ⏳ 4.3. Find copied passages inside different documents
+### ✅ 4.3. Find copied passages inside different documents
 
 Suppose a second article covers tomato pests. It has several new paragraphs,
 but copies the watering advice from our original article:
@@ -443,6 +443,18 @@ This finds exact copied paragraphs even when the rest of the article differs.
 Another searches for long repeated sequences that may cross paragraph boundaries.
 Google's ExactSubstr research implementation uses a **suffix array**, an index
 that makes repeated text sequences easier to find across a corpus.
+
+A **suffix** is the text from a chosen starting position to the end. For
+example, in `cat sat`, position 0 starts `cat sat`, position 1 starts `at sat`,
+and position 4 starts `sat`. Google's implementation indexes byte positions,
+so it is not limited to word or paragraph boundaries.
+
+The suffix array stores these positions sorted by the text that follows them,
+like entries in a dictionary. Suffixes that begin with the same passage land
+next to each other in that ordering. Comparing neighboring suffixes reveals
+how long their shared beginning is. A long shared beginning identifies repeated
+text, such as our copied watering advice. The index stores positions rather
+than separate copies of every suffix.
 [Repeated-sequence deduplication implementation](https://github.com/google-research/deduplicate-text-datasets)
 
 Finding a match and deciding what to remove are separate steps. We might remove
@@ -454,7 +466,7 @@ DataTrove provides tools for several deduplication methods; you do not need
 to build every index from scratch.
 [DataTrove deduplication tools](https://github.com/huggingface/datatrove#deduplication)
 
-### ⏳ 4.4. Choose how broadly to deduplicate
+### ✅ 4.4. Choose how broadly to deduplicate
 
 You can search for copies within one crawl, across several crawls, or across
 all sources in the final mixture. A copy found in another crawl will survive
@@ -476,7 +488,7 @@ setting is best. FineWeb explicitly experiments with deduplication choices.
 
 ## ⏳ 5. Select text for what you want the model to learn
 
-### ⏳ 5.1. A quality score needs a purpose
+### ✅ 5.1. A quality score needs a purpose
 
 After cleaning and deduplication, we still have more text than we can afford
 to train on. Which documents should receive that budget?
@@ -491,6 +503,20 @@ A smaller model then learns to predict those ratings and scores the larger
 corpus. FineWeb-Edu uses model-generated educational ratings to train a scalable
 scorer, then selects documents with higher educational scores.
 [FineWeb-Edu selection method](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu#dataset-creation)
+
+For a concrete sense of scale, FineWeb-Edu's scorer was trained on **450,000
+web samples**, each rated from 0 to 5 by **Llama 3 70B Instruct**. The scorer
+uses a pretrained **Snowflake Arctic Embed M**, about **110 million parameters**,
+with an added scoring layer (769 parameters: 768 weights and one bias). The text encoder was frozen; only the scoring
+layer was trained. This teaches an existing text model to predict educational
+ratings, rather than training a new language model from scratch.
+[Scorer training details](https://huggingface.co/HuggingFaceFW/fineweb-edu-classifier),
+[Base model size](https://huggingface.co/Snowflake/snowflake-arctic-embed-m)
+
+The expensive 70B model labels a sample once. The much smaller scorer then
+processes the full corpus. The 450,000 examples are a published recipe, not a
+universal requirement; the needed count depends on document diversity and
+how subtle the scoring task is.
 
 That score means “resembles the material this scorer was trained to favor.”
 It is not a guarantee of factual accuracy. It may also favor some topics or
