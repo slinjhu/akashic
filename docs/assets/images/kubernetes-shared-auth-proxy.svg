@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="460" viewBox="0 0 1140 460" role="img" aria-labelledby="title desc">
+  <title id="title">One auth proxy shared by notes and search in Kubernetes</title>
+  <desc id="desc">The browser reaches example.com's HTTPS gateway. All application requests pass through the shared auth proxy, then an internal router selects the notes or search Service by path. The proxy handles OIDC with FileBox and uses Redis for sessions. Application services are reachable only through the trusted internal request path.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="1140" height="460" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="17" fill="#0f172a">
+    <text x="28" y="36" font-size="21" font-weight="600">One login boundary, multiple application services</text>
+    <rect x="190" y="145" width="930" height="270" rx="14" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="210" y="172" font-size="15" fill="#475569">Kubernetes cluster</text>
+    <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M170 250 H210"/>
+      <path d="M360 250 H400"/>
+      <path d="M590 250 H650"/>
+      <path d="M800 250 H850 V202 H920"/>
+      <path d="M800 250 H850 V322 H920"/>
+      <path d="M495 210 V110" marker-start="url(#arrow)" stroke-dasharray="6 5"/>
+      <path d="M495 290 V345" marker-start="url(#arrow)"/>
+    </g>
+    <rect x="20" y="210" width="150" height="80" rx="10" fill="#e0f2fe" stroke="#0284c7"/>
+    <rect x="210" y="210" width="150" height="80" rx="10" fill="#e0f2fe" stroke="#0284c7"/>
+    <rect x="400" y="210" width="190" height="80" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+    <rect x="650" y="210" width="150" height="80" rx="10" fill="#e2e8f0" stroke="#64748b"/>
+    <rect x="920" y="170" width="180" height="64" rx="10" fill="#fff" stroke="#64748b"/>
+    <rect x="920" y="290" width="180" height="64" rx="10" fill="#fff" stroke="#64748b"/>
+    <rect x="400" y="345" width="190" height="50" rx="10" fill="#fff" stroke="#64748b"/>
+    <rect x="400" y="54" width="190" height="56" rx="10" fill="#ede9fe" stroke="#7c3aed"/>
+    <g text-anchor="middle">
+      <text x="95" y="244" font-weight="600">Browser</text>
+      <text x="95" y="270" font-size="15">Session cookie</text>
+      <text x="285" y="244" font-weight="600">Gateway</text>
+      <text x="285" y="270" font-size="13">example.com · HTTPS</text>
+      <text x="495" y="244" font-weight="600">Shared auth proxy</text>
+      <text x="495" y="270" font-size="15">Login + session checks</text>
+      <text x="725" y="244" font-weight="600">App router</text>
+      <text x="725" y="270" font-size="15">Choose by path</text>
+      <text x="1010" y="208">notes Service</text>
+      <text x="1010" y="328">search Service</text>
+      <text x="880" y="188" font-size="15">/notes</text>
+      <text x="881" y="308" font-size="15">/search</text>
+      <text x="495" y="376" font-size="16">Redis · shared sessions</text>
+      <text x="495" y="89" font-size="15">FileBox · identity provider</text>
+      <text x="570" y="133" font-size="15" fill="#6d28d9">OIDC</text>
+      <text x="570" y="322" font-size="15" fill="#475569">Session data</text>
+      <text x="570" y="444" font-size="16" fill="#475569">Only the auth proxy handles OIDC; each application still checks access to its own data.</text>
+    </g>
+  </g>
+</svg>

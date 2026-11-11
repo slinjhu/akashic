@@ -1,6 +1,6 @@
 ---
 title: Authentication and OIDC
-description: Start with signing into example.com, then add an identity provider and delegated API access.
+description: Start with signing into example.com, then share OIDC authentication across Kubernetes services.
 tags:
   - security
   - authentication
@@ -254,7 +254,7 @@ tokens in the redirect URL.
 
 The response includes an ID token and an access token. For signing Alice into
 our app, the ID token is the relevant identity assertion. The access token has
-an API access role, which we will use in section 3.
+an API access role; it is separate from the assertion used to sign Alice in.
 See [OIDC token responses](https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse).
 
 #### ✅ 2.1.5. Why not get id_token directly?
@@ -415,47 +415,133 @@ this; the callback and token exchange stay the same, with the checks added above
 
 ![Complete OIDC request with state to protect the callback, nonce to bind the ID token, and a PKCE challenge to protect code redemption.](../assets/images/oidc-sign-in-request.svg)
 
-## 3. Add document access using OAuth
+## 3. Share an authentication proxy across Kubernetes services
 
-Alice can now sign in. Suppose she also wants example.com to import documents
-stored at FileBox. This introduces a separate permission: our app must be
-allowed to call FileBox's document API on her behalf.
+Suppose example.com now runs two applications in Kubernetes: a notes service at
+`/notes` and a search service at `/search`. Both need to recognize Alice. Instead
+of putting the OIDC flow into each application, move it into a shared auth proxy.
+The proxy takes the backend's authentication role from section 2: it talks to
+FileBox, validates tokens, and manages the browser's login session.
 
-### 3.1. Request permission with a scope
+### 3.1. Put one service behind the proxy
 
-OAuth 2.0 supplies the framework for this delegated access. Our fictional
-`documents.read` scope requests permission to read documents. To request sign-in
-and document access together, change the scope in the existing request:
+Start with just notes. A reverse proxy receives a request and forwards it to
+another server. Our auth proxy first checks the session: with a valid login it
+forwards the request to notes; otherwise it starts the sign-in flow.
 
-```text
-scope=openid%20documents.read
+Use [OAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/behaviour/) as the
+reusable component. Despite its name, it supports OIDC sign-in. Deploy it as a
+Kubernetes Deployment with a ClusterIP Service. The public ingress or gateway
+terminates HTTPS for example.com and sends requests to that Service. Notes stays
+behind an internal ClusterIP Service. ClusterIP gives a stable in-cluster address;
+it does not itself restrict which cluster workloads can connect. See
+[Kubernetes Services](https://kubernetes.io/docs/concepts/services-networking/service/).
+
+### 3.2. Make the proxy the OIDC client
+
+Register the proxy with FileBox using the callback
+`https://example.com/oauth2/callback`. FileBox knows one client for this shared
+login boundary; the notes and search services do not each need an OIDC client.
+
+Configure the proxy with FileBox's issuer, the registered client ID and client
+credential, and the `openid` scope. Add `profile` or `email` when needed for the
+identity information or admission policy. Enable PKCE with `S256`; when using
+nonce, enable its verification explicitly rather than assuming library defaults.
+Set an explicit admission policy for the intended users, such as an allowed
+email domain or provider group, rather than admitting every FileBox account.
+See [OAuth2 Proxy's OIDC provider](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/openid_connect/).
+
+The proxy owns `/oauth2/start` and `/oauth2/callback`. These endpoints must reach
+it even before Alice is signed in. The callback cannot require an existing
+logged-in session, or Alice could never complete login. The proxy validates the
+pending attempt and provider response there. After success, it sets its session
+cookie and returns Alice to the original local application path.
+See [OAuth2 Proxy endpoints](https://oauth2-proxy.github.io/oauth2-proxy/features/endpoints/).
+
+### 3.3. Add another service behind the same login
+
+To add search, put an internal path router behind the auth proxy. Configure the
+proxy's upstream as `http://app-router:8080`, and let that router choose the
+application. All application traffic still passes through authentication first.
+
+![Browser traffic enters example.com's gateway, passes through a shared auth proxy, and reaches an internal router that selects notes or search. The auth proxy handles OIDC with FileBox and stores sessions in Redis.](../assets/images/kubernetes-shared-auth-proxy.svg)
+
+| Public path on example.com | Handled by |
+|---|---|
+| `/oauth2/*` | The auth proxy's built-in login endpoints |
+| `/notes` and `/notes/*` | Auth proxy → app router → notes Service |
+| `/search` and `/search/*` | Auth proxy → app router → search Service |
+
+For example, a small NGINX router can preserve application paths while selecting
+an upstream. Assume both applications support their respective path prefixes:
+
+```nginx
+server {
+    listen 8080;
+
+    location = /notes { proxy_pass http://notes:8080; }
+    location /notes/ { proxy_pass http://notes:8080; }
+
+    location = /search { proxy_pass http://search:8080; }
+    location /search/ { proxy_pass http://search:8080; }
+
+    location / { return 404; }
+}
 ```
 
-FileBox obtains the required authorization and issues an access token with the
-approved access. Our backend receives it through the code exchange we already
-understand. OIDC's `openid` scope alone does not grant document access.
-See [OAuth scopes](https://www.rfc-editor.org/rfc/rfc6749#section-3.3).
+These are internal Service names in the router's namespace. The `proxy_pass`
+values have no trailing URI component, so the original path is preserved.
+See [NGINX proxy_pass](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass).
 
-![Alice approves document access at FileBox, which issues an access token to example.com. The backend presents that token to the FileBox API.](../assets/images/oauth-delegated-access.svg)
+Use one host-only cookie for example.com with `Path=/`, `Secure`, `HttpOnly`,
+and `SameSite=Lax`. Both application paths then use the same login. The services
+receive requests from the proxy; they do not need to decode its session cookie.
+See [OAuth2 Proxy cookie and upstream settings](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/).
 
-### 3.2. Present the access token to the API
+### 3.4. Pass identity through a trusted boundary
 
-Our backend calls FileBox over HTTPS:
+After authentication, configure the proxy to pass the identity fields the apps
+need, such as `X-Forwarded-User`, using `--pass-user-headers=true`. Define the
+meaning of that identifier for this provider and keep the mapping consistent
+across services. Do not assume a display name or email is an immutable account ID.
+See [OAuth2 Proxy header settings](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/#header-options).
 
-```http
-GET /documents HTTP/1.1
-Host: api.filebox.example
-Authorization: Bearer ******
-```
+An identity header is trustworthy only because of the request path. Strip or
+overwrite client-supplied identity headers at the boundary, and make each service
+read only the headers established by the proxy. Do not let a caller bypass it:
 
-The API checks that the access token is valid for it and permits reading the
-requested documents. A read-only token should not authorize deleting them.
+- Only the public gateway may reach the auth proxy's application port.
+- Only auth proxy pods may reach the internal router.
+- Only router pods may reach the notes and search application ports.
 
-“Bearer” means possession is enough to use the token. Keep it protected on the
-backend and out of URLs. See [bearer token usage](https://www.rfc-editor.org/rfc/rfc6750#section-2.1)
-and [token disclosure risks](https://www.rfc-editor.org/rfc/rfc6750#section-5).
+Enforce these paths with NetworkPolicies and a network plugin that implements
+them. Merely giving services internal addresses is insufficient. The proxy also
+needs outbound access to FileBox, DNS, and its session store. See
+[Kubernetes NetworkPolicies](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
 
-The app can offer FileBox sign-in without document access. It can also request
-document access for a user who signs into example.com with a local password.
-OAuth access and OIDC sign-in address different needs, even when one flow
-requests both.
+The proxy establishes who Alice is. Notes must still check which notes she may
+read, and search must limit results to data she may access. Also retain CSRF
+protection for application state changes: verifying a login cookie does not
+prove Alice intended a particular operation.
+
+### 3.5. Share sessions across proxy replicas
+
+Run multiple proxy replicas behind the same Kubernetes Service. A callback may
+arrive at a different replica from the one that started login. Replicas therefore
+need matching client configuration and cookie secrets, plus a session design
+that works across them.
+
+Choose Redis-backed sessions to keep provider tokens server-side. Each proxy
+replica uses the same Redis service, while the browser holds a session ticket.
+This differs from OAuth2 Proxy's default cookie-backed storage, which stores the
+session in an encrypted cookie. See [OAuth2 Proxy session storage](https://oauth2-proxy.github.io/oauth2-proxy/configuration/session_storage/).
+
+Mount client credentials, the cookie secret, and Redis credentials from
+Kubernetes Secrets, with access limited to the workloads that need them. Notes
+and search do not need FileBox's client credential. See [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
+
+The resulting request path is reusable: Alice signs in through the proxy once,
+then visits either application using the same session. Adding another trusted
+service means adding an internal route and the appropriate permission checks,
+rather than implementing another OIDC callback. Keep unrelated or less-trusted
+applications outside this shared cookie boundary.
