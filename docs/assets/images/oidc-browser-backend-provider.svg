@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" role="img" aria-labelledby="title desc">
+  <title id="title">Three steps from login redirect to ID token</title>
+  <desc id="desc">First, example.com's backend sends the user to FileBox to sign in, through a browser redirect. Second, FileBox returns a temporary authorization code to the backend through the browser callback. Third, the backend exchanges that code directly with FileBox over HTTPS and receives an ID token. The browser carries redirects and the code; it does not perform the token exchange in this design.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker>
+    <marker id="direct" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#15803d"/></marker>
+    <g id="browser-icon">
+      <circle r="18" fill="#f8fafc"/>
+      <path d="M0 0 L-13 -7.5 A15 15 0 0 1 13 -7.5 H0 Z" fill="#ea4335"/>
+      <path d="M0 0 H15 A15 15 0 0 1 -7.5 13 L0 0" fill="#fbbc05"/>
+      <path d="M0 0 L-7.5 13 A15 15 0 0 1 -13 -7.5 L-6.5 3.75 Z" fill="#34a853"/>
+      <path d="M0 0 L13 -7.5 A15 15 0 0 1 15 0 Z" fill="#fbbc05"/>
+      <circle r="7.2" fill="#4285f4" stroke="#fff" stroke-width="1.8"/>
+    </g>
+  </defs>
+  <rect width="1000" height="430" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="17" fill="#0f172a">
+    <text x="28" y="36" font-size="21" font-weight="600">From sign-in to an ID token</text>
+    <rect x="30" y="70" width="210" height="288" rx="12" fill="#dcfce7" stroke="#16a34a"/>
+    <rect x="760" y="70" width="210" height="288" rx="12" fill="#ede9fe" stroke="#7c3aed"/>
+    <g text-anchor="middle">
+      <text x="135" y="195" font-size="20" font-weight="600">Backend</text>
+      <text x="135" y="223">example.com</text>
+      <text x="865" y="195" font-size="20" font-weight="600">Identity provider</text>
+      <text x="865" y="223">FileBox</text>
+      <text x="500" y="100">1. Send the user to FileBox to sign in</text>
+      <text x="500" y="125" font-size="15" fill="#475569">Browser follows the backend's redirect</text>
+      <text x="500" y="196">2. Receive a temporary authorization <tspan fill="#1d4ed8" font-weight="700">code</tspan></text>
+      <text x="500" y="221" font-size="15" fill="#475569">Browser returns to the backend's callback</text>
+      <text x="500" y="292" fill="#166534">3. Exchange <tspan fill="#1d4ed8" font-weight="700">code</tspan> for <tspan fill="#7e22ce" font-weight="700">id_token</tspan> (user info)</text>
+      <text x="500" y="317" font-size="15" fill="#166534">Backend calls FileBox directly over HTTPS</text>
+    </g>
+    <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M250 145 H750" stroke-dasharray="6 5"/>
+      <path d="M750 241 H250" stroke-dasharray="6 5"/>
+    </g>
+    <use href="#browser-icon" transform="translate(500 145)"/>
+    <use href="#browser-icon" transform="translate(500 241)"/>
+    <path d="M250 337 H750" fill="none" stroke="#15803d" stroke-width="2" marker-start="url(#direct)" marker-end="url(#direct)"/>
+  </g>
+</svg>

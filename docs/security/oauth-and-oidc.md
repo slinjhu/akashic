@@ -177,6 +177,8 @@ about the user who signed in. See [the OIDC overview](https://openid.net/specs/o
 
 ### ✅ 2.1. Follow the basic authentication flow
 
+![Three participants: the browser frontend follows redirects and carries the code and cookie; example.com's backend exchanges the code for tokens and creates a session; FileBox authenticates Alice.](../assets/images/oidc-browser-backend-provider.svg)
+
 The initial authorization request has four required parameters: `response_type`,
 `client_id`, `redirect_uri`, and `scope`. Start with those to trace the exchange.
 A working sign-in also needs protection against forged callbacks; the following
