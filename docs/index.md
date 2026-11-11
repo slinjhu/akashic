@@ -20,6 +20,9 @@ The [writing guide](akashic/writing-notes.md) demonstrates metadata, equations,
 diagrams, images, and links. A reusable note template lives in `templates/note.md`
 at the repository root.
 
+[Writing for clear understanding](writing/index.md) collects good and bad
+practices for making explanations fluent, logical, and easy to follow.
+
 ## How Akashic works
 
 Read the [architecture guide](akashic/architecture.md) for the content pipeline,
