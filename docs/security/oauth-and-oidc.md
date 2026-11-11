@@ -423,21 +423,20 @@ of putting the OIDC flow into each application, move it into a shared auth proxy
 The proxy takes the backend's authentication role from section 2: it talks to
 FileBox, validates tokens, and manages the browser's login session.
 
-### 3.1. Put one service behind the proxy
+### ✅ 3.1. Introduce OAuth2 Proxy
 
-Start with just notes. A reverse proxy receives a request and forwards it to
-another server. Our auth proxy first checks the session: with a valid login it
-forwards the request to notes; otherwise it starts the sign-in flow.
+[OAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/behaviour/) is a
+reusable authentication proxy. It sits in front of an application and handles
+login with an identity provider. Despite its name, it supports OIDC sign-in.
 
-Use [OAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/behaviour/) as the
-reusable component. Despite its name, it supports OIDC sign-in. Deploy it as a
-Kubernetes Deployment with a ClusterIP Service. The public ingress or gateway
-terminates HTTPS for example.com and sends requests to that Service. Notes stays
-behind an internal ClusterIP Service. ClusterIP gives a stable in-cluster address;
-it does not itself restrict which cluster workloads can connect. See
-[Kubernetes Services](https://kubernetes.io/docs/concepts/services-networking/service/).
+For our notes application, it checks whether Alice is signed in. If she is,
+it forwards her request to notes. Otherwise, it guides her through sign-in
+with FileBox. This lets notes rely on a shared login component instead of
+implementing the sign-in flow itself.
 
-### 3.2. Make the proxy the OIDC client
+![OAuth2 Proxy sits between the browser and our application. It handles sign-in with an identity provider and forwards requests after authentication.](../assets/images/oauth2-proxy-single-service.svg)
+
+### ✅ 3.2. Configure OAuth2 Proxy as the OIDC client
 
 Register the proxy with FileBox using the callback
 `https://example.com/oauth2/callback`. FileBox knows one client for this shared
@@ -458,7 +457,7 @@ pending attempt and provider response there. After success, it sets its session
 cookie and returns Alice to the original local application path.
 See [OAuth2 Proxy endpoints](https://oauth2-proxy.github.io/oauth2-proxy/features/endpoints/).
 
-### 3.3. Add another service behind the same login
+### ✅ 3.3. Add multiple services behind OAuth2 Proxy
 
 To add search, put an internal path router behind the auth proxy. Configure the
 proxy's upstream as `http://app-router:8080`, and let that router choose the
@@ -506,9 +505,23 @@ meaning of that identifier for this provider and keep the mapping consistent
 across services. Do not assume a display name or email is an immutable account ID.
 See [OAuth2 Proxy header settings](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/#header-options).
 
-An identity header is trustworthy only because of the request path. Strip or
-overwrite client-supplied identity headers at the boundary, and make each service
-read only the headers established by the proxy. Do not let a caller bypass it:
+A caller can send a header such as `X-Forwarded-User: admin`. The header alone
+does not prove that the caller is an administrator. The application needs to
+know that OAuth2 Proxy set the value after verifying the login.
+
+For Alice's request, the trusted sequence is:
+
+1. OAuth2 Proxy verifies Alice's login.
+2. The proxy removes or overwrites caller-supplied identity headers and sets
+   the configured headers from Alice's verified session.
+3. The internal router forwards those headers without accepting a replacement
+   identity from the caller.
+4. Notes accepts requests only through this proxy-and-router chain.
+
+The application can trust the identity header only if the authentication proxy
+sets it and callers cannot reach the application directly. Here, the request's
+**route through servers** matters, rather than its URL path such as `/notes`.
+Enforce that route:
 
 - Only the public gateway may reach the auth proxy's application port.
 - Only auth proxy pods may reach the internal router.
@@ -545,3 +558,40 @@ then visits either application using the same session. Adding another trusted
 service means adding an internal route and the appropriate permission checks,
 rather than implementing another OIDC callback. Keep unrelated or less-trusted
 applications outside this shared cookie boundary.
+
+### ⏳ 3.6. Install OAuth2 Proxy after defining the routes
+
+OAuth2 Proxy is a standalone application. In Kubernetes, we run it in containers
+as a Deployment and expose it through a Service. It is not a Kubernetes plugin;
+it can also run outside a cluster.
+[Installation options](https://oauth2-proxy.github.io/oauth2-proxy/installation/)
+
+The official **Helm chart** packages its Kubernetes resources. Before installing,
+prepare a `values.yaml` that connects the pieces introduced above:
+
+| Configuration | Value or decision in our example |
+|---|---|
+| Identity provider | FileBox's issuer and registered client settings from 3.2 |
+| Callback | `https://example.com/oauth2/callback` |
+| Upstream | `http://app-router:8080`, the internal router from 3.3 |
+| Public routing | Send example.com's protected paths and `/oauth2/*` to the proxy |
+| Sessions and credentials | Shared Redis and Kubernetes Secrets from 3.5 |
+
+After preparing those values, install the chart:
+
+```sh
+helm repo add oauth2-proxy https://oauth2-proxy.github.io/manifests
+helm repo update
+
+helm upgrade --install oauth2-proxy oauth2-proxy/oauth2-proxy \
+  --namespace auth --create-namespace \
+  --values values.yaml
+```
+
+This command assumes `values.yaml` supplies the required configuration; it is
+not a complete configuration by itself. Our team still deploys and configures
+the public ingress, internal NGINX router, and applications. Installing OAuth2
+Proxy does not automatically connect them. The upstream Service name above
+assumes the router is in the proxy's namespace; use a namespace-qualified name
+if it is elsewhere.
+[Official Helm chart and configuration reference](https://github.com/oauth2-proxy/manifests/tree/main/helm/oauth2-proxy)

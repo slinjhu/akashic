@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" role="img" aria-labelledby="title desc">
+  <title id="title">OAuth2 Proxy handles login for an application</title>
+  <desc id="desc">OAuth2 Proxy sits between the browser and our application. It works with an identity provider to handle sign-in and forwards requests after authentication. Sign-in involves the browser as well as the proxy.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="1000" height="470" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#0f172a">
+    <text x="30" y="40" font-size="23" font-weight="650">One component handles login for the application</text>
+    <rect x="30" y="100" width="210" height="95" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <rect x="385" y="100" width="230" height="95" rx="12" fill="#dcfce7" stroke="#16a34a"/>
+    <rect x="760" y="100" width="210" height="95" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <g text-anchor="middle">
+      <text x="135" y="154" font-weight="600">Browser</text>
+      <text x="500" y="139" font-size="21" font-weight="650">OAuth2 Proxy</text>
+      <text x="500" y="169">Checks login</text>
+      <text x="865" y="154" font-weight="600">Our application</text>
+      <text x="312" y="127" font-size="16" fill="#475569">Request</text>
+      <text x="687" y="127" font-size="16" fill="#166534">If signed in</text>
+    </g>
+    <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M240 151 H385"/>
+      <path d="M615 151 H760"/>
+    </g>
+    <rect x="385" y="275" width="230" height="85" rx="12" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="500" y="325" text-anchor="middle" font-size="21" font-weight="600">Identity provider</text>
+    <path d="M500 195 V275" fill="none" stroke="#475569" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="525" y="232" font-size="16" fill="#475569">Works with the provider to handle sign-in</text>
+    <text x="525" y="255" font-size="15" fill="#475569">The browser participates in sign-in too.</text>
+    <text x="500" y="414" text-anchor="middle" fill="#475569">OAuth2 Proxy manages login; our application focuses on its features.</text>
+  </g>
+</svg>
