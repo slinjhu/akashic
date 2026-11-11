@@ -415,7 +415,7 @@ this; the callback and token exchange stay the same, with the checks added above
 
 ![Complete OIDC request with state to protect the callback, nonce to bind the ID token, and a PKCE challenge to protect code redemption.](../assets/images/oidc-sign-in-request.svg)
 
-## 3. Share an authentication proxy across Kubernetes services
+## ✅ 3. Share an authentication proxy across Kubernetes services
 
 Suppose example.com now runs two applications in Kubernetes: a notes service at
 `/notes` and a search service at `/search`. Both need to recognize Alice. Instead
@@ -497,7 +497,7 @@ and `SameSite=Lax`. Both application paths then use the same login. The services
 receive requests from the proxy; they do not need to decode its session cookie.
 See [OAuth2 Proxy cookie and upstream settings](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/).
 
-### 3.4. Pass identity through a trusted boundary
+### ✅ 3.4. Pass identity through a trusted boundary
 
 After authentication, configure the proxy to pass the identity fields the apps
 need, such as `X-Forwarded-User`, using `--pass-user-headers=true`. Define the
@@ -537,7 +537,7 @@ read, and search must limit results to data she may access. Also retain CSRF
 protection for application state changes: verifying a login cookie does not
 prove Alice intended a particular operation.
 
-### 3.5. Share sessions across proxy replicas
+### ✅ 3.5. Share sessions across proxy replicas
 
 Run multiple proxy replicas behind the same Kubernetes Service. A callback may
 arrive at a different replica from the one that started login. Replicas therefore
@@ -559,7 +559,7 @@ service means adding an internal route and the appropriate permission checks,
 rather than implementing another OIDC callback. Keep unrelated or less-trusted
 applications outside this shared cookie boundary.
 
-### ⏳ 3.6. Install OAuth2 Proxy after defining the routes
+### ✅ 3.6. Install OAuth2 Proxy after defining the routes
 
 OAuth2 Proxy is a standalone application. In Kubernetes, we run it in containers
 as a Deployment and expose it through a Service. It is not a Kubernetes plugin;
