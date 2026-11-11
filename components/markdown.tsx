@@ -17,13 +17,14 @@ import { SectionSummary } from "./section-summary";
 import { SectionDisclosure } from "./section-disclosure";
 import { withoutReviewEmoji } from "@/lib/section-reviews.mjs";
 import remarkImageGallery from "@/lib/remark-image-gallery.mjs";
+import remarkAdmonitions from "@/lib/remark-admonitions.mjs";
 import { ImageGallery, type GalleryImage } from "./image-gallery";
 
 export function NoteMarkdown({ body, file, assetRevision }: { body: string; file: string; assetRevision: string }) {
   const imageUrl = (src: string) => src.startsWith("/content/")
     ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${src}${src.includes("?") ? "&" : "?"}v=${assetRevision.slice(0, 12)}` : src;
   return <SectionTree key={file}><Markdown
-    remarkPlugins={[remarkGfm, remarkMath, remarkImageGallery]}
+    remarkPlugins={[remarkGfm, remarkMath, remarkImageGallery, remarkAdmonitions]}
     rehypePlugins={[rehypeSlug, rehypeKatex, [rehypeHighlight, { languages: { ...common, dockerfile }, detect: false, ignoreMissing: true }], rehypeSections]}
     urlTransform={url => defaultUrlTransform(resolveContentUrl(url, file))}
     components={{

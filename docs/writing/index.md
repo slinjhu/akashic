@@ -20,8 +20,7 @@ When you first mention a publicly known project, product, organization, or other
 named entity, briefly explain what it is. Link its name to an authoritative page
 so readers can learn more and recognize it as an established public entity.
 
-**Good**
-
+> [!GOOD]
 > [OAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/) is a reusable
 > authentication proxy for Kubernetes.
 
@@ -30,8 +29,7 @@ the rest of the sentence tells readers what it is. The link points to the
 project's official documentation. Readers can understand its role without
 opening the link.
 
-**Bad**
-
+> [!BAD]
 > Use [OAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/) as the reusable
 > component.
 

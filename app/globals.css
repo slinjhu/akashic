@@ -42,6 +42,18 @@ main { min-width: 0; padding: 42px 48px 90px; }main:focus { outline: none; }
 .tags { display: flex; flex-wrap: wrap; gap: 7px; }.page-tags { margin: 0 0 17px; }.tag { background: var(--accent-soft); border: 1px solid transparent; color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .2px; line-height: 1.5; padding: 4px 10px; border-radius: 5px; }.tag:hover { border-color: var(--accent); text-decoration: none; }
 h1, h2, h3 { line-height: 1.3; font-weight: 600; letter-spacing: -.6px; }h1 { font-size: clamp(30px, 3.2vw, 43px); margin: 0 0 24px; }h2 { font-size: 23px; margin: 42px 0 18px; }h3 { font-size: 18px; margin: 30px 0 14px; }
 .prose { overflow-wrap: break-word; }.prose h1 { max-width: 850px; }.prose h2 { padding-top: 12px; border-top: 1px solid var(--line); }.prose h2:first-child { border: 0; }.prose p { margin: 0 0 20px; }.prose ul, .prose ol { padding-left: 25px; margin: 16px 0 24px; }.prose li { margin: 7px 0; }.prose li > p { margin-bottom: 8px; }.prose strong { font-weight: 650; color: var(--strong); }.prose blockquote { border-left: 3px solid var(--accent); margin: 24px 0; padding: 14px 22px; background: var(--accent-soft); }.prose blockquote p:last-child { margin: 0; }.prose img { max-width: 100%; height: auto; border-radius: 8px; }.prose hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+.admonition { --card-color: #2563a6; margin: 24px 0; padding: 16px 20px; border: 1px solid var(--card-color); border-left-width: 4px; border-radius: 8px; background: color-mix(in srgb, var(--card-color) 7%, var(--surface)); }
+.admonition-success { --card-color: #237647; }
+.admonition-danger { --card-color: #b63740; }
+.admonition-warning { --card-color: #946000; }
+.admonition-important { --card-color: #7952b3; }
+.prose .admonition > .admonition-title { color: var(--card-color); font-weight: 650; margin: 0 0 10px; }
+.prose .admonition > :last-child { margin-bottom: 0; }
+[data-theme="dark"] .admonition { --card-color: #89bafa; }
+[data-theme="dark"] .admonition-success { --card-color: #86d6a4; }
+[data-theme="dark"] .admonition-danger { --card-color: #f49ba3; }
+[data-theme="dark"] .admonition-warning { --card-color: #ebc16d; }
+[data-theme="dark"] .admonition-important { --card-color: #c4a7f2; }
 .image-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
 .image-gallery[data-columns="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .gallery-preview { display: block; min-width: 0; padding: 0; overflow: hidden; background: var(--code); border-radius: 8px; cursor: zoom-in; }

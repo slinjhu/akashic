@@ -104,6 +104,35 @@ Give fenced code blocks a language such as `python`, `sh`, `json`, or
 language set plus Dockerfile; unknown languages remain plain text. Unlabelled
 blocks are not automatically detected. Each code block has a Copy button.
 
+## Admonition cards
+
+Use a blockquote with a marker on its own first line to call out an example:
+
+```markdown
+> [!GOOD]
+> Introduce a project before explaining how to use it.
+
+> [!BAD]
+> Assume readers already know the project.
+```
+
+> [!GOOD]
+> Introduce a project before explaining how to use it.
+
+> [!BAD]
+> Assume readers already know the project.
+
+`GOOD` produces a green card and `BAD` a red card, with visible labels in both
+light and dark themes. Also supported: `NOTE` (blue), `TIP` (green), `IMPORTANT`
+(purple), `WARNING` (amber), and `CAUTION` (red). Use uppercase markers.
+
+Keep every line inside the blockquote, including a `>` on blank lines between
+paragraphs. Cards support ordinary Markdown such as links, lists, and code
+blocks. Unmarked blockquotes keep their usual appearance.
+
+This is blockquote-based syntax; MkDocs' `!!!` and `???` syntax, custom titles,
+and collapsible cards are not supported.
+
 ## Equations
 
 Use `$...$` for inline math, such as $A\mathbf{v} = \lambda\mathbf{v}$.
