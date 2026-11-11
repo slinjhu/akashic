@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useReviewMode } from "./review-mode";
 
 type Reviews = Record<string, boolean>;
 type ReviewContextValue = {
@@ -11,6 +12,7 @@ const ReviewContext = createContext<ReviewContextValue | null>(null);
 const endpoint = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/section-review/`;
 
 export function SectionReviews({ file, initial, children }: { file: string; initial: Reviews; children: ReactNode }) {
+  const { enabled } = useReviewMode();
   const [reviews, setReviews] = useState(initial);
   const [available, setAvailable] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
@@ -18,7 +20,8 @@ export function SectionReviews({ file, initial, children }: { file: string; init
 
   useEffect(() => { setReviews(initial); }, [initial]);
   useEffect(() => {
-    if (!["localhost", "127.0.0.1"].includes(location.hostname)) return;
+    if (!enabled || !["localhost", "127.0.0.1"].includes(location.hostname)) return;
+    setError("");
     const controller = new AbortController();
     fetch(`${endpoint}?file=${encodeURIComponent(file)}`, { cache: "no-store", signal: controller.signal })
       .then(async response => {
@@ -28,7 +31,7 @@ export function SectionReviews({ file, initial, children }: { file: string; init
         setAvailable(true);
       }).catch(reason => { if (!controller.signal.aborted) setError(reason.message); });
     return () => controller.abort();
-  }, [file]);
+  }, [file, enabled]);
 
   async function toggle(id: string) {
     if (!available || saving) return;
@@ -48,7 +51,7 @@ export function SectionReviews({ file, initial, children }: { file: string; init
   }
 
   return <ReviewContext.Provider value={{ reviews, available, saving, toggle }}>
-    {error && <p className="review-error" role="alert">{error}</p>}
+    {enabled && error && <p className="review-error" role="alert">{error}</p>}
     {children}
   </ReviewContext.Provider>;
 }
@@ -59,7 +62,9 @@ export function useSectionReviewed(id?: string) {
 }
 
 export function SectionReviewStatus({ id }: { id: string }) {
+  const { enabled } = useReviewMode();
   const context = useContext(ReviewContext);
+  if (!enabled) return null;
   const reviewed = context?.reviews[id] === true;
   const status = reviewed ? "Reviewed" : "Pending";
   return <span className="toc-review-status" role="img" aria-label={status} title={status}>
@@ -68,8 +73,9 @@ export function SectionReviewStatus({ id }: { id: string }) {
 }
 
 export function SectionReviewButton({ id }: { id: string }) {
+  const { enabled } = useReviewMode();
   const context = useContext(ReviewContext);
-  if (!context) return null;
+  if (!enabled || !context) return null;
   const { reviews, available, saving, toggle } = context;
   const reviewed = reviews[id] === true;
   const status = reviewed ? "Reviewed" : "Pending";

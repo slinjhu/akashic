@@ -2,14 +2,15 @@
 
 import { PanelResizeHandle } from "./resizable-panels";
 import { SectionReviewStatus, useSectionReviewed } from "./section-reviews";
-import { useId, useState } from "react";
+import { useId } from "react";
+import { useReviewDisclosure } from "./review-mode";
 
 type Heading = { id: string; text: string; depth: number };
 type HeadingNode = Heading & { children: HeadingNode[] };
 
 function HeadingBranch({ node }: { node: HeadingNode }) {
   const reviewed = useSectionReviewed(node.id);
-  const [expanded, setExpanded] = useState(() => !reviewed);
+  const [expanded, setExpanded] = useReviewDisclosure(reviewed);
   const childrenId = useId();
   const hasChildren = node.children.length > 0;
 
@@ -18,7 +19,7 @@ function HeadingBranch({ node }: { node: HeadingNode }) {
       {hasChildren ? <button type="button" className="toc-toggle"
         aria-expanded={expanded} aria-controls={childrenId}
         aria-label={`${expanded ? "Collapse" : "Expand"} ${node.text}`}
-        onClick={() => setExpanded(value => !value)}>
+        onClick={() => setExpanded(!expanded)}>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
       </button> : <span className="toc-spacer" aria-hidden="true" />}
       <SectionReviewStatus id={node.id} />

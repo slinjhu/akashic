@@ -173,6 +173,7 @@ html:is([data-left-panel="hidden"], [data-right-panel="hidden"]) .home-page .pro
 .settings-switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
 .settings-switch[aria-checked="true"] span { transform: translateX(14px); background: var(--surface); }
 .settings-switch:disabled { opacity: .5; cursor: default; }
+html[data-review-mode="off"] :is(.section-review, .toc-review-status, .review-error) { display: none; }
 @media (max-width: 760px) { .settings-trigger { width: 32px; height: 32px; } }
 
 /* Dividers span the viewport below the header, independently of panel content. */

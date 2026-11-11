@@ -81,6 +81,12 @@ Akashic excludes the status emoji when generating anchors and table-of-contents 
 static pages display the saved statuses but cannot edit local files. Rebuild and
 publish to update those pages after reviewing locally.
 
+The **Review mode** switch in Settings is on by default. Turn it off to hide
+review emojis in headings and the table of contents. Sections then start
+expanded regardless of their saved status, and you can still fold them manually.
+Changing the mode resets both trees to that mode's default fold states. The
+preference is saved in your browser; the Markdown review markers stay intact.
+
 Open the gear button at the top right for settings. The card contains switches
 for the left navigation and right table of contents, plus an appearance selector. Their visibility is saved in this browser and
 restored after refresh. On narrow screens, opened panels appear above the content.

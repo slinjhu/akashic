@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PanelControls } from "./panel-controls";
 import { ThemeSelect } from "./theme";
+import { ReviewModeControl } from "./review-mode";
 
 export function Settings() {
   const [open, setOpen] = useState(false);
@@ -46,6 +47,7 @@ export function Settings() {
     <div ref={card} id="settings-card" className="settings-card" role="dialog" aria-label="Settings" hidden={!open}>
       <p className="settings-title">Settings</p>
       <PanelControls />
+      <ReviewModeControl />
       <div className="settings-divider" />
       <ThemeSelect />
     </div>
