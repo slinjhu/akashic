@@ -22,7 +22,7 @@ model. Our running example is a short article about growing tomatoes. The
 article, records, and numerical examples below are invented to explain the
 process. Published pipelines provide the supporting examples and sources.
 
-## ⏳ 1. Start with an archived web page
+## ✅ 1. Start with an archived web page
 
 ### ✅ 1.1. What Common Crawl gives us
 
@@ -72,7 +72,7 @@ helps us identify all records from a source we need to exclude. FineWeb's
 released records retain source fields such as URL, date, and crawl information.
 [FineWeb dataset card](https://huggingface.co/datasets/HuggingFaceFW/fineweb)
 
-## ⏳ 2. Extract the article before judging its quality
+## ✅ 2. Extract the article before judging its quality
 
 ### ✅ 2.1. Use the page structure to find the main text
 
@@ -157,7 +157,7 @@ FineWeb starts from Common Crawl HTML and uses a main-content extractor.
 Its experiments compare extraction and filtering choices through model training.
 [FineWeb processing study](https://arxiv.org/abs/2406.17557)
 
-## ⏳ 3. Remove records that do not fit the corpus
+## ✅ 3. Remove records that do not fit the corpus
 
 ### ✅ 3.1. Start with inexpensive checks
 
@@ -622,7 +622,165 @@ The useful mix depends on the model's goals. Dolma studies mixtures of web
 text and other sources, including code, papers, and books.
 [Dolma's data-mixture experiments](https://arxiv.org/abs/2402.00159)
 
-## ⏳ 6. Keep evaluation separate from training
+## ⏳ 6. Create synthetic data to make useful material easier to learn
+
+### ⏳ 6.1. Start with one source and a learning goal
+
+So far, we have selected existing text. **Synthetic data** adds another option:
+use a model or program to produce training examples. The goal is to give the
+learner useful practice that the collected corpus does not already provide
+in the desired form.
+
+Return to our tomato article. It contains the advice we want, but only as prose.
+We could ask a generator to turn it into a question and answer:
+
+```text
+Source: Water the roots when the soil begins to dry.
+
+Generated question: When should I water the roots?
+Generated answer: When the soil begins to dry.
+```
+
+The example presents the same information in a new form. It adds training
+material without adding a new observation about tomato plants. Ten rewrites
+do not become ten independent sources of evidence.
+
+DatologyAI's [Eating the Rainbow primer](https://www.datologyai.com/blog/eating-the-rainbow-a-primer-on-synthetic-data-for-non-researchers)
+emphasizes this approach: turn real source material into several useful forms,
+such as explanations, questions and answers, or dialogues. The motivation is
+to improve how the model learns from available material, rather than merely
+increase the token count.
+
+### ⏳ 6.2. Distinguish rewriting a source from generating new examples
+
+Two common approaches give the generator different starting points:
+
+| Approach | What we give the generator | What it produces | What needs checking |
+| --- | --- | --- | --- |
+| Source-grounded transformation | Our tomato article plus a request to explain or restructure it | A simpler explanation, summary, or Q&A | Does it preserve the source's meaning? |
+| Task or topic generation | A topic, task description, or small set of examples | New exercises, instructions, stories, or solutions | Are the examples correct, useful, and varied? |
+
+Grounding gives us a reference for checking claims. It does not guarantee
+faithfulness. A rewrite could change “when the soil begins to dry” into “every
+day,” adding advice the source never gave. It can also repeat an error already
+present in the source.
+
+Generating exercises can be useful when answers are independently checkable.
+For example, a program can generate arithmetic problems and calculate their
+answers. For code, tests can check generated solutions. A task need not come
+from a source article to be useful, but it still needs a reliable quality check.
+
+*Textbooks Are All You Need* illustrates synthetic teaching material. The phi-1
+recipe combines selected web data with generated textbooks and coding exercises.
+It demonstrates a successful use of generation in its setting; it does not
+establish that any generated textbook will improve any model.
+[Phi-1 paper](https://arxiv.org/abs/2306.11644)
+
+### ⏳ 6.3. Use diverse forms without losing the substance
+
+Repeating the original tomato article mostly repeats its wording. Rephrasing
+can give the model practice connecting the same information to different
+questions and contexts.
+
+For example, the watering passage could become a direct Q&A, a short explanation,
+or a dialogue between a beginner and a gardener. Changing only names and
+punctuation adds little variety. Inventing unsupported advice adds errors.
+We want useful variation in presentation while retaining the information.
+
+**WRAP**, or Web Rephrase Augmented Pre-training, studies this directly. It
+uses an instruction-tuned model to rephrase web documents in several styles,
+then trains on original and rewritten text together. Its experiments report
+better training efficiency and downstream performance in that setup.
+[Rephrasing the Web](https://aclanthology.org/2024.acl-long.757/)
+
+**BeyondWeb** extends the study to trillion-scale synthetic pretraining data.
+It investigates source selection, rephrasing choices, and generator models.
+Its lesson is that these choices must be optimized together; generating more
+text alone is not a recipe for higher quality.
+[BeyondWeb paper](https://arxiv.org/abs/2508.10975)
+
+### ⏳ 6.4. Generate, check, and select before training
+
+Treat generated output as candidate data. For our article, a practical loop is:
+
+1. **Choose a good source.** Start with the cleaned, selected article. Preserve
+   its document ID so generated examples can be traced back to it.
+2. **Specify the task.** For example: “Write questions answerable from this
+   passage. Preserve its conditions and do not add facts.”
+3. **Generate candidates.** Vary the questions or presentation deliberately.
+   Record the generator version, prompt, and generation settings.
+4. **Check the output.** Compare claims with the source. Check that answers
+   address their questions. For executable tasks, use calculations or tests.
+   Sample outputs for human review; model judges can make mistakes too.
+5. **Remove redundancy and leakage.** Deduplicate generated examples. Keep
+   source families and their rewrites together when separating training from
+   validation. Do not generate training answers from held-out test questions.
+6. **Test a mixture.** Compare training with and without the synthetic component
+   at a controlled training budget. Also count the cost of generating and
+   checking the data.
+
+The right check depends on the task. **STaR** generates reasoning traces and
+selects traces that lead to known correct answers, then fine-tunes and repeats.
+This gives selection an external signal. A correct final answer still does
+not prove every intermediate reasoning step is valid.
+[STaR: Bootstrapping Reasoning With Reasoning](https://arxiv.org/abs/2203.14465)
+
+### ⏳ 6.5. Match the record to the training stage
+
+The same generated Q&A can serve different training objectives:
+
+| Stage | Example use | What the learner practices |
+| --- | --- | --- |
+| Pretraining | Include the Q&A as a text document | Predict subsequent tokens across that format |
+| Continued pretraining in a domain | Mix source articles and selected rewrites about that domain | Learn the domain's language and content |
+| Supervised post-training | Store the question as a user message and the answer as the target response | Respond to a request |
+
+The record format and training loss determine the use. A question mark in a
+document does not automatically make it instruction tuning.
+
+**Self-Instruct** is an influential post-training example. It starts from seed
+tasks, generates further instructions and instances, filters them, and uses
+the resulting data for instruction tuning. This expands task coverage instead
+of simply rewriting a web corpus.
+[Self-Instruct paper](https://aclanthology.org/2023.acl-long.754/)
+
+### ⏳ 6.6. Understand model collapse without treating it as inevitable
+
+Suppose we discard the original articles after generation. We train a model
+on the generated versions, ask it to generate the next corpus, and repeat.
+Rare details may disappear. Mistakes and favored writing patterns can be
+passed along. Later generations can become less representative of the original
+data. This degradation is called **model collapse**.
+
+Research demonstrates this risk in recursive training settings. It does not
+show that every use of synthetic data fails. The way data is retained and
+mixed matters. Separate experiments find that accumulating synthetic examples
+alongside the original real data avoids collapse in their studied settings.
+[Recursive-training study](https://www.nature.com/articles/s41586-024-07566-y),
+[Accumulating real and synthetic data](https://arxiv.org/abs/2404.01413)
+
+Source grounding helps us check fidelity, but is not a blanket guarantee
+against degradation. Keep access to the original evidence, check coverage of
+rare cases, and measure performance on independent real tasks. A collection
+of fluent, consistent rewrites can still omit information we needed to teach.
+
+### ⏳ 6.7. Measure what generation adds
+
+Use the experiment pattern from section 8. Train one model on the original
+corpus and another on a chosen original-plus-synthetic mixture. Keep the model
+and training-token budget comparable. This asks whether spending some training
+tokens on generated text helps more than spending them on original text.
+
+Evaluate on unseen source families and tasks. Check factual accuracy, task
+coverage, and regressions as well as average benchmark scores. Record unique
+sources separately from generated documents and token exposures. Generating
+five versions of one article expands its presentation, not its factual coverage.
+
+If an improvement survives these checks, you have evidence for that generator,
+source selection, filtering process, and mixture. You do not yet have evidence
+that more synthetic data, or a larger generator, would necessarily be better.
+
+## ⏳ 7. Keep evaluation separate from training
 
 Suppose a crawled page reproduces a GSM8K test question and its solution.
 Keeping it may help a model answer that exact test item. The resulting score
@@ -644,9 +802,9 @@ between training and evaluation data.
 [Deduplication and evaluation overlap](https://aclanthology.org/2022.acl-long.577/),
 [C4 contamination analysis](https://aclanthology.org/2021.emnlp-main.98/)
 
-## ⏳ 7. Test whether the curation actually helps
+## ⏳ 8. Test whether the curation actually helps
 
-### ⏳ 7.1. Audit the documents and the counts
+### ⏳ 8.1. Audit the documents and the counts
 
 Before training, sample records from each processing stage. Read both keeps
 and rejects. Include several domains, document lengths, topics, and score ranges.
@@ -668,7 +826,7 @@ short paragraph each removes one document, but very different text volumes.
 State which tokenizer produced the counts. A token is a unit of text defined
 by that tokenizer, not necessarily a word.
 
-### ⏳ 7.2. Train a model to test a data decision
+### ⏳ 8.2. Train a model to test a data decision
 
 An attractive sample is not enough to establish that a filter improves training.
 Build two corpus versions: one without the proposed filter and one with it.
@@ -691,7 +849,7 @@ than trusting a quality score alone.
 [DataComp-LM paper](https://arxiv.org/abs/2406.11794),
 [Experimental framework](https://www.datacomp.ai/dclm/)
 
-## ⏳ 8. Turn the chosen corpus into reproducible training input
+## ⏳ 9. Turn the chosen corpus into reproducible training input
 
 Once a corpus version is chosen, store the accepted text with its metadata.
 Record the extractor, filter versions, thresholds, duplicate decisions, and
