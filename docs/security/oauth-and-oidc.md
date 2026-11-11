@@ -164,106 +164,232 @@ See [OWASP session expiration](https://cheatsheetseries.owasp.org/cheatsheets/Se
 sessions, and permission checks already let Alice use her private notes. OAuth
 and OIDC become useful when we introduce another responsibility or service.
 
-## 2. Let another service verify Alice: OIDC
+## 2. Sign in through FileBox using OIDC
 
-Now suppose we want Alice to use an existing account instead of creating a new
-password at example.com. Introduce a fictional service called **FileBox**, which
-supports sign-in for other applications.
+Alice wants to sign into example.com using an account she already has. Introduce
+FileBox, a fictional service that supports sign-in for other applications.
+FileBox becomes our identity provider: example.com trusts it to authenticate
+Alice.
 
-FileBox becomes our **identity provider**: example.com trusts it to authenticate
-Alice. **OpenID Connect (OIDC)** standardizes how FileBox communicates that
-result. It is an authentication layer built on OAuth 2.0.
+OpenID Connect (OIDC) standardizes how FileBox communicates the result. It builds
+on OAuth 2.0's authorization code flow and adds an ID token: a signed statement
+about the user who signed in. See [the OIDC overview](https://openid.net/specs/openid-connect-core-1_0.html#Overview).
 
-A typical sign-in follows this path:
+### 2.1. Follow the basic authentication flow
 
-1. Example.com redirects Alice's browser to FileBox with an OIDC sign-in request.
-2. FileBox authenticates Alice, or uses an existing suitable login session.
-3. FileBox redirects her browser to `https://example.com/callback` with a code.
-4. Our backend exchanges the code directly with FileBox and receives an ID token.
-5. The backend validates the token and maps FileBox's user identity to a local account.
-6. Example.com creates the same kind of local session we already understand.
+The initial authorization request has four required parameters: `response_type`,
+`client_id`, `redirect_uri`, and `scope`. Start with those to trace the exchange.
+A working sign-in also needs protection against forged callbacks; the following
+subsections add those checks. See [OIDC request parameters](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 
-The **ID token** is a signed statement about the authenticated user. The app
-validates the signature, issuer, audience, expiration, and other applicable
-rules. It identifies the external account using the issuer and subject together.
-See [OIDC code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth)
-and [ID token validation](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
+#### ✅ 2.1.1. Prerequisite: register example.com with FileBox
 
-The change is at the credential-verification step: FileBox verifies Alice, and
-example.com verifies FileBox's assertion. Our local session and note permission
-checks still have their jobs.
+Before Alice can sign in, we register our app with FileBox. For our backend-based
+app, the registration supplies:
 
-## 3. Give our app access to FileBox documents: OAuth
+| Setting | Value in our example | Purpose |
+|---|---|---|
+| Client ID | `reading-app` | Identifies our application to FileBox |
+| Redirect URI | `https://example.com/callback` | Where FileBox may return the browser |
+| Client authentication | A credential held by our backend | Lets FileBox authenticate the app during token exchange |
 
-Signing in and importing files are different needs. Suppose Alice also wants
-the app to read documents stored at FileBox. Now FileBox must grant the app
-limited API access. This is where **OAuth 2.0 delegated authorization** applies.
+A client ID is public. A client secret, if used, stays on the backend. FileBox
+checks the redirect URI against the registration so the app cannot redirect the
+result to an arbitrary destination. See [client registration](https://www.rfc-editor.org/rfc/rfc6749#section-2)
+and [redirect URI matching](https://www.rfc-editor.org/rfc/rfc9700#section-4.1.3).
 
-Alice could give our app her FileBox password. But then the app would hold a
-credential intended for Alice herself, rather than permission tailored to one
-task.
+#### ✅ 2.1.2. Backend sends Alice's browser to FileBox
 
-Instead, Alice approves a narrower arrangement: let this app read her documents.
-FileBox issues an **access token**, a credential the app can present to its API.
-A **scope** describes requested access, such as our fictional `documents.read`.
+Alice clicks “Sign in with FileBox” at example.com. Our backend redirects her
+browser to FileBox's authorization endpoint. Each query parameter tells FileBox
+something about the request:
 
-![Alice approves document access at FileBox, which issues an access token to example.com. The backend presents that token to the FileBox API.](../assets/images/oauth-delegated-access.svg)
+![Basic OIDC sign-in request: response_type requests a code, client_id identifies our app, redirect_uri specifies the callback, and scope=openid requests sign-in.](../assets/images/oidc-basic-sign-in-request.svg)
 
-This is **delegated authorization**: Alice lets another application exercise
-limited access. OAuth 2.0 defines a framework for arranging it without the app
-receiving her password. See [OAuth roles and access tokens](https://www.rfc-editor.org/rfc/rfc6749#section-1.1).
+`response_type` specifies what FileBox returns through the browser after
+authorization. Its main building blocks are:
 
-## 4. Use the token to call the API
+- `code`: returns an authorization code that our backend exchanges for tokens.
+- `id_token`: returns an ID token describing who authenticated.
+- `token`: returns an access token for calling a protected API.
 
-Suppose our backend already has a token. With a **bearer token**, it sends an API
-request like this:
+These values can be combined in supported flows. Our example uses only `code`:
+the browser carries the code, then our backend obtains the ID token and access
+token directly from FileBox's token endpoint. See [response type definitions](https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html).
 
-```http
-GET /documents HTTP/1.1
-Host: api.filebox.example
-Authorization: Bearer ACCESS_TOKEN
+`scope` is a space-separated list of what our app requests: `openid` enables
+OIDC sign-in, while `profile` and `email` request user information. For example,
+`scope=openid%20email` requests sign-in and email claims (`%20` means a space).
+An API can define additional scopes, such as FileBox's fictional `documents.read`.
+FileBox decides what access to grant; requesting a scope does not grant it
+automatically. See [OIDC scopes](https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims).
+
+Alice authenticates on FileBox's own page. If she already has a suitable FileBox
+session, it may recognize her without asking for her password again. FileBox
+also obtains any required approval. Her FileBox password goes to FileBox.
+See [OIDC authentication requests](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+
+#### ✅ 2.1.3. FileBox returns a code through the browser
+
+FileBox redirects the browser to `https://example.com/callback?code=CODE`.
+
+The browser follows the redirect and sends a request to our callback route,
+carrying the code. Our backend still needs to exchange it and validate the
+result before creating a session.
+
+The authorization code is short-lived and single-use. Receiving it is an
+intermediate step, rather than proof that Alice is signed into example.com.
+See [authorization codes](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2).
+
+#### ✅ 2.1.4. Backend exchanges the code directly with FileBox
+
+Our backend sends the code to FileBox's token endpoint over HTTPS, with the
+registered redirect URI and required client authentication.
+FileBox checks the request and returns tokens. The browser does not carry these
+tokens in the redirect URL.
+
+![OIDC sign-in: Alice's browser follows redirects and delivers an authorization code to example.com. The backend exchanges it directly with FileBox for an ID token and an access token.](../assets/images/oauth-authorization-code.svg)
+
+The response includes an ID token and an access token. For signing Alice into
+our app, the ID token is the relevant identity assertion. The access token has
+an API access role, which we will use in section 3.
+See [OIDC token responses](https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse).
+
+#### ✅ 2.1.5. Why not get id_token directly?
+
+Our backend runs on servers we control. It can keep client credentials and
+tokens private. Frontend code runs on the user's device, where we do not control
+the environment:
+
+- Users can inspect downloaded JavaScript, browser storage, and network traffic
+  with developer tools. A secret shipped to the frontend cannot remain private
+  from the person controlling that browser.
+- Browser extensions with sufficient permissions may read page contents or
+  observe and modify requests, potentially exposing information handled there.
+- Users can bypass the frontend entirely and send their own requests with tools
+  such as `curl`, changing parameters or submitting fabricated values. The
+  backend must validate requests regardless of which client sends them; the
+  presence of a frontend field or a disabled button does not establish trust.
+
+These capabilities do not let someone forge FileBox's signature on an ID token.
+They explain why we keep app credentials on the backend and validate identity
+assertions there instead of trusting a client-supplied claim that Alice signed in.
+
+Code flow fits this boundary: the browser carries a temporary code, while our
+backend receives and stores the actual tokens directly from FileBox. With PKCE,
+introduced below, redeeming the code also requires a private verifier. Someone
+who intercepts only the code cannot exchange it without that verifier and our
+backend's client credentials. The benefit comes from these protections and
+reduced token exposure, rather than from adding another step by itself.
+See [OAuth code flow security](https://www.rfc-editor.org/rfc/rfc9700#section-2.1.1).
+
+Direct ID-token delivery can also be implemented securely. We choose code flow
+with PKCE because it suits our backend app and supports obtaining API access
+tokens without returning them through the browser's authorization response.
+The backend still needs protection, and the browser's session cookie remains a
+credential. See [OAuth guidance on token delivery](https://www.rfc-editor.org/rfc/rfc9700#section-2.1.2).
+
+#### ✅ 2.1.6. Verify FileBox's statement about Alice
+
+The ID token is a signed JWT (JSON Web Token). Its payload contains claims:
+statements that the backend must validate before trusting them.
+
+| Claim | What the backend checks |
+|---|---|
+| `iss` — issuer | Is it the expected FileBox issuer, `https://login.filebox.example`? |
+| `aud` — audience | Is this token intended for our app, `reading-app`? |
+| `exp` — expiration | Is it still valid? |
+| `sub` — subject | Which user does FileBox identify? For Alice, suppose it is `alice-42`. |
+
+The backend also verifies the signature using FileBox's trusted public keys and
+applies the remaining protocol checks. Decoding a JWT only reveals its contents;
+it does not establish that those contents are authentic. See [ID token
+validation](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
+
+#### ✅ 2.1.7. Create the familiar local session
+
+The app identifies the external account by the combination of issuer and
+subject, then looks up its local account mapping. For Alice, suppose that mapping
+has already been established:
+
+| External issuer | External subject | Local user ID |
+|---|---|---|
+| `https://login.filebox.example` | `alice-42` | `user-42` |
+
+A first-time user needs a new account, or an explicit linking flow for an
+existing account. An email match alone should not silently establish that link.
+See [OWASP federated account linking](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#secure-federated-account-linking).
+
+Once Alice's identity is verified and mapped, example.com creates a local
+session for `user-42` and sets the session cookie from section 1. Her later
+requests use that cookie, and our backend checks access to her notes as before.
+
+FileBox verifies Alice's credentials; example.com verifies FileBox's assertion.
+The provider's login session and our app's session are separate. The same
+separation appears in [Google's OIDC server flow](https://developers.google.com/identity/openid-connect/openid-connect#server-flow),
+where validating the ID token precedes establishing the application's session.
+
+### 2.2. Add state to protect the callback
+
+What if an attacker starts a sign-in using the attacker's FileBox account, then
+tricks Alice's browser into submitting that callback? Without a check tying the
+callback to Alice's attempt, our app could sign Alice into the attacker's account.
+This is login CSRF.
+
+Add `state` to the authorization request:
+
+```text
+&state=STATE
 ```
 
-The API checks the token and whether it permits the requested operation. A
-read-only token should not authorize deleting a document.
+- Our backend generates a random, unguessable value once for this attempt and
+  stores it bound to Alice's browser session. It must have enough randomness;
+  a timestamp or counter is predictable even if the string is long.
+- FileBox echoes the same value with the code:
+  `https://example.com/callback?code=CODE&state=STATE`.
+- Our backend checks it against the stored attempt and rejects a missing,
+  mismatched, or already consumed value before proceeding.
 
-“Bearer” means possession is enough to use the credential. The backend must
-protect it in storage and send it over HTTPS. It should not put it in a URL,
-where it might enter logs or browser history. See [bearer token usage](https://www.rfc-editor.org/rfc/rfc6750#section-2.1)
-and [token disclosure risks](https://www.rfc-editor.org/rfc/rfc6750#section-5).
+`state` is recommended in the OIDC code flow. CSRF protection is required;
+properly bound and validated PKCE or OIDC `nonce` can also provide it, so `state`
+is not mandatory in every secure design. Our example uses it explicitly.
+See [OAuth CSRF protection](https://www.rfc-editor.org/rfc/rfc9700#section-4.7).
 
-**We can now explain an API call.** Next we need to explain how the backend gets
-the token in the first place.
+### 2.3. Add nonce to bind the ID token to this attempt
 
-## 5. Obtain a token through Alice's browser
+An ID token can have a valid signature and still belong to an earlier or
+unrelated sign-in. `nonce` helps prevent that token from being replayed as the
+result of Alice's current attempt.
 
-Our app first registers with FileBox and receives a **client ID**, here
-`reading-app`. It also registers an exact return address, the **redirect URI**:
-`https://example.com/callback`.
+“Nonce” is commonly explained as “number used once.” Here, “once” means one
+sign-in attempt; the value can be a random string. Add it to the request:
 
-When Alice clicks **Connect FileBox**, the app sends her browser to FileBox's
-authorization endpoint. FileBox authenticates Alice and obtains authorization,
-which may include a consent screen.
+```text
+&nonce=NONCE
+```
 
-After approval, FileBox redirects her browser back with a short-lived,
-single-use **authorization code**. The backend exchanges that code at FileBox's
-token endpoint for an access token. The code itself cannot read documents.
-This is the **authorization code flow**. See [OAuth authorization code flow](https://www.rfc-editor.org/rfc/rfc6749#section-4.1).
+- Our backend generates a separate random, unguessable nonce for the attempt
+  and stores it for comparison.
+- FileBox includes that same value in the signed ID token's `nonce` claim.
+- Our backend validates the token and requires its nonce to match the stored
+  value. A new attempt gets a new nonce.
 
-![Authorization code flow: Alice's browser follows redirects between example.com and FileBox, delivers the code to example.com, and the backend exchanges it directly with FileBox for an access token.](../assets/images/oauth-authorization-code.svg)
+`nonce` is optional in this OIDC code flow. Once we send it, checking it in the
+ID token is required. `state` returns in the callback URL; `nonce` returns inside
+the signed identity assertion. See [OIDC request parameters](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
+and [nonce validation](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
 
-Notice the two paths: the browser carries the code; the backend receives the
-token directly. The next step adds protections to this exchange.
+### 2.4. Add a code challenge to protect code redemption
 
-## 6. Bind the exchange to the request that started it
+What if someone intercepts the authorization code? PKCE (Proof Key for Code
+Exchange) makes that code insufficient by requiring a private verifier created
+for this attempt.
 
-What if someone intercepts the code? **PKCE (Proof Key for Code Exchange)** binds
-the code to a secret created for this particular attempt:
-
-1. The backend generates a random **code verifier** and keeps it privately.
-2. It derives a **code challenge** and sends that in the authorization request.
-3. During the token exchange, it supplies the original verifier.
-4. FileBox checks that the verifier matches the challenge associated with the code.
+- Our backend generates a random code verifier once and keeps it privately.
+- It derives a code challenge and sends that in the authorization request.
+  FileBox associates the challenge with the issued code.
+- Our backend sends the original verifier when exchanging the code. FileBox
+  checks it against the challenge before issuing tokens.
 
 With the `S256` method, the derivation is:
 
@@ -271,70 +397,110 @@ With the `S256` method, the derivation is:
 code_challenge = BASE64URL(SHA256(ASCII(code_verifier)))
 ```
 
-The base64url encoding omits padding. Knowing the challenge or code alone does
-not reveal the verifier. See [PKCE challenge generation](https://www.rfc-editor.org/rfc/rfc7636#section-4.2)
-and [verifier checks](https://www.rfc-editor.org/rfc/rfc7636#section-4.6).
-
-The app also creates a random **state** value, binds it to Alice's browser
-session, and checks the returned value before accepting the callback. This
-helps prevent an attacker from substituting an authorization response into her
-session.
-
-Here is the authorization request, displayed across lines for readability:
+The base64url encoding omits padding. Add these parameters to the request:
 
 ```text
-https://login.filebox.example/authorize
-  ?response_type=code
-  &client_id=reading-app
-  &redirect_uri=https%3A%2F%2Fexample.com%2Fcallback
-  &scope=documents.read
-  &state=RANDOM_STATE
-  &code_challenge=DERIVED_CHALLENGE
-  &code_challenge_method=S256
+&code_challenge=CHALLENGE
+&code_challenge_method=S256
 ```
 
-The backend's token request includes the code, redirect URI, verifier, and the
-client authentication required by its registration. A client ID identifies the
-app; it is not a secret.
+The challenge travels through the browser; the verifier stays on our backend
+until it is sent directly to the token endpoint. Someone who obtains only the
+code and challenge cannot redeem the code without the verifier. See [PKCE](https://www.rfc-editor.org/rfc/rfc7636#section-4).
 
-Use authorization code flow with PKCE here. Current security guidance applies
-PKCE to web applications too and requires exact redirect URI matching in this
-case. Use a maintained library to handle these checks. See [OAuth security best
-practice](https://www.rfc-editor.org/rfc/rfc9700#section-2.1).
+Current guidance requires PKCE for public clients, such as browser-only and
+mobile apps, and recommends it for confidential clients such as our backend
+app. The `code_challenge` is required when using PKCE. A client secret
+authenticates the app; PKCE binds code redemption to a particular attempt.
+See [OAuth code flow security](https://www.rfc-editor.org/rfc/rfc9700#section-2.1.1).
 
-## 7. Combine sign-in and API access when needed
+Our example now includes all three protections. The complete request looks like
+this; the callback and token exchange stay the same, with the checks added above:
 
-The code exchange above explains the mechanism used by our OIDC sign-in too.
-To request OIDC, include `openid` in the scope. To request both sign-in and
-document access, use `scope=openid%20documents.read`. Add a fresh `nonce` bound
-to the sign-in attempt, and check it in the ID token.
+![Complete OIDC request with state to protect the callback, nonce to bind the ID token, and a PKCE challenge to protect code redemption.](../assets/images/oidc-sign-in-request.svg)
 
-The token response now includes an ID token alongside the access token. These
-credentials have different recipients and purposes:
+## 3. Add document access using OAuth
+
+Alice can now sign in. Suppose she also wants example.com to import documents
+stored at FileBox. This introduces a separate permission: our app must be
+allowed to call FileBox's document API on her behalf.
+
+### 3.1. Request permission with a scope
+
+OAuth 2.0 supplies the framework for this delegated access. Our fictional
+`documents.read` scope requests permission to read documents. To request sign-in
+and document access together, change the scope in the existing request:
+
+```text
+scope=openid%20documents.read
+```
+
+FileBox obtains the required authorization and issues an access token with the
+approved access. Our backend receives it through the code exchange we already
+understand. OIDC's `openid` scope alone does not grant document access.
+See [OAuth scopes](https://www.rfc-editor.org/rfc/rfc6749#section-3.3).
+
+![Alice approves document access at FileBox, which issues an access token to example.com. The backend presents that token to the FileBox API.](../assets/images/oauth-delegated-access.svg)
+
+### 3.2. Present the access token to the API
+
+Our backend calls FileBox over HTTPS:
+
+```http
+GET /documents HTTP/1.1
+Host: api.filebox.example
+Authorization: Bearer ******
+```
+
+The API checks that the access token is valid for it and permits reading the
+requested documents. A read-only token should not authorize deleting them.
+
+“Bearer” means possession is enough to use the token. Keep it protected on the
+backend and out of URLs. See [bearer token usage](https://www.rfc-editor.org/rfc/rfc6750#section-2.1)
+and [token disclosure risks](https://www.rfc-editor.org/rfc/rfc6750#section-5).
+
+The app can offer FileBox sign-in without document access. It can also request
+document access for a user who signs into example.com with a local password.
+OAuth access and OIDC sign-in address different needs, even when one flow
+requests both.
+
+## 4. Follow each credential to its destination
 
 | Credential | Who receives it? | Purpose in our example |
 |---|---|---|
-| ID token | example.com backend | Verify the identity asserted by FileBox |
+| Authorization code | FileBox token endpoint, sent by our backend | Exchange once for tokens |
+| ID token | example.com backend | Verify FileBox's assertion about Alice |
 | Access token | FileBox API | Authorize document access |
 | Session cookie | example.com backend | Recognize Alice on later visits |
 
-See [OIDC authentication requests](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+The code is an intermediate credential. The ID token establishes identity at
+sign-in. The access token authorizes API use. The session cookie lets our app
+recognize later requests. Sending one in place of another does not give it the
+other credential's purpose.
 
-The app can offer FileBox sign-in without requesting document access. It can
-also add FileBox document access to an account that uses a local password.
-Neither feature requires us to replace our application session with an API token.
+## 5. Extend the model when another need appears
 
-## 8. Extend the model when another need appears
+### 5.1. Find the provider's endpoints and keys
 
-**Find the provider's endpoints and keys.** Starting from its configured,
-trusted issuer, the app retrieves FileBox's OIDC discovery document. It supplies
-endpoint locations and `jwks_uri`, the public signing key location. Metadata
-must match the expected issuer. See [OIDC discovery](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig).
+Starting from its configured, trusted issuer, the app retrieves FileBox's OIDC
+discovery document:
 
-**Import documents after the access token expires.** A provider may issue a
-**refresh token** that our backend exchanges for new access tokens. It goes to
-the token endpoint, not the document API. See [OAuth refresh tokens](https://www.rfc-editor.org/rfc/rfc6749#section-1.5).
+```text
+https://login.filebox.example/.well-known/openid-configuration
+```
 
-**Sign out after using OIDC.** Ending example.com's session and ending FileBox's
-login session are separate operations. Ending either is also distinct from
-revoking document access. Provider logout can use [OIDC RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html).
+It supplies endpoint locations and `jwks_uri`, the public signing key location.
+Metadata must match the expected issuer. FileBox retains its private signing
+keys. See [OIDC discovery](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig).
+
+### 5.2. Import documents after the access token expires
+
+A provider may issue a refresh token that our backend exchanges for new access
+tokens. It goes to the token endpoint, not the document API. See [OAuth refresh
+tokens](https://www.rfc-editor.org/rfc/rfc6749#section-1.5).
+
+### 5.3. Sign out after using OIDC
+
+Ending example.com's session and ending FileBox's login session are separate
+operations. Ending either is also distinct from revoking document access.
+Provider logout can use [OIDC RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html).

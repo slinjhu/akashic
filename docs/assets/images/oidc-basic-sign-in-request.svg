@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="202" viewBox="0 0 1240 202" role="img" aria-labelledby="title desc">
+  <title id="title">Basic OIDC sign-in URL: four required parameters</title>
+  <desc id="desc">The FileBox authorization endpoint and four required OIDC code flow parameters: response_type=code, client_id=reading-app, an abbreviated redirect_uri for https://example.com/callback, and scope=openid. Each has a color-coded value and an explanation connected by a guide arrow.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L6 3 L0 6" fill="none" stroke="#94a3b8" stroke-width="1"/></marker>
+  </defs>
+  <rect width="1240" height="202" rx="12" fill="#f8fafc"/>
+  <rect x="0.5" y="0.5" width="1239" height="201" rx="12" fill="none" stroke="#e2e8f0"/>
+  <text x="28" y="42" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#6d28d9">https://login.filebox.example/authorize<tspan fill="#6d28d9"></tspan></text>
+  <path d="M416.4 37 H444" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text x="460" y="42" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#475569">Identity provider endpoint: begin sign-in using Alice’s existing FileBox account.</text>
+  <text x="48" y="73" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#475569">?response_type=<tspan fill="#1d4ed8">code</tspan></text>
+  <path d="M243.3 68 H444" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text x="460" y="73" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#475569">Get a code first, so tokens are delivered directly to our backend after exchange.</text>
+  <text x="48" y="104" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#475569">&amp;client_id=<tspan fill="#15803d">reading-app</tspan></text>
+  <path d="M272.3 99 H444" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text x="460" y="104" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#475569">Tell FileBox which registered application is asking Alice to sign in.</text>
+  <text x="48" y="135" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#475569">&amp;redirect_uri=<tspan fill="#15803d">https%3A...%2Fcallback</tspan></text>
+  <path d="M407.4 130 H444" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text x="460" y="135" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#475569">Tell FileBox where to return the browser: https://example.com/callback.</text>
+  <text x="48" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#475569">&amp;scope=<tspan fill="#1d4ed8">openid</tspan></text>
+  <path d="M185.4 161 H444" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 4" marker-end="url(#arrow)"/>
+  <text x="460" y="166" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#475569">Request OIDC sign-in and an ID token that tells our app who authenticated.</text>
+</svg>
