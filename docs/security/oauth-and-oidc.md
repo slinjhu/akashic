@@ -1,5 +1,5 @@
 ---
-title: Authentication, sessions, OAuth, and OIDC
+title: Authentication and OIDC
 description: Start with signing into example.com, then add an identity provider and delegated API access.
 tags:
   - security
@@ -8,7 +8,7 @@ tags:
   - OIDC
 ---
 
-# Authentication, sessions, OAuth, and OIDC
+# Authentication and OIDC
 
 Alice opens `https://example.com`, a reading app where she keeps private notes.
 How does the site know which notes belong to her?
