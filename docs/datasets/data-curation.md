@@ -486,7 +486,7 @@ You should test the threshold and scope rather than assume the most aggressive
 setting is best. FineWeb explicitly experiments with deduplication choices.
 [FineWeb study](https://arxiv.org/abs/2406.17557)
 
-## ⏳ 5. Select text for what you want the model to learn
+## ✅ 5. Select text for what you want the model to learn
 
 ### ✅ 5.1. A quality score needs a purpose
 
@@ -522,7 +522,88 @@ That score means “resembles the material this scorer was trained to favor.”
 It is not a guarantee of factual accuracy. It may also favor some topics or
 writing styles over others. Keep human audits and downstream tests in the loop.
 
-### ⏳ 5.2. Filtering and mixing solve different problems
+### ✅ 5.2. Common scoring and filtering signals
+
+There is no single score that captures every reason to keep or remove a page.
+Some signals measure formatting. Others estimate educational value or identify
+content we want to exclude. A pipeline can record several signals for each
+document, then apply separate thresholds.
+
+#### ✅ 5.2.1. Gopher heuristics catch obvious junk
+
+**Gopher heuristics** are rules based on measurable text properties. They check
+things such as document length, average word length, symbol frequency, and
+repeated lines or n-grams. They require no model training. The original Gopher
+pipeline includes quality and repetition filters; later datasets reuse or
+adapt these rules.
+[Gopher paper, data processing](https://arxiv.org/abs/2112.11446)
+
+Our tomato article might pass because it contains ordinary sentences with
+little repetition. A page repeating “BUY SEEDS” hundreds of times might fail.
+These checks are cheap, but thresholds need care: a short useful answer or
+a page of code can look unusual without being junk.
+
+#### ✅ 5.2.2. fastText learns what desirable text looks like
+
+**fastText** is a lightweight text-classification tool. Train it with positive
+examples of text you want and negative examples from a background collection.
+It learns word and n-gram patterns that distinguish the two groups. At inference,
+it assigns a score for the desired class.
+
+DCLM's quality classifier uses OpenHermes and Reddit ELI5 examples as positives
+against background web text. This favors patterns associated with those examples.
+There is no universal “fastText quality score”: changing the examples changes
+what the classifier rewards.
+[DCLM classifier training](https://github.com/mlfoundations/dclm/tree/main/baselines)
+
+A clear tomato explanation may score above a sales listing. But the score
+does not verify that its gardening advice is correct.
+
+#### ✅ 5.2.3. Educational and domain scores target particular skills
+
+FineWeb-Edu's score asks whether a document has educational value, as described
+in section 5.1. A **domain score** asks a narrower question, such as whether
+the page contains useful mathematical reasoning. FineMath uses scoring to
+select math content and distinguish levels of mathematical value.
+[FineMath dataset and scoring method](https://huggingface.co/datasets/HuggingFaceTB/finemath)
+
+Our tomato article could have a high educational score and a low math score.
+That is not a contradiction. The scores serve different training goals.
+
+#### ✅ 5.2.4. Perplexity measures how familiar text is to a reference model
+
+**Perplexity** measures how well a language model predicts the document's text.
+Lower perplexity means the words were easier for that model to predict.
+CCNet-style processing uses a language model trained on Wikipedia. RedPajama-V2
+provides this signal alongside other quality annotations.
+[RedPajama-V2 signal definitions](https://github.com/togethercomputer/RedPajama-Data#summary-of-quality-signals)
+
+Garbled extraction may have high perplexity. But specialized terminology or
+an unfamiliar writing style can also have high perplexity. Low perplexity is
+not proof of quality either: repetitive text can be easy to predict. The
+reference model determines what counts as familiar.
+
+#### ✅ 5.2.5. Profanity and toxicity signals support content decisions
+
+A **profanity signal** often counts matches from a word list. RedPajama-V2
+provides a bad-word-list signal. A **toxicity classifier** instead uses learned
+patterns to score categories such as abusive language; Dolma describes using
+a trained classifier for content filtering.
+[RedPajama signals](https://github.com/togethercomputer/RedPajama-Data#summary-of-quality-signals),
+[Dolma processing](https://arxiv.org/abs/2402.00159)
+
+These signals are related but different. An insult can be abusive without
+containing profanity. A quotation can contain profanity without endorsing it.
+Neither score directly measures readability or factual accuracy. Choose how
+to act on it according to the corpus's content rules, and inspect false matches
+as in section 3.3.
+
+For our tomato article, the pipeline might record low repetition, a high
+educational score, a low math score, and no profanity matches. We can then
+choose it for a general educational corpus and exclude it from a math-only
+corpus. The signals inform that decision; none is a universal quality verdict.
+
+### ✅ 5.3. Filtering and mixing solve different problems
 
 **Filtering** decides what is eligible for training. **Mixing** decides how
 often each eligible source or category is sampled.
